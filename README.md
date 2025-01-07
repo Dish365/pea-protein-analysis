@@ -72,6 +72,7 @@ A comprehensive analysis system for comparing three pea protein extraction proce
   - Analysis dashboards
 
 ## Project Structure
+
 ```
 project_root/
 ├── analytics/           # Core analysis modules
@@ -174,6 +175,24 @@ git push -u origin feature/your-feature-name
 ```
 
 4. Create pull request on GitHub
+- Analytics/: Core analysis modules
+- Backend/: Django and FastAPI applications
+- Frontend/: React application
+- docs/: Project documentation
+
+## Setup
+1. Clone the repository
+2. Create virtual environment: python -m venv venv
+3. Activate virtual environment: .\venv\Scripts\Activate
+4. Install dependencies: pip install -r requirements.txt
+5. Set up database: .\setup_database.ps1
+6. Run migrations: cd backend\django_app && python manage.py migrate
+
+## Development
+- Django server: python manage.py runserver
+- FastAPI server: uvicorn main:app --reload
+- Frontend: cd frontend && npm start
+
 
 ## Testing
 - Django tests: `python manage.py test`

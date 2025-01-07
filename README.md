@@ -14,8 +14,8 @@ A comprehensive backend system for analyzing and comparing three pea protein ext
 - React: Frontend visualization
 
 ## Project Structure
-- nalytics/: Core analysis modules
-- ackend/: Django and FastAPI applications
+- Analytics/: Core analysis modules
+- Backend/: Django and FastAPI applications
 - rontend/: React application
 - docs/: Project documentation
 

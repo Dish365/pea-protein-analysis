@@ -1,0 +1,97 @@
+project_root/
+├── analytics/
+│   ├── protein_analysis/
+│   │   ├── __init__.py
+│   │   ├── recovery.py
+│   │   ├── separation.py
+│   │   ├── particle_size.py
+│   │   └── tests/
+│   ├── economic/
+│   │   ├── __init__.py
+│   │   ├── capex.py
+│   │   ├── opex.py
+│   │   ├── profitability.py
+│   │   └── tests/
+│   ├── environmental/
+│   │   ├── __init__.py
+│   │   ├── lca.py
+│   │   ├── impact_assessment.py
+│   │   ├── eco_efficiency.py
+│   │   └── tests/
+│   └── simulation/
+│       ├── __init__.py
+│       ├── monte_carlo.py
+│       ├── sensitivity.py
+│       └── tests/
+├── backend/
+│   ├── django_app/
+│   │   ├── settings/
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py
+│   │   │   ├── development.py
+│   │   │   └── production.py
+│   │   ├── process_data/
+│   │   │   ├── models/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── baseline.py
+│   │   │   │   ├── rf_treatment.py
+│   │   │   │   └── ir_treatment.py
+│   │   │   ├── views/
+│   │   │   ├── serializers/
+│   │   │   └── tests/
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── models.py
+│   │   │   ├── views.py
+│   │   │   └── serializers.py
+│   │   └── manage.py
+│   ├── fastapi_app/
+│   │   ├── main.py
+│   │   ├── process_analysis/
+│   │   │   ├── protein_endpoints.py
+│   │   │   ├── economic_endpoints.py
+│   │   │   └── environmental_endpoints.py
+│   │   ├── services/
+│   │   │   ├── calculations.py
+│   │   │   └── helpers.py
+│   │   ├── models/
+│   │   │   ├── process.py
+│   │   │   ├── economics.py
+│   │   │   └── environment.py
+│   │   └── tests/
+│   └── rust_modules/
+│       ├── src/
+│       │   ├── lib.rs
+│       │   ├── protein_analysis/
+│       │   │   ├── mod.rs
+│       │   │   └── particle_size.rs
+│       │   ├── monte_carlo/
+│       │   │   ├── mod.rs
+│       │   │   └── simulation.rs
+│       │   └── matrix_ops/
+│       │       ├── mod.rs
+│       │       └── operations.rs
+│       ├── tests/
+│       └── Cargo.toml
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── analysis/
+│   │   │   │   ├── ProteinAnalysis.tsx
+│   │   │   │   ├── EconomicAnalysis.tsx
+│   │   │   │   └── EnvironmentalAnalysis.tsx
+│   │   │   └── visualization/
+│   │   └── pages/
+│   ├── public/
+│   └── package.json
+├── database/
+│   ├── migrations/
+│   ├── scripts/
+│   │   └── init_db.sql
+│   └── Dockerfile
+├── tests/
+│   ├── integration/
+│   └── unit/
+├── docs/
+├── docker-compose.yml
+└── README.md

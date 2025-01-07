@@ -1,25 +1,92 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feature/*, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
-  test:
+  code-quality:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+    
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: '3.9'
+    
+    - name: Install quality tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black flake8 mypy pytest
+    
+    - name: Check code formatting
+      run: black --check .
+    
+    - name: Lint with flake8
+      run: flake8 . --count --max-line-length=100 --statistics
+
+  test:
+    needs: code-quality
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_DB: pea_protein_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ''
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.9'
+    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    - name: Run tests
+    
+    - name: Run Django tests
       run: |
         cd backend/django_app
-        python manage.py test 
+        python manage.py test
+      env:
+        DATABASE_URL: postgresql://postgres:@localhost:5432/pea_protein_db
+    
+    - name: Run FastAPI tests
+      run: |
+        cd backend/fastapi_app
+        pytest
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        body: |
+          Changes in this Release:
+          ${{ github.event.head_commit.message }}
+        draft: false
+        prerelease: false 

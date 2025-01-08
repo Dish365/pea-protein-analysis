@@ -72,3 +72,5 @@ Cargo.lock
 htmlcov/
 .tox/
 .pytest_cache/
+
+.codegpt

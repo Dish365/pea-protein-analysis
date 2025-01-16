@@ -2,6 +2,7 @@ class MonteCarloSimulation:
     """
     Performs Monte Carlo simulations for process analysis.
     """
+
     def __init__(self):
         pass
 

@@ -10,4 +10,4 @@ setup(
         "scipy",
         "pandas",
     ],
-) 
+)

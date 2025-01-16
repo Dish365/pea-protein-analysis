@@ -4,10 +4,11 @@ import random
 
 logger = logging.getLogger(__name__)
 
+
 class LoadBalancer:
     def __init__(self, servers: List[str]):
         self.servers = servers
-        
+
     def distribute_task(self, task: Callable[..., Any], *args, **kwargs) -> Any:
         """
         Distribute a task to a server
@@ -21,9 +22,9 @@ class LoadBalancer:
         except Exception as e:
             logger.error(f"Task {task.__name__} failed on server: {server}: {str(e)}")
             raise
-        
+
     def _select_server(self) -> str:
         """
         Select a server using a simple round-robin or random strategy
         """
-        return random.choice(self.servers) 
+        return random.choice(self.servers)

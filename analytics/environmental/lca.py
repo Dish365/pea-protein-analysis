@@ -2,6 +2,7 @@ class LifeCycleAssessment:
     """
     Performs life cycle assessment for protein extraction processes.
     """
+
     def __init__(self):
         pass
 

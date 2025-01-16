@@ -2,6 +2,7 @@ class SensitivityAnalysis:
     """
     Performs sensitivity analysis for process parameters.
     """
+
     def __init__(self):
         pass
 

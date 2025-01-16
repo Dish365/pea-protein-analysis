@@ -2,6 +2,7 @@ class EcoEfficiencyAnalysis:
     """
     Analyzes eco-efficiency metrics for protein extraction processes.
     """
+
     def __init__(self):
         pass
 

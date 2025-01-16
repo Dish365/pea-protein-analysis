@@ -6,7 +6,8 @@ from .process_analysis import (
     pipeline_endpoints,
     protein_endpoints,
     economic_endpoints,
-    environmental_endpoints
+    environmental_endpoints,
+    efficiency_endpoints
 )
 from .services import streaming, ws_manager  # Import shared ws_manager instance
 
@@ -40,6 +41,7 @@ app.include_router(pipeline_endpoints.router)
 app.include_router(protein_endpoints.router)
 app.include_router(economic_endpoints.router)
 app.include_router(environmental_endpoints.router)
+app.include_router(efficiency_endpoints.router)
 app.include_router(streaming.router)  # Add streaming router
 
 @app.on_event("startup")
@@ -56,6 +58,7 @@ async def startup_event():
         
         logger.info("Analysis pipeline initialized")
         logger.info("Real-time streaming services initialized")
+        logger.info("Environmental and efficiency endpoints initialized")
         
     except Exception as e:
         logger.error(f"Startup error: {str(e)}")
@@ -88,7 +91,9 @@ async def health_check():
         "websocket_connections": len(ws_manager.active_connections),
         "components": {
             "pipeline": "ok",
-            "streaming": "ok"
+            "streaming": "ok",
+            "environmental": "ok",
+            "efficiency": "ok"
         }
     }
 

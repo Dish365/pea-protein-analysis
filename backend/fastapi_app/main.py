@@ -15,6 +15,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
+
+    title="Pea Protein Process Analysis API",
+    description="API for analyzing pea protein extraction processes",
+    version="1.0.0",
+
     title="Process Analysis API",
     description="API for pea protein extraction process analysis",
     version="1.0.0"
@@ -69,6 +74,12 @@ async def shutdown_event():
     except Exception as e:
         logger.error(f"Shutdown error: {str(e)}")
 
+
+
+@app.get("/")
+async def root():
+    return {"message": "Pea Protein Process Analysis API"}
+
 @app.get("/health")
 async def health_check():
     """API health check endpoint"""
@@ -80,3 +91,4 @@ async def health_check():
             "streaming": "ok"
         }
     }
+

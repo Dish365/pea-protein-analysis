@@ -2,6 +2,7 @@ class EnvironmentalImpactAssessment:
     """
     Assesses environmental impacts of protein extraction processes.
     """
+
     def __init__(self):
         pass
 

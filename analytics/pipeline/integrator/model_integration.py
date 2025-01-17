@@ -2,8 +2,18 @@ from typing import Dict, Any, Type, Optional
 from django.db import models
 from django.core.exceptions import ValidationError
 from datetime import datetime
+import sys
+from pathlib import Path
 
-# Change these imports:
+# Add backend/django_app to Python path
+django_app_path = Path(__file__).resolve().parent.parent.parent.parent / "backend" / "django_app"
+sys.path.append(str(django_app_path))
+
+# Import and run Django setup
+from core.setup import setup_django_for_fastapi
+setup_django_for_fastapi()
+
+# Now import Django models
 from backend.django_app.process_data.models.baseline import BaselineProcess
 from backend.django_app.process_data.models.rf_treatment import RFTreatmentProcess
 from backend.django_app.process_data.models.ir_treatment import IRTreatmentProcess

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 
-from analytics.economic.capex import CapitalExpenditureAnalysis
+from analytics.economic.capex_analyzer import CapitalExpenditureAnalysis
 
 router = APIRouter()
 

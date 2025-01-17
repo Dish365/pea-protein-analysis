@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 
-from analytics.economic.opex import OperationalExpenditureAnalysis
+from analytics.economic.opex_analyzer import OperationalExpenditureAnalysis
 
 router = APIRouter()
 

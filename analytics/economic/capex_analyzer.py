@@ -1,7 +1,7 @@
 from typing import Dict, List
-from .capex.equipment_costs import calculate_equipment_costs
-from .capex.installation import calculate_installation_costs
-from .capex.indirect_costs import calculate_indirect_costs
+from analytics.economic.capex.equipment_costs import calculate_equipment_costs
+from analytics.economic.capex.installation import calculate_installation_costs
+from analytics.economic.capex.indirect_costs import calculate_indirect_costs
 
 
 class CapitalExpenditureAnalysis:

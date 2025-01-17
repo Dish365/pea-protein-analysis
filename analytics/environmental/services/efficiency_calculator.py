@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
-from ..eco_efficiency.indicators import EconomicIndicators
-from ..eco_efficiency.quality import QualityIndicators
-from ..eco_efficiency.relative import RelativeEfficiencyCalculator
+from analytics.environmental.eco_efficiency.indicators import EconomicIndicators
+from analytics.environmental.eco_efficiency.quality import QualityIndicators
+from analytics.environmental.eco_efficiency.relative import RelativeEfficiencyCalculator
 
 class EfficiencyCalculator:
     """Service for calculating eco-efficiency metrics"""

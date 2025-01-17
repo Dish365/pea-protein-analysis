@@ -2,28 +2,25 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-from .process_analysis import (
+from process_analysis import (
     pipeline_endpoints,
     protein_endpoints,
     economic_endpoints,
     environmental_endpoints,
-    efficiency_endpoints
+    efficiency_endpoints,
+    impact_endpoints,
+    allocation_endpoints
 )
-from .services import streaming, ws_manager  # Import shared ws_manager instance
+from services import streaming, ws_manager  # Import shared ws_manager instance
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-
     title="Pea Protein Process Analysis API",
     description="API for analyzing pea protein extraction processes",
     version="1.0.0",
-
-    title="Process Analysis API",
-    description="API for pea protein extraction process analysis",
-    version="1.0.0"
 )
 
 # Configure CORS with WebSocket support
@@ -43,6 +40,8 @@ app.include_router(economic_endpoints.router)
 app.include_router(environmental_endpoints.router)
 app.include_router(efficiency_endpoints.router)
 app.include_router(streaming.router)  # Add streaming router
+app.include_router(impact_endpoints.router)
+app.include_router(allocation_endpoints.router)
 
 @app.on_event("startup")
 async def startup_event():
@@ -59,6 +58,9 @@ async def startup_event():
         logger.info("Analysis pipeline initialized")
         logger.info("Real-time streaming services initialized")
         logger.info("Environmental and efficiency endpoints initialized")
+        logger.info("Environmental impact endpoints initialized")
+        logger.info("Environmental allocation endpoints initialized")
+        logger.info("Eco-efficiency endpoints initialized")
         
     except Exception as e:
         logger.error(f"Startup error: {str(e)}")

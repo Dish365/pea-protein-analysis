@@ -3,6 +3,7 @@ import asyncio
 import logging
 from datetime import datetime
 from functools import wraps
+from django.core.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -17,18 +18,25 @@ class AnalysisError(Exception):
         self.timestamp = datetime.utcnow()
 
 
-class ValidationError(AnalysisError):
-    """Error for input validation failures"""
+class TechnicalAnalysisError(AnalysisError):
+    """Error for technical analysis failures"""
 
     def __init__(self, message: str, details: Optional[Dict] = None):
-        super().__init__(message, "VALIDATION_ERROR", details)
+        super().__init__(message, "TECHNICAL_ERROR", details)
 
 
-class ComputationError(AnalysisError):
-    """Error for computation failures"""
+class EconomicAnalysisError(AnalysisError):
+    """Error for economic analysis failures"""
 
     def __init__(self, message: str, details: Optional[Dict] = None):
-        super().__init__(message, "COMPUTATION_ERROR", details)
+        super().__init__(message, "ECONOMIC_ERROR", details)
+
+
+class EnvironmentalAnalysisError(AnalysisError):
+    """Error for environmental analysis failures"""
+
+    def __init__(self, message: str, details: Optional[Dict] = None):
+        super().__init__(message, "ENVIRONMENTAL_ERROR", details)
 
 
 class IntegrationError(AnalysisError):
@@ -59,29 +67,29 @@ def handle_error(error: Exception) -> Dict[str, Any]:
     return {"error": error_response}
 
 
-async def retry_operation(
-    operation: Callable,
-    max_retries: int = 3,
-    delay: float = 1.0,
-    backoff_factor: float = 2.0,
-) -> Any:
-    """Retry an operation with exponential backoff"""
-    last_error = None
-    current_delay = delay
+def retry_operation(max_retries: int = 3, delay: float = 1.0):
+    """Enhanced retry decorator with exponential backoff"""
+    def decorator(func):
+        async def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        wait_time = delay * (2 ** attempt)  # Exponential backoff
+                        logger.warning(
+                            f"Attempt {attempt + 1} failed for {func.__name__}, "
+                            f"retrying in {wait_time:.1f}s: {str(e)}"
+                        )
+                        await asyncio.sleep(wait_time)
+            
+            logger.error(f"All {max_retries} attempts failed for {func.__name__}")
+            raise last_exception
 
-    for attempt in range(max_retries):
-        try:
-            return operation()
-        except Exception as e:
-            last_error = e
-            logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
-
-            if attempt < max_retries - 1:
-                await asyncio.sleep(current_delay)
-                current_delay *= backoff_factor
-
-    logger.error(f"Operation failed after {max_retries} attempts")
-    raise last_error
+        return wrapper
+    return decorator
 
 
 def validate_input(required_fields: Dict[str, type]):
@@ -154,3 +162,24 @@ def log_execution_time(logger_name: str = __name__):
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
     return decorator
+
+
+async def track_workflow_errors(workflow_type: str, error: Exception):
+    """Enhanced error tracking with detailed metadata"""
+    error_details = {
+        'workflow_type': workflow_type,
+        'error_type': type(error).__name__,
+        'timestamp': datetime.utcnow().isoformat(),
+        'details': str(error),
+        'stack_trace': getattr(error, '__traceback__', None),
+        'metadata': {
+            'severity': 'high' if isinstance(error, (
+                TechnicalAnalysisError,
+                EconomicAnalysisError,
+                EnvironmentalAnalysisError
+            )) else 'medium'
+        }
+    }
+    
+    logger.error(f"Workflow error: {error_details}")
+    # Add additional error tracking logic here

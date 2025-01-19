@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Response, Header
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from pydantic import BaseModel, Field, field_validator
 import logging
 import math
@@ -10,6 +10,7 @@ from analytics.environmental.impact.gwp import GWPCalculator
 from analytics.environmental.impact.hct import HCTCalculator
 from analytics.environmental.impact.frs import FRSCalculator
 from analytics.environmental.impact.water import WaterConsumptionCalculator
+from .allocation_endpoints import allocate_impacts, AllocationRequest
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -74,6 +75,13 @@ class ProcessData(BaseModel):
             )
         return v
 
+class AllocationReadyResponse(BaseModel):
+    """Response model that's ready for allocation processing"""
+    impacts: Dict[str, float]
+    process_contributions: Dict[str, Dict[str, float]]
+    allocation_ready: bool = True
+    suggested_allocation_method: Optional[str] = None
+
 # Initialize calculators
 impact_calculator = ImpactCalculator()
 logger.info("Initialized ImpactCalculator service")
@@ -90,8 +98,11 @@ def create_json_response(content: Dict) -> Response:
         raise HTTPException(status_code=500, detail="Error serializing response data")
 
 @router.post("/calculate-impacts")
-async def calculate_impacts(data: ProcessData):
-    """Calculate all environmental impacts for the process"""
+async def calculate_impacts(data: ProcessData) -> AllocationReadyResponse:
+    """
+    Calculate all environmental impacts for the process
+    Returns data in a format ready for allocation processing
+    """
     try:
         logger.debug(f"Received impact calculation request: {data.dict()}")
         logger.info("Starting impact calculations...")
@@ -119,13 +130,29 @@ async def calculate_impacts(data: ProcessData):
         process_contributions = impact_calculator.get_process_contributions()
         logger.debug(f"Process contributions: {process_contributions}")
 
+        # Determine suggested allocation method based on process characteristics
+        suggested_method = "hybrid"
+        if data.thermal_ratio > 0.7:  # High thermal processing
+            suggested_method = "physical"
+        elif data.product_kg < 100:  # Small batch processing
+            suggested_method = "economic"
+
         logger.info("Impact calculations completed successfully")
         
-        return create_json_response({
+        response_data = {
             "status": "success",
             "impacts": impacts,
-            "process_contributions": process_contributions
-        })
+            "process_contributions": process_contributions,
+            "allocation_ready": True,
+            "suggested_allocation_method": suggested_method,
+            "metadata": {
+                "total_mass": data.product_kg,
+                "energy_intensity": data.electricity_kwh / data.product_kg if data.product_kg > 0 else 0,
+                "water_intensity": data.water_kg / data.product_kg if data.product_kg > 0 else 0
+            }
+        }
+        
+        return create_json_response(response_data)
             
     except HTTPException:
         raise
@@ -163,5 +190,49 @@ async def get_impact_factors(accept: str = Header(None)):
         raise
     except Exception as e:
         error_msg = f"Error retrieving impact factors: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        raise HTTPException(status_code=500, detail={"message": error_msg, "type": "server_error"})
+
+@router.post("/calculate-and-allocate")
+async def calculate_impacts_and_allocate(
+    data: ProcessData,
+    allocation_request: Optional[Dict[str, Any]] = None
+):
+    """
+    Calculate impacts and optionally perform allocation in one step
+    """
+    try:
+        # First calculate impacts
+        impact_response = await calculate_impacts(data)
+        
+        # If allocation request is provided, proceed with allocation
+        if allocation_request:
+            logger.info("Proceeding with allocation after impact calculation")
+            
+            # Prepare allocation request
+            allocation_data = {
+                "impacts": impact_response["impacts"],
+                "product_values": allocation_request.get("product_values", {}),
+                "mass_flows": allocation_request.get("mass_flows", {}),
+                "method": allocation_request.get("method", impact_response["suggested_allocation_method"]),
+                "hybrid_weights": allocation_request.get("hybrid_weights")
+            }
+            
+            # Forward to allocation endpoint
+            allocation_response = await allocate_impacts(AllocationRequest(**allocation_data))
+            
+            # Combine responses
+            return create_json_response({
+                "status": "success",
+                "impact_results": impact_response,
+                "allocation_results": allocation_response["results"]
+            })
+            
+        return impact_response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = f"Error in combined impact calculation and allocation: {str(e)}"
         logger.error(error_msg, exc_info=True)
         raise HTTPException(status_code=500, detail={"message": error_msg, "type": "server_error"}) 

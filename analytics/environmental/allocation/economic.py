@@ -1,5 +1,4 @@
-from typing import Dict, List, Optional
-import numpy as np
+from typing import Dict
 
 class EconomicAllocator:
     """Economic allocation of environmental impacts based on product value"""

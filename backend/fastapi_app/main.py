@@ -9,7 +9,6 @@ from backend.fastapi_app.process_analysis import (
     profitability_endpoints,
     economic_endpoints,
     pipeline_endpoints,
-    environmental_endpoints,
     efficiency_endpoints,
     impact_endpoints,
     allocation_endpoints,
@@ -115,36 +114,29 @@ api_router.include_router(
     tags=["Pipeline Analysis"]
 )
 
-# Environmental analysis endpoints
-logger.debug("Including Environmental endpoints")
-api_router.include_router(
-    environmental_endpoints.router,
-    prefix="/environmental",
-    tags=["Environmental Analysis"]
-)
-
-# Efficiency analysis endpoints
-logger.debug("Including Efficiency endpoints")
-api_router.include_router(
-    efficiency_endpoints.router,
-    prefix="/efficiency",
-    tags=["Efficiency Analysis"]
-)
 
 # Impact analysis endpoints
 logger.debug("Including Impact endpoints")
 api_router.include_router(
     impact_endpoints.router,
-    prefix="/environmental",
-    tags=["Environmental Impact Analysis"]
+    prefix="/environmental/impact",
+    tags=["Environmental Impact"]
 )
 
 # Allocation analysis endpoints
 logger.debug("Including Allocation endpoints")
 api_router.include_router(
     allocation_endpoints.router,
-    prefix="/allocation",
-    tags=["Allocation Analysis"]
+    prefix="/environmental/allocation",
+    tags=["Environmental Allocation"]
+)
+
+# Efficiency analysis endpoints
+logger.debug("Including Efficiency endpoints")
+api_router.include_router(
+    efficiency_endpoints.router,
+    prefix="/environmental/eco-efficiency",
+    tags=["Eco-efficiency Analysis"]
 )
 
 # Include all routers in the main app

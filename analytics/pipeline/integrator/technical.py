@@ -1,38 +1,25 @@
-from typing import Dict, List, Optional, Any
-import ctypes
+from typing import Dict,  Any
 import httpx
 import asyncio
-from pathlib import Path
-import os
-import sys
 import logging
-from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
-@dataclass
-class RustLibConfig:
-    """Configuration for Rust library functions"""
-    calculate_protein_recovery: Any  # Protein recovery calculation
-    analyze_particle_distribution: Any  # Particle distribution analysis
-    calculate_separation_efficiency: Any  # Separation efficiency calculation
-
 class TechnicalIntegrator:
     """
-    Integrates technical analysis components with FastAPI and Rust.
+    Integrates technical analysis components with FastAPI.
     
     This class coordinates between:
     1. FastAPI endpoints for protein analysis
-    2. Rust modules for optimized calculations
-    3. Python-based analysis components
+    2. Python-based analysis components
     
     The integrator ensures no duplication of logic while maintaining 
-    high performance through Rust for computationally intensive operations.
+    high performance through optimized Python calculations.
     """
     
-    def __init__(self, api_base_url: str = "http://localhost:8001/process/technical"):
+    def __init__(self, api_base_url: str = "http://localhost:8001/api/v1/technical/protein-analysis"):
         """
-        Initialize the technical integrator with API and Rust components.
+        Initialize the technical integrator with API components.
         
         Args:
             api_base_url: Base URL for FastAPI endpoints
@@ -41,92 +28,11 @@ class TechnicalIntegrator:
         self.client = httpx.AsyncClient()
         self.api_base_url = api_base_url
         
-        # Initialize Rust library
-        self.lib = self._load_rust_library()
-        self.rust_config = self._configure_rust_functions()
-        
         logger.info("TechnicalIntegrator initialized successfully")
-
-    def _load_rust_library(self) -> Any:
-        """Load the Rust library based on platform"""
-        try:
-            # Get the path to the Rust library
-            lib_path = Path(__file__).parent.parent.parent.parent / "backend" / "rust_modules" / "target" / "release"
-            
-            # Use correct extension based on platform
-            if sys.platform == "win32":
-                lib_path = lib_path / "protein_analysis.dll"
-            elif sys.platform == "darwin":
-                lib_path = lib_path / "libprotein_analysis.dylib"
-            else:
-                lib_path = lib_path / "libprotein_analysis.so"
-
-            if not lib_path.exists():
-                raise FileNotFoundError(
-                    f"Rust library not found at {lib_path}. "
-                    "Please ensure the library has been built with 'cargo build --release'"
-                )
-
-            lib = ctypes.CDLL(str(lib_path))
-            
-            # Verify required functions exist
-            required_functions = [
-                'calculate_protein_recovery',
-                'analyze_particle_distribution',
-                'calculate_separation_efficiency'
-            ]
-            
-            for func_name in required_functions:
-                if not hasattr(lib, func_name):
-                    raise AttributeError(
-                        f"Required function '{func_name}' not found in Rust library. "
-                        f"Please ensure the library is properly compiled with all required functions."
-                    )
-
-            return lib
-
-        except Exception as e:
-            logger.error(f"Failed to load Rust library: {str(e)}")
-            raise RuntimeError(f"Failed to load Rust library: {str(e)}")
-
-    def _configure_rust_functions(self) -> RustLibConfig:
-        """Configure Rust function signatures and return types"""
-        # Protein recovery calculation
-        self.lib.calculate_protein_recovery.argtypes = [
-            ctypes.c_double,  # protein_yield
-            ctypes.c_double,  # protein_content
-            ctypes.c_double,  # separation_efficiency
-        ]
-        self.lib.calculate_protein_recovery.restype = ctypes.c_double
-
-        # Particle distribution analysis
-        self.lib.analyze_particle_distribution.argtypes = [
-            ctypes.POINTER(ctypes.c_double),  # particles
-            ctypes.c_size_t,  # len
-            ctypes.POINTER(ctypes.c_double),  # d10
-            ctypes.POINTER(ctypes.c_double),  # d50
-            ctypes.POINTER(ctypes.c_double),  # d90
-        ]
-        self.lib.analyze_particle_distribution.restype = None
-
-        # Separation efficiency calculation
-        self.lib.calculate_separation_efficiency.argtypes = [
-            ctypes.c_double,  # input_mass
-            ctypes.c_double,  # output_mass
-            ctypes.c_double,  # input_concentration 
-            ctypes.c_double   # output_concentration
-        ]
-        self.lib.calculate_separation_efficiency.restype = ctypes.c_double
-        
-        return RustLibConfig(
-            calculate_protein_recovery=self.lib.calculate_protein_recovery,
-            analyze_particle_distribution=self.lib.analyze_particle_distribution,
-            calculate_separation_efficiency=self.lib.calculate_separation_efficiency
-        )
 
     async def analyze_technical(self, process_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Orchestrate complete technical analysis using FastAPI endpoints and Rust calculations.
+        Orchestrate complete technical analysis using FastAPI endpoints.
         
         Args:
             process_data: Dictionary containing process parameters and measurements
@@ -210,27 +116,17 @@ class TechnicalIntegrator:
         }
 
     async def analyze_protein_recovery(self, process_data: Dict[str, Any]) -> Dict[str, float]:
-        """Calculate protein recovery using FastAPI endpoint and Rust"""
+        """Calculate protein recovery using FastAPI endpoint"""
         try:
-            # Call FastAPI endpoint
             response = await self.client.post(
-                f"{self.api_base_url}/protein-recovery/",
+                f"{self.api_base_url}/recovery/",
                 json=process_data
             )
             
             if response.status_code != 200:
                 raise RuntimeError(f"Protein recovery API call failed: {response.text}")
                 
-            # Enhance results with Rust calculation
-            api_results = response.json()
-            rust_recovery = self.rust_config.calculate_protein_recovery(
-                ctypes.c_double(api_results.get('protein_yield', 0.0)),
-                ctypes.c_double(process_data.get('initial_protein_content', 0.0)),
-                ctypes.c_double(api_results.get('separation_efficiency', 0.0))
-            )
-            
-            api_results['rust_calculated_recovery'] = rust_recovery
-            return api_results
+            return response.json()
             
         except Exception as e:
             logger.error(f"Protein recovery analysis failed: {str(e)}")
@@ -240,7 +136,7 @@ class TechnicalIntegrator:
         """Calculate separation efficiency using FastAPI endpoint"""
         try:
             response = await self.client.post(
-                f"{self.api_base_url}/separation-efficiency/",
+                f"{self.api_base_url}/separation/",
                 json=process_data
             )
             
@@ -254,9 +150,8 @@ class TechnicalIntegrator:
             raise RuntimeError(f"Separation efficiency analysis failed: {str(e)}")
 
     async def analyze_particle_size(self, process_data: Dict[str, Any]) -> Dict[str, float]:
-        """Analyze particle size distribution using FastAPI endpoint and Rust"""
+        """Analyze particle size distribution using FastAPI endpoint"""
         try:
-            # Call FastAPI endpoint
             response = await self.client.post(
                 f"{self.api_base_url}/particle-size/",
                 json=process_data
@@ -265,38 +160,11 @@ class TechnicalIntegrator:
             if response.status_code != 200:
                 raise RuntimeError(f"Particle size API call failed: {response.text}")
                 
-            # Enhance with Rust calculation
-            api_results = response.json()
-            rust_results = self._calculate_particle_distribution(process_data['particle_sizes'])
-            api_results.update(rust_results)
-            
-            return api_results
+            return response.json()
             
         except Exception as e:
             logger.error(f"Particle size analysis failed: {str(e)}")
             raise RuntimeError(f"Particle size analysis failed: {str(e)}")
-
-    def _calculate_particle_distribution(self, particles: List[float]) -> Dict[str, float]:
-        """Calculate particle distribution using Rust"""
-        arr = (ctypes.c_double * len(particles))(*particles)
-        d10 = ctypes.c_double()
-        d50 = ctypes.c_double()
-        d90 = ctypes.c_double()
-
-        self.rust_config.analyze_particle_distribution(
-            arr, 
-            len(particles),
-            ctypes.byref(d10),
-            ctypes.byref(d50),
-            ctypes.byref(d90)
-        )
-
-        return {
-            "rust_d10": d10.value,
-            "rust_d50": d50.value,
-            "rust_d90": d90.value,
-            "rust_distribution_width": (d90.value - d10.value) / d50.value
-        }
 
     def _compile_analysis_results(
         self,

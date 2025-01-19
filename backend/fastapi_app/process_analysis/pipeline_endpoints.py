@@ -1,6 +1,6 @@
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime, timedelta
 import logging
 from enum import Enum
@@ -47,12 +47,16 @@ class AnalysisRequest(BaseModel):
     priority: Optional[str] = Field("MEDIUM", description="Task priority: LOW, MEDIUM, HIGH")
     repeat_interval: Optional[int] = Field(None, description="Repeat interval in minutes")
 
-    @validator('workflow_type')
-    def validate_workflow_type(cls, v):
-        try:
-            return WorkflowType.from_str(v).value
-        except ValueError as e:
-            raise ValueError(f"Invalid workflow type: {str(e)}")
+    @field_validator('workflow_type')
+    @classmethod
+    def validate_workflow_type(cls, v: str) -> str:
+        valid_types = {'baseline', 'rf_treatment', 'ir_treatment'}
+        if v not in valid_types:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid workflow type. Must be one of: {', '.join(valid_types)}"
+            )
+        return v
 
 @router.post("/analyze")
 @log_execution_time()

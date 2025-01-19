@@ -1,6 +1,7 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+from contextlib import asynccontextmanager
 
 from backend.fastapi_app.process_analysis import (
     capex_endpoints,
@@ -19,7 +20,30 @@ from backend.fastapi_app.process_analysis import (
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(debug=True)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Log all registered routes
+    logger.debug("Registered routes:")
+    routes = []
+    for route in app.routes:
+        routes.append(f"Route: {route.path} [{route.methods}]")
+    for route in sorted(routes):
+        logger.debug(route)
+    
+    # Initialize components
+    logger.info("Analysis pipeline initialized")
+    logger.info("Environmental and efficiency endpoints initialized")
+    logger.info("Environmental impact endpoints initialized")
+    logger.info("Environmental allocation endpoints initialized")
+    logger.info("Eco-efficiency endpoints initialized")
+    logger.info("Workflow components initialized successfully")
+    
+    yield  # Application runs here
+    
+    # Shutdown: Clean up resources if needed
+    logger.info("Shutting down application")
+
+app = FastAPI(debug=True, lifespan=lifespan)
 
 # Configure CORS
 app.add_middleware(
@@ -32,6 +56,20 @@ app.add_middleware(
 
 # Create main API router
 api_router = APIRouter(prefix="/api/v1")
+
+# Technical analysis router
+logger.debug("Configuring technical analysis endpoints")
+technical_router = APIRouter()
+
+# Include protein analysis endpoints
+logger.debug("Including Protein Analysis endpoints")
+technical_router.include_router(
+    protein_endpoints.router,
+    tags=["Protein Analysis"]
+)
+
+# Include technical router in main API router
+api_router.include_router(technical_router, prefix="/technical")
 
 # Economic analysis endpoints
 logger.debug("Configuring economic analysis endpoints")
@@ -97,8 +135,8 @@ api_router.include_router(
 logger.debug("Including Impact endpoints")
 api_router.include_router(
     impact_endpoints.router,
-    prefix="/impact",
-    tags=["Impact Analysis"]
+    prefix="/environmental",
+    tags=["Environmental Impact Analysis"]
 )
 
 # Allocation analysis endpoints
@@ -109,29 +147,9 @@ api_router.include_router(
     tags=["Allocation Analysis"]
 )
 
-# Protein analysis endpoints
-logger.debug("Including Protein endpoints")
-protein_router = APIRouter()
-protein_router.include_router(
-    protein_endpoints.router,
-    prefix="/process/technical",
-    tags=["Protein Analysis"]
-)
-api_router.include_router(protein_router, prefix="/protein")
-
 # Include all routers in the main app
 logger.debug("Including main API router in FastAPI app")
 app.include_router(api_router)
-
-# Log all registered routes for debugging
-@app.on_event("startup")
-async def log_routes():
-    logger.debug("Registered routes:")
-    routes = []
-    for route in app.routes:
-        routes.append(f"Route: {route.path} [{route.methods}]")
-    for route in sorted(routes):
-        logger.debug(route)
 
 @app.get("/")
 async def root():
@@ -147,12 +165,4 @@ async def health_check():
             "services": "operational"
         }
     }
-
-# Initialize components
-logger.info("Analysis pipeline initialized")
-logger.info("Environmental and efficiency endpoints initialized")
-logger.info("Environmental impact endpoints initialized")
-logger.info("Environmental allocation endpoints initialized")
-logger.info("Eco-efficiency endpoints initialized")
-logger.info("Workflow components initialized successfully")
 

@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Dict, List, Optional
 from scipy import stats
+from backend.fastapi_app.process_analysis.services.rust_handler import RustHandler
 
 
 class ParticleSizeAnalyzer:
@@ -40,6 +41,9 @@ class ParticleSizeAnalyzer:
        - d is particle diameter
     """
 
+    def __init__(self):
+        self.rust_handler = RustHandler()
+
     def analyze_distribution(
         self, particle_sizes: List[float], weights: Optional[List[float]] = None
     ) -> Dict[str, float]:
@@ -66,6 +70,9 @@ class ParticleSizeAnalyzer:
 
         4. Weighted Variance:
            σ²w = Σw'ᵢ(xᵢ - μw)²
+           
+        Uses Rust for computationally intensive calculations (percentiles and weighted statistics).
+        Python handles data preparation and post-processing.
 
         Args:
             particle_sizes: List of particle sizes in μm
@@ -87,59 +94,26 @@ class ParticleSizeAnalyzer:
             # Normalize weights to sum to 1
             weights = np.array(weights) / np.sum(weights)
 
-        particle_sizes = np.array(particle_sizes)
+        # Use Rust for computationally intensive calculations
+        rust_results = self.rust_handler.analyze_particle_distribution(
+            particle_sizes=particle_sizes,
+            weights=weights
+        )
 
-        # Sort sizes and weights together
-        sort_idx = np.argsort(particle_sizes)
-        sorted_sizes = particle_sizes[sort_idx]
-        sorted_weights = weights[sort_idx]
-
-        # Calculate cumulative distribution
-        cumulative = np.cumsum(sorted_weights)
-
-        # Calculate percentiles using linear interpolation
-        def get_percentile(p):
-            """
-            Calculate weighted percentile using linear interpolation.
-
-            Mathematical Formula:
-            Dp = x₁ + (x₂ - x₁)(p - F₁)/(F₂ - F₁)
-            """
-            idx = np.searchsorted(cumulative, p)
-            if idx == 0:
-                return sorted_sizes[0]
-            if idx == len(cumulative):
-                return sorted_sizes[-1]
-            # Linear interpolation
-            x0, x1 = sorted_sizes[idx - 1], sorted_sizes[idx]
-            y0, y1 = cumulative[idx - 1], cumulative[idx]
-            return x0 + (x1 - x0) * (p - y0) / (y1 - y0)
-
-        # Calculate D10, D50, D90
-        d10 = get_percentile(0.1)
-        d50 = get_percentile(0.5)
-        d90 = get_percentile(0.9)
-
-        # Calculate weighted statistics
-        weighted_mean = np.sum(particle_sizes * weights)  # μw = Σ(xᵢw'ᵢ)
-        weighted_var = np.sum(weights * (particle_sizes - weighted_mean) ** 2)  # σ²w
-        weighted_std = np.sqrt(weighted_var)
-
-        # Calculate span: (D90 - D10)/D50
-        span = (d90 - d10) / d50 if d50 > 0 else float("inf")
+        # Calculate span using Rust results
+        span = (rust_results["D90"] - rust_results["D10"]) / rust_results["D50"] if rust_results["D50"] > 0 else float("inf")
+        
+        # Calculate CV using Rust results
+        cv = (rust_results["std_dev"] / rust_results["mean"] * 100) if rust_results["mean"] > 0 else float("inf")
 
         return {
-            "D10": d10,
-            "D50": d50,
-            "D90": d90,
+            "D10": rust_results["D10"],
+            "D50": rust_results["D50"],
+            "D90": rust_results["D90"],
             "span": span,
-            "mean": weighted_mean,
-            "std_dev": weighted_std,
-            "cv": (
-                (weighted_std / weighted_mean) * 100
-                if weighted_mean > 0
-                else float("inf")
-            ),
+            "mean": rust_results["mean"],
+            "std_dev": rust_results["std_dev"],
+            "cv": cv
         }
 
     def evaluate_size_quality(

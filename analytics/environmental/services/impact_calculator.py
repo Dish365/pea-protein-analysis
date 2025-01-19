@@ -21,8 +21,20 @@ class ImpactCalculator:
                                 product_kg: float,
                                 equipment_kg: float,
                                 cooling_kwh: float,
-                                waste_kg: float) -> Dict[str, float]:
-        """Calculate all environmental impacts for the process"""
+                                waste_kg: float,
+                                thermal_ratio: float = 0.3) -> Dict[str, float]:
+        """Calculate all environmental impacts for the process
+        
+        Args:
+            electricity_kwh: Electricity consumption in kWh
+            water_kg: Water consumption in kg
+            transport_ton_km: Transport in ton-km
+            product_kg: Product mass in kg
+            equipment_kg: Equipment mass in kg
+            cooling_kwh: Cooling energy in kWh
+            waste_kg: Waste mass in kg
+            thermal_ratio: Ratio of product going through thermal treatment (default: 0.3)
+        """
         
         # Calculate GWP
         gwp = self.gwp_calculator.calculate_total_impact(
@@ -41,8 +53,8 @@ class ImpactCalculator:
         # Calculate FRS
         frs = self.frs_calculator.calculate_total_scarcity(
             electricity_kwh=electricity_kwh,
-            thermal_product_kg=product_kg * 0.3,  # Assuming 30% thermal treatment
-            mechanical_product_kg=product_kg * 0.7  # Assuming 70% mechanical
+            thermal_product_kg=product_kg * thermal_ratio,
+            mechanical_product_kg=product_kg * (1 - thermal_ratio)
         )
         
         # Calculate Water Consumption

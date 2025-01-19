@@ -115,4 +115,55 @@ class RustHandler:
             
         except Exception as e:
             logger.error(f"Error in Monte Carlo simulation: {str(e)}", exc_info=True)
-            raise RuntimeError(f"Monte Carlo simulation failed: {str(e)}") 
+            raise RuntimeError(f"Monte Carlo simulation failed: {str(e)}")
+
+    def analyze_particle_distribution(
+        self,
+        particle_sizes: List[float],
+        weights: List[float]
+    ) -> Dict[str, float]:
+        """
+        Analyze particle size distribution using Rust implementation
+        
+        Args:
+            particle_sizes: List of particle sizes
+            weights: List of weights for each size
+            
+        Returns:
+            Dictionary containing distribution metrics
+        """
+        try:
+            # Convert lists to C arrays
+            size_array = (ctypes.c_double * len(particle_sizes))(*particle_sizes)
+            weight_array = (ctypes.c_double * len(weights))(*weights)
+            
+            # Initialize result variables
+            d10 = ctypes.c_double()
+            d50 = ctypes.c_double()
+            d90 = ctypes.c_double()
+            mean = ctypes.c_double()
+            std_dev = ctypes.c_double()
+            
+            # Call Rust function
+            self.lib.analyze_particle_distribution(
+                size_array,
+                weight_array,
+                len(particle_sizes),
+                ctypes.byref(d10),
+                ctypes.byref(d50),
+                ctypes.byref(d90),
+                ctypes.byref(mean),
+                ctypes.byref(std_dev)
+            )
+            
+            return {
+                "D10": d10.value,
+                "D50": d50.value,
+                "D90": d90.value,
+                "mean": mean.value,
+                "std_dev": std_dev.value
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in particle size analysis: {str(e)}", exc_info=True)
+            raise RuntimeError(f"Particle size analysis failed: {str(e)}") 

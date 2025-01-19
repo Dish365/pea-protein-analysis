@@ -1,13 +1,25 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import httpx
+from datetime import datetime
 
 class EconomicIntegrator:
     """Integrates economic analysis components through FastAPI endpoints"""
     
-    def __init__(self):
+    def __init__(self, base_url: str = "http://localhost:8001"):
         # Initialize FastAPI client
         self.client = httpx.AsyncClient()
-        self.base_url = "http://localhost:8001"
+        self.base_url = base_url
+
+    async def __aenter__(self):
+        return self
+        
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
+        
+    async def close(self):
+        """Close the HTTP client"""
+        if self.client:
+            await self.client.aclose()
 
     async def analyze_economics(self, process_data: Dict[str, Any]) -> Dict[str, Any]:
         """Orchestrate complete economic analysis through FastAPI endpoints"""
@@ -35,11 +47,19 @@ class EconomicIntegrator:
                 'cash_flows': profitability_results.get('cash_flows', [])
             })
             
+            # Get sensitivity analysis
+            sensitivity_results = await self.analyze_sensitivity(process_data)
+            
+            # Get cost tracking data
+            cost_tracking = await self.get_cost_tracking()
+            
             return {
                 'capex_analysis': capex_results,
                 'opex_analysis': opex_results,
                 'profitability_analysis': profitability_results,
-                'economic_analysis': economic_results
+                'economic_analysis': economic_results,
+                'sensitivity_analysis': sensitivity_results,
+                'cost_tracking': cost_tracking
             }
             
         except Exception as e:
@@ -124,8 +144,10 @@ class EconomicIntegrator:
             if response.status_code != 200:
                 raise RuntimeError(f"Profitability API call failed: {response.text}")
             
+            result = response.json()
             return {
-                **response.json()['metrics'],
+                'metrics': result['metrics'],
+                'monte_carlo': result['monte_carlo'],
                 'cash_flows': cash_flows
             }
             
@@ -137,17 +159,18 @@ class EconomicIntegrator:
         try:
             # Prepare CAPEX and OPEX data
             capex_data = {
+                'total_capex': analysis_data['capex'].get('total_capex', 0),
                 'equipment_cost': analysis_data['capex'].get('equipment_cost', 0),
                 'installation_cost': analysis_data['capex'].get('installation_cost', 0),
                 'indirect_cost': analysis_data['capex'].get('indirect_cost', 0)
             }
             
             opex_data = {
+                'total_opex': analysis_data['opex'].get('total_opex', 0),
                 'utilities_cost': analysis_data['opex'].get('utilities_cost', 0),
                 'materials_cost': analysis_data['opex'].get('materials_cost', 0),
                 'labor_cost': analysis_data['opex'].get('labor_cost', 0),
-                'maintenance_cost': analysis_data['opex'].get('maintenance_cost', 0),
-                'total_opex': analysis_data['opex'].get('total_opex', 0)
+                'maintenance_cost': analysis_data['opex'].get('maintenance_cost', 0)
             }
             
             response = await self.client.post(
@@ -188,3 +211,47 @@ class EconomicIntegrator:
                 cash_flows.append(annual_cash_flow)
                 
         return cash_flows
+
+    async def analyze_sensitivity(self, process_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform sensitivity analysis using FastAPI endpoint"""
+        try:
+            response = await self.client.post(
+                f"{self.base_url}/api/v1/economic/profitability/sensitivity",
+                json={
+                    'base_cash_flows': process_data.get('cash_flows', []),
+                    'discount_rate': process_data.get('discount_rate', 0.1),
+                    'production_volume': process_data.get('production_volume', 0),
+                    'sensitivity_range': process_data.get('sensitivity_range', 0.2),
+                    'steps': process_data.get('steps', 10)
+                }
+            )
+            
+            if response.status_code != 200:
+                raise RuntimeError(f"Sensitivity analysis API call failed: {response.text}")
+                
+            return response.json()
+            
+        except Exception as e:
+            raise RuntimeError(f"Sensitivity analysis failed: {str(e)}")
+
+    async def get_cost_tracking(self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> Dict[str, Any]:
+        """Get cost tracking data using FastAPI endpoint"""
+        try:
+            params = {}
+            if start_date:
+                params['start_date'] = start_date.isoformat()
+            if end_date:
+                params['end_date'] = end_date.isoformat()
+                
+            response = await self.client.get(
+                f"{self.base_url}/api/v1/economic/cost-tracking",
+                params=params
+            )
+            
+            if response.status_code != 200:
+                raise RuntimeError(f"Cost tracking API call failed: {response.text}")
+                
+            return response.json()
+            
+        except Exception as e:
+            raise RuntimeError(f"Cost tracking retrieval failed: {str(e)}")

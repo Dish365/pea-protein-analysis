@@ -204,6 +204,7 @@ async def calculate_impacts_and_allocate(
     try:
         # First calculate impacts
         impact_response = await calculate_impacts(data)
+        impact_data = json.loads(impact_response.body)
         
         # If allocation request is provided, proceed with allocation
         if allocation_request:
@@ -211,10 +212,10 @@ async def calculate_impacts_and_allocate(
             
             # Prepare allocation request
             allocation_data = {
-                "impacts": impact_response["impacts"],
+                "impacts": impact_data["impacts"],
                 "product_values": allocation_request.get("product_values", {}),
                 "mass_flows": allocation_request.get("mass_flows", {}),
-                "method": allocation_request.get("method", impact_response["suggested_allocation_method"]),
+                "method": allocation_request.get("method", impact_data["suggested_allocation_method"]),
                 "hybrid_weights": allocation_request.get("hybrid_weights")
             }
             
@@ -224,7 +225,7 @@ async def calculate_impacts_and_allocate(
             # Combine responses
             return create_json_response({
                 "status": "success",
-                "impact_results": impact_response,
+                "impact_results": impact_data,
                 "allocation_results": allocation_response["results"]
             })
             

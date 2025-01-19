@@ -114,6 +114,7 @@ api_router.include_router(
     tags=["Pipeline Analysis"]
 )
 
+# Environmental analysis endpoints
 
 # Impact analysis endpoints
 logger.debug("Including Impact endpoints")

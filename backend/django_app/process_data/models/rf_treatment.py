@@ -50,5 +50,6 @@ class RFTreatmentProcess(models.Model):
     )
     
     class Meta:
+        app_label = 'process_data'
         db_table = 'rf_treatment_process'
         ordering = ['-timestamp']

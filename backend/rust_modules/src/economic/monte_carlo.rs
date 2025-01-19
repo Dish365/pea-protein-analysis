@@ -1,4 +1,4 @@
-use rand::distributions::{Distribution, Normal};
+use rand_distr::{Distribution, Normal};
 use rayon::prelude::*;
 
 #[no_mangle]
@@ -22,7 +22,7 @@ pub extern "C" fn run_economic_monte_carlo(
             values.iter().enumerate().map(|(i, &value)| {
                 let variation = normal.sample(&mut rng);
                 value * (1.0 + variation) / (1.1f64.powi(i as i32))
-            }).sum()
+            }).sum::<f64>()
         })
     );
     

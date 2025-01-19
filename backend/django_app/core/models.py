@@ -12,6 +12,7 @@ class Equipment(models.Model):
     processing_capacity = models.FloatField()  # kg/h
 
     class Meta:
+        app_label = 'core'
         verbose_name = "equipment"
         verbose_name_plural = "equipment"
 
@@ -39,6 +40,7 @@ class ProcessStep(models.Model):
     particle_size_d90 = models.FloatField()  # μm
 
     class Meta:
+        app_label = 'core'
         ordering = ["process_type", "order"]
 
     def __str__(self):
@@ -68,6 +70,7 @@ class Analysis(models.Model):
     wc = models.FloatField()  # Water Consumption
 
     class Meta:
+        app_label = 'core'
         verbose_name = "analysis"
         verbose_name_plural = "analyses"
 

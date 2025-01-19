@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 
 from analytics.economic.capex_analyzer import CapitalExpenditureAnalysis
 
-router = APIRouter()
+router = APIRouter(tags=["Capital Expenditure"])
 
 
 class Equipment(BaseModel):
@@ -29,7 +29,7 @@ class CapexAnalysisInput(BaseModel):
     indirect_costs_factor: Optional[float] = 0.15
 
 
-@router.post("/capex/calculate")
+@router.post("/calculate")
 async def calculate_capex(input_data: CapexAnalysisInput):
     """
     Calculate total capital expenditure and its components
@@ -65,8 +65,7 @@ async def calculate_capex(input_data: CapexAnalysisInput):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/capex/factors")
+@router.get("/factors")
 async def get_default_factors():
     """
     Get default installation and indirect cost factors
@@ -78,3 +77,4 @@ async def get_default_factors():
 
 
 # ...existing code...
+

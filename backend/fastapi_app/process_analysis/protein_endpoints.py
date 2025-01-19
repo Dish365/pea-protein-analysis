@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from typing import Dict, List
 
-from ..models.protein_analysis import (
+from backend.fastapi_app.models.protein_analysis import (
     ProteinRecoveryInput,
     SeparationEfficiencyInput,
     ParticleSizeInput,
@@ -11,7 +11,7 @@ from analytics.protein_analysis.recovery import ProteinRecoveryCalculator
 from analytics.protein_analysis.separation import SeparationEfficiencyAnalyzer
 from analytics.protein_analysis.particle_size import ParticleSizeAnalyzer
 
-router = APIRouter(prefix="/process/technical", tags=["protein-analysis"])
+router = APIRouter(tags=["protein-analysis"])
 
 
 @router.post("/protein-recovery/", response_model=Dict[str, float])

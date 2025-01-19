@@ -8,7 +8,7 @@ from analytics.environmental.impact.hct import HCTCalculator
 from analytics.environmental.impact.frs import FRSCalculator
 from analytics.environmental.impact.water import WaterConsumptionCalculator
 
-router = APIRouter(prefix="/impact", tags=["environmental-impact"])
+router = APIRouter(tags=["environmental-impact"])
 
 # Request Models
 class ProcessDataRequest(BaseModel):

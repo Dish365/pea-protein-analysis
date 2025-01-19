@@ -42,22 +42,30 @@ class OperationalExpenditureAnalysis:
         utility_costs = calculate_utility_costs(self.utilities)
 
         # Calculate labor costs
-        labor_costs = calculate_labor_costs(self.labor_data)
+        labor_costs = calculate_labor_costs(
+            hourly_wage=self.labor_data["hourly_wage"],
+            hours_per_week=self.labor_data["hours_per_week"],
+            weeks_per_year=self.labor_data["weeks_per_year"],
+            num_workers=int(self.labor_data["num_workers"])  # Convert back to int for labor calculation
+        )
 
         # Calculate maintenance costs
-        maintenance_costs = calculate_maintenance_costs(self.maintenance_factors)
+        maintenance_costs = calculate_maintenance_costs(
+            equipment_costs=self.maintenance_factors["equipment_cost"],
+            maintenance_factor=self.maintenance_factors["maintenance_factor"]
+        )
 
         # Calculate total OPEX
         total_opex = (
-            raw_material_costs +
-            utility_costs +
+            raw_material_costs["total_cost"] +
+            utility_costs["total_cost"] +
             labor_costs +
             maintenance_costs
         )
 
         return {
-            "raw_material_costs": raw_material_costs,
-            "utility_costs": utility_costs,
+            "raw_material_costs": raw_material_costs["total_cost"],
+            "utility_costs": utility_costs["total_cost"],
             "labor_costs": labor_costs,
             "maintenance_costs": maintenance_costs,
             "total_opex": total_opex,
@@ -70,3 +78,18 @@ class OperationalExpenditureAnalysis:
     def get_utilities_breakdown(self) -> List[Dict[str, float]]:
         """Get detailed breakdown of utility costs"""
         return self.utilities
+
+    def get_labor_breakdown(self) -> Dict[str, float]:
+        """Get detailed breakdown of labor costs"""
+        return {
+            "hourly_wage": self.labor_data["hourly_wage"],
+            "hours_per_week": self.labor_data["hours_per_week"],
+            "weeks_per_year": self.labor_data["weeks_per_year"],
+            "num_workers": self.labor_data["num_workers"],
+            "annual_hours": self.labor_data["hours_per_week"] * self.labor_data["weeks_per_year"],
+            "annual_cost_per_worker": (
+                self.labor_data["hourly_wage"] * 
+                self.labor_data["hours_per_week"] * 
+                self.labor_data["weeks_per_year"]
+            )
+        }

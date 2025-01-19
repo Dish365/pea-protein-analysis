@@ -1,4 +1,4 @@
-use std::ffi::{c_double, c_void};
+use std::ffi::{c_double};
 
 #[no_mangle]
 pub extern "C" fn calculate_protein_recovery(
@@ -16,7 +16,7 @@ pub extern "C" fn analyze_particle_distribution(
     d10: *mut c_double,
     d50: *mut c_double,
     d90: *mut c_double
-) -> c_void {
+) {
     let slice = unsafe { std::slice::from_raw_parts(particles, len) };
     let mut vec = slice.to_vec();
     vec.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -31,4 +31,21 @@ pub extern "C" fn analyze_particle_distribution(
 fn percentile(data: &Vec<f64>, p: f64) -> f64 {
     let idx = (p / 100.0 * (data.len() - 1) as f64).round() as usize;
     data[idx]
+}
+
+#[no_mangle]
+pub extern "C" fn calculate_separation_efficiency(
+    input_mass: c_double,
+    output_mass: c_double,
+    input_concentration: c_double,
+    output_concentration: c_double
+) -> c_double {
+    if input_mass <= 0.0 || input_concentration <= 0.0 {
+        return 0.0;
+    }
+
+    let efficiency = (output_mass * output_concentration) / (input_mass * input_concentration);
+    
+    // Clamp between 0 and 1
+    efficiency.max(0.0).min(1.0)
 } 

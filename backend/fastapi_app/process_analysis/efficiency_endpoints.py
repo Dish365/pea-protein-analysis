@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from analytics.environmental.services.efficiency_calculator import EfficiencyCalculator
 
-router = APIRouter(prefix="/efficiency", tags=["environmental-efficiency"])
+router = APIRouter(tags=["environmental-efficiency"])
 
 class EfficiencyRequest(BaseModel):
     economic_data: Dict[str, float]

@@ -38,8 +38,8 @@ INSTALLED_APPS = [
     "django_celery_results",
     "rest_framework_simplejwt",
     # Local apps
-    "core",
-    "process_data",
+    "core.apps.CoreConfig",
+    "process_data.apps.ProcessDataConfig",
     "users.apps.UsersConfig",
 ]
 
@@ -54,7 +54,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "backend.django_app.core.urls"
+ROOT_URLCONF = "core.urls"
 
 TEMPLATES = [
     {

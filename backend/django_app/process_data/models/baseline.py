@@ -51,5 +51,6 @@ class BaselineProcess(models.Model):
     )
     
     class Meta:
+        app_label = 'process_data'
         db_table = 'baseline_process'
         ordering = ['-timestamp']

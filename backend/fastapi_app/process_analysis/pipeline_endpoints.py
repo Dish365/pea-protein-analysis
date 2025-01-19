@@ -1,26 +1,31 @@
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from datetime import datetime, timedelta
 import logging
 from enum import Enum
 
-from analytics.pipeline.orchestrator.workflow import AnalysisWorkflow
+from analytics.pipeline.orchestrator.workflow import (
+    AnalysisWorkflow, 
+    WorkflowType,
+    WorkflowOrchestrator
+)
 from analytics.pipeline.orchestrator.error_handling import (
     AnalysisError,
     handle_error,
-    log_execution_time
+    log_execution_time,
+    track_workflow_errors
 )
 from analytics.simulation.pipeline.scheduling import AnalysisScheduler, SchedulePriority
 from analytics.simulation.pipeline.monitoring import PipelineMonitor, MetricType
 
-router = APIRouter(prefix="/pipeline", tags=["Pipeline Management"])
+router = APIRouter(tags=["Pipeline Management"])
 logger = logging.getLogger(__name__)
 
 # Initialize components
 scheduler = AnalysisScheduler()
 monitor = PipelineMonitor()
-workflow = AnalysisWorkflow()
+orchestrator = WorkflowOrchestrator()
 
 class AnalysisTypeEnum(str, Enum):
     TECHNICAL = "technical"
@@ -28,80 +33,67 @@ class AnalysisTypeEnum(str, Enum):
     ENVIRONMENTAL = "environmental"
     ECO_EFFICIENCY = "eco_efficiency"
 
-# Enhanced Pydantic models
 class AnalysisRequest(BaseModel):
+    """Analysis request model with enhanced validation"""
+    workflow_type: str = Field(
+        ..., 
+        description="Type of workflow",
+        examples=WorkflowType.values()
+    )
+    process_id: str = Field(..., description="Unique process identifier")
     analysis_type: AnalysisTypeEnum
     input_data: Dict[str, Any]
     schedule_time: Optional[datetime] = Field(None, description="Schedule time for delayed execution")
     priority: Optional[str] = Field("MEDIUM", description="Task priority: LOW, MEDIUM, HIGH")
     repeat_interval: Optional[int] = Field(None, description="Repeat interval in minutes")
 
-class MonitoringTimeRange(BaseModel):
-    start_time: Optional[datetime] = Field(None, description="Start time for monitoring data")
-    end_time: Optional[datetime] = Field(None, description="End time for monitoring data")
+    @validator('workflow_type')
+    def validate_workflow_type(cls, v):
+        try:
+            return WorkflowType.from_str(v).value
+        except ValueError as e:
+            raise ValueError(f"Invalid workflow type: {str(e)}")
 
 @router.post("/analyze")
 @log_execution_time()
-async def run_analysis(request: AnalysisRequest, background_tasks: BackgroundTasks):
-    """Submit an analysis task for execution"""
+async def analyze_process(request: AnalysisRequest, background_tasks: BackgroundTasks):
+    """Submit a process analysis request"""
     try:
-        # Validate priority if provided
+        # Schedule task if needed
         if request.schedule_time:
-            try:
-                priority = SchedulePriority[request.priority.upper()]
-            except KeyError:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid priority. Must be one of: {[p.name for p in SchedulePriority]}"
-                )
-            
-            # Schedule the task
-            repeat_interval = (
-                timedelta(minutes=request.repeat_interval)
-                if request.repeat_interval
-                else None
-            )
-            
-            task_id = await scheduler.schedule_analysis(
-                analysis_type=request.analysis_type.value,
-                input_data=request.input_data,
+            task_id = scheduler.schedule_task(
+                task_data=request.dict(),
                 schedule_time=request.schedule_time,
-                priority=priority,
-                repeat_interval=repeat_interval
+                priority=SchedulePriority[request.priority],
+                repeat_interval=request.repeat_interval
             )
-            
             return {
-                "task_id": task_id,
                 "status": "scheduled",
-                "schedule_time": request.schedule_time,
-                "priority": priority.name
+                "task_id": task_id,
+                "schedule_time": request.schedule_time.isoformat()
             }
-        
-        # Execute immediately
-        start_time = datetime.now()
-        task_id = await workflow.execute_analysis(
-            analysis_type=request.analysis_type,
-            input_data=request.input_data,
-            workflow_id=None
+            
+        # Execute immediately using the orchestrator
+        workflow_type = WorkflowType.from_str(request.workflow_type)
+        results = await orchestrator.process_workflow(
+            workflow_type=workflow_type,
+            process_id=request.process_id,
+            input_data=request.input_data
         )
         
-        # Record task duration for monitoring
-        duration = (datetime.now() - start_time).total_seconds()
-        monitor.record_task_duration(task_id, duration)
-        
         return {
-            "task_id": task_id,
             "status": "completed",
-            "execution_time": duration
+            "results": results,
+            "execution_time": datetime.now().isoformat()
         }
         
     except AnalysisError as e:
-        monitor.record_task_error(str(e))
-        error_response = handle_error(e)
-        raise HTTPException(status_code=500, detail=error_response)
+        await track_workflow_errors(request.workflow_type, e)
+        error_details = handle_error(e)
+        raise HTTPException(status_code=400, detail=error_details)
     except Exception as e:
-        monitor.record_task_error(str(e))
-        logger.error(f"Error processing analysis request: {str(e)}")
+        await track_workflow_errors(request.workflow_type, e)
+        logger.error(f"Analysis failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/tasks/{task_id}")
@@ -117,6 +109,11 @@ async def cancel_task(task_id: str):
     except Exception as e:
         logger.error(f"Error cancelling task {task_id}: {str(e)}")
         raise HTTPException(status_code=404, detail=f"Task not found: {task_id}")
+
+class MonitoringTimeRange(BaseModel):
+    """Time range for monitoring data"""
+    start_time: Optional[datetime] = Field(None, description="Start time for monitoring data")
+    end_time: Optional[datetime] = Field(None, description="End time for monitoring data")
 
 @router.get("/monitoring/metrics")
 @log_execution_time()
@@ -134,68 +131,43 @@ async def get_metrics(timerange: MonitoringTimeRange):
 
 @router.get("/tasks/status/{task_id}")
 async def get_task_status(task_id: str):
-    """Get the status of a specific task"""
+    """Get status of a scheduled or running task"""
     try:
-        # Check scheduled tasks
-        if task_id in scheduler.scheduled_tasks:
-            task = scheduler.scheduled_tasks[task_id]
-            return {
-                "task_id": task_id,
-                "status": "scheduled",
-                "analysis_type": task.analysis_type,
-                "next_run": task.next_run,
-                "last_run": task.last_run,
-                "priority": SchedulePriority(task.priority).name
-            }
-        
-        # Check running tasks
-        if task_id in scheduler.running_tasks:
-            return {
-                "task_id": task_id,
-                "status": "running",
-                "start_time": scheduler.running_tasks[task_id].get_start_time()
-            }
-        
-        raise HTTPException(status_code=404, detail=f"Task not found: {task_id}")
-        
+        status = scheduler.get_task_status(task_id)
+        return {
+            "task_id": task_id,
+            "status": status,
+            "last_updated": datetime.now().isoformat()
+        }
     except Exception as e:
-        logger.error(f"Error getting task status: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting task status {task_id}: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"Task not found: {task_id}")
 
 @router.get("/tasks/list")
-async def list_tasks(status: Optional[str] = None):
-    """List all tasks, optionally filtered by status"""
+async def list_tasks():
+    """List all scheduled and running tasks"""
     try:
-        tasks = []
-        
-        # Get scheduled tasks
-        if not status or status == "scheduled":
-            for task_id, task in scheduler.scheduled_tasks.items():
-                tasks.append({
-                    "task_id": task_id,
-                    "status": "scheduled",
-                    "analysis_type": task.analysis_type,
-                    "next_run": task.next_run,
-                    "last_run": task.last_run,
-                    "priority": SchedulePriority(task.priority).name
-                })
-        
-        # Get running tasks
-        if not status or status == "running":
-            for task_id, task in scheduler.running_tasks.items():
-                tasks.append({
-                    "task_id": task_id,
-                    "status": "running",
-                    "start_time": task.get_start_time(),
-                    "analysis_type": task.get_analysis_type()
-                })
-        
+        tasks = scheduler.list_tasks()
         return {
             "tasks": tasks,
-            "total_count": len(tasks),
             "timestamp": datetime.now().isoformat()
         }
-        
     except Exception as e:
         logger.error(f"Error listing tasks: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/debug/config")
+async def get_debug_config():
+    """Get current pipeline configuration for debugging"""
+    try:
+        return {
+            "workflow_types": WorkflowType.values(),
+            "analysis_types": [e.value for e in AnalysisTypeEnum],
+            "priority_levels": [p.value for p in SchedulePriority],
+            "metric_types": [m.value for m in MetricType],
+            "scheduler_status": scheduler.get_status(),
+            "monitor_status": monitor.get_status()
+        }
+    except Exception as e:
+        logger.error(f"Error getting debug config: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e)) 

@@ -4,13 +4,18 @@ from django.core.exceptions import ValidationError
 from datetime import datetime
 import sys
 from pathlib import Path
+import logging
+
+from ..orchestrator.workflow_types import WorkflowType  # Update import path
+
+logger = logging.getLogger(__name__)
 
 # Add backend/django_app to Python path
 django_app_path = Path(__file__).resolve().parent.parent.parent.parent / "backend" / "django_app"
 sys.path.append(str(django_app_path))
 
 # Import and run Django setup
-from core.setup import setup_django_for_fastapi
+from backend.django_app.core.setup import setup_django_for_fastapi
 setup_django_for_fastapi()
 
 # Now import Django models
@@ -20,6 +25,33 @@ from backend.django_app.process_data.models.ir_treatment import IRTreatmentProce
 
 class ModelIntegrator:
     """Handles integration between Django models and analysis pipeline"""
+    
+    def __init__(self):
+        # Map workflow types using enum values
+        self.workflow_models = {
+            WorkflowType.BASELINE.value: BaselineProcess,
+            WorkflowType.RF_TREATMENT.value: RFTreatmentProcess,
+            WorkflowType.IR_TREATMENT.value: IRTreatmentProcess
+        }
+        logger.debug(f"Initialized ModelIntegrator with workflows: {list(self.workflow_models.keys())}")
+
+    def get_model_for_process_type(self, workflow_type: str) -> Type[models.Model]:
+        """Get the appropriate model class for a process type"""
+        logger.debug(f"Getting model for workflow type: '{workflow_type}'")
+        logger.debug(f"Available workflow types: {list(self.workflow_models.keys())}")
+        
+        # Normalize workflow type to string value
+        if isinstance(workflow_type, WorkflowType):
+            workflow_type = workflow_type.value
+            
+        if workflow_type not in self.workflow_models:
+            error_msg = f"Unknown workflow type: {workflow_type}"
+            logger.error(f"{error_msg}. Available types: {list(self.workflow_models.keys())}")
+            raise ValueError(error_msg)
+            
+        model_class = self.workflow_models[workflow_type]
+        logger.debug(f"Found model class: {model_class.__name__}")
+        return model_class
 
     @staticmethod
     def transform_baseline_to_analysis_input(model_instance: BaselineProcess) -> Dict[str, Any]:
@@ -40,7 +72,7 @@ class ModelIntegrator:
             'metadata': {
                 'process_id': model_instance.process_id,
                 'timestamp': model_instance.timestamp.isoformat(),
-                'process_type': 'baseline'
+                'process_type': WorkflowType.BASELINE.value
             }
         }
 
@@ -65,7 +97,7 @@ class ModelIntegrator:
             'metadata': {
                 'process_id': model_instance.process_id,
                 'timestamp': model_instance.timestamp.isoformat(),
-                'process_type': 'rf_treatment'
+                'process_type': WorkflowType.RF_TREATMENT.value
             }
         }
 
@@ -87,7 +119,7 @@ class ModelIntegrator:
             'metadata': {
                 'process_id': model_instance.process_id,
                 'timestamp': model_instance.timestamp.isoformat(),
-                'process_type': 'ir_treatment'
+                'process_type': WorkflowType.IR_TREATMENT.value
             }
         }
 
@@ -100,7 +132,7 @@ class ModelIntegrator:
         """Transform analysis results to model fields"""
         # Define field mappings for different model types
         field_mappings = {
-            'BaselineProcess': {
+            BaselineProcess.__name__: {
                 'technical_results': {
                     'protein_recovery': 'protein_yield',
                     'separation_efficiency': 'separation_efficiency',
@@ -109,7 +141,7 @@ class ModelIntegrator:
                     'classifier_efficiency': 'classifier_speed'
                 }
             },
-            'RFTreatmentProcess': {
+            RFTreatmentProcess.__name__: {
                 'technical_results': {
                     'final_moisture': 'moisture_content',
                     'power_efficiency': 'power',
@@ -117,7 +149,7 @@ class ModelIntegrator:
                     'dielectric_response': 'dielectric_constant'
                 }
             },
-            'IRTreatmentProcess': {
+            IRTreatmentProcess.__name__: {
                 'technical_results': {
                     'final_moisture': 'moisture_content',
                     'surface_temp_actual': 'surface_temperature',
@@ -156,18 +188,4 @@ class ModelIntegrator:
             instance = model_class(**data)
             instance.full_clean()
         except ValidationError as e:
-            raise ValidationError(f"Model validation failed: {str(e)}")
-
-    @staticmethod
-    def get_model_for_process_type(process_type: str) -> Type[models.Model]:
-        """Get the appropriate model class for a process type"""
-        model_mapping = {
-            'baseline': BaselineProcess,
-            'rf_treatment': RFTreatmentProcess,
-            'ir_treatment': IRTreatmentProcess
-        }
-        
-        if process_type not in model_mapping:
-            raise ValueError(f"Unknown process type: {process_type}")
-            
-        return model_mapping[process_type] 
+            raise ValidationError(f"Model validation failed: {str(e)}") 

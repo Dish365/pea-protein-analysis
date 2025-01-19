@@ -6,7 +6,7 @@ from analytics.environmental.services.impact_calculator import ImpactCalculator
 from analytics.environmental.services.allocation_engine import AllocationEngine
 from analytics.environmental.services.efficiency_calculator import EfficiencyCalculator
 
-router = APIRouter(prefix="/environmental", tags=["environmental"])
+router = APIRouter(tags=["environmental"])
 
 # Request/Response Models
 class ImpactCalculationRequest(BaseModel):

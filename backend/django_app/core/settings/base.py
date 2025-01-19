@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     # Local apps
     "core.apps.CoreConfig",
     "process_data.apps.ProcessDataConfig",
-    "users.apps.UsersConfig",
 ]
 
 MIDDLEWARE = [
@@ -187,3 +186,16 @@ LOGGING = {
 }
 
 AUTH_USER_MODEL = "users.User"
+
+# FastAPI Service Configuration
+FASTAPI_BASE_URL = os.environ.get('FASTAPI_BASE_URL', 'http://localhost:8001/api/v1')
+FASTAPI_TIMEOUT = 30  # seconds
+FASTAPI_RETRY_COUNT = 3
+
+# Process Analysis Settings
+PROCESS_ANALYSIS = {
+    'DEFAULT_TIMEOUT': 60,  # seconds
+    'MAX_RETRIES': 3,
+    'BACKOFF_FACTOR': 0.3,
+    'CONCURRENT_REQUESTS': 10
+}

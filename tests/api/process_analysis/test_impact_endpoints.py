@@ -221,3 +221,205 @@ class TestEnvironmentalEndpoints:
             headers={"Content-Type": "text/plain"}
         )
         assert response.status_code in (415, 422)
+    @pytest.mark.asyncio
+    async def test_calculate_and_allocate(self, process_tester: ProcessAnalysisTester, valid_process_data: Dict):
+        """Test combined impact calculation and allocation"""
+        allocation_request = {
+            "product_values": {"product1": 10.0, "product2": 5.0},
+            "mass_flows": {"product1": 60.0, "product2": 40.0},
+            "method": "hybrid",
+            "hybrid_weights": {"economic": 0.6, "physical": 0.4}
+        }
+
+        response = await process_tester.client.post(
+            "/api/v1/environmental/impact/calculate-and-allocate",
+            json={
+                "data": valid_process_data,
+                "allocation_request": allocation_request
+            }
+        )
+
+        assert response.status_code == 200
+        result = response.json()
+
+        # Verify response structure
+        assert "status" in result
+        assert result["status"] == "success"
+        assert "impact_results" in result
+        assert "allocation_results" in result
+
+        # Verify impact results
+        impact_results = result["impact_results"]
+        assert "impacts" in impact_results
+        assert "process_contributions" in impact_results
+
+        # Verify allocation results
+        allocation_results = result["allocation_results"]
+        assert "allocation_factors" in allocation_results
+        assert "allocated_impacts" in allocation_results
+
+    @pytest.mark.asyncio
+    async def test_allocation_methods(self, process_tester: ProcessAnalysisTester):
+        """Test different allocation methods"""
+        response = await process_tester.client.get(
+            "/api/v1/environmental/allocation/methods"
+        )
+
+        assert response.status_code == 200
+        methods = response.json()
+
+        # Verify all allocation methods are present
+        assert "economic" in methods
+        assert "physical" in methods
+        assert "hybrid" in methods
+
+    @pytest.mark.asyncio
+    async def test_allocation_calculation(self, process_tester: ProcessAnalysisTester):
+        """Test standalone allocation calculation"""
+        allocation_request = {
+            "impacts": {"gwp": 100.0, "hct": 50.0},
+            "product_values": {"product1": 10.0, "product2": 5.0},
+            "mass_flows": {"product1": 60.0, "product2": 40.0},
+            "method": "hybrid",
+            "hybrid_weights": {"economic": 0.6, "physical": 0.4}
+        }
+
+        response = await process_tester.client.post(
+            "/api/v1/environmental/allocation/calculate",
+            json=allocation_request
+        )
+
+        assert response.status_code == 200
+        result = response.json()
+
+        # Verify allocation results
+        assert "status" in result
+        assert result["status"] == "success"
+        assert "method" in result
+        assert "results" in result
+
+        # Verify allocation factors sum to approximately 1
+        factors = result["results"]["allocation_factors"]
+        assert math.isclose(sum(factors.values()), 1.0, rel_tol=1e-9)
+
+    @pytest.mark.asyncio
+    async def test_invalid_allocation_request(self, process_tester: ProcessAnalysisTester):
+        """Test allocation with invalid request data"""
+        invalid_request = {
+            "impacts": {"gwp": -100.0},  # Invalid negative impact
+            "product_values": {"product1": 10.0},
+            "mass_flows": {"product1": 60.0, "product2": 40.0},  # Mismatched products
+            "method": "invalid_method"  # Invalid method
+        }
+
+        response = await process_tester.client.post(
+            "/api/v1/environmental/allocation/calculate",
+            json=invalid_request
+        )
+
+        assert response.status_code == 422  # Validation error
+
+class TestCombinedEndpoints:
+    """Test suite for combined impact and allocation endpoints"""
+    
+    @pytest.mark.asyncio
+    async def test_calculate_and_allocate(self, process_tester: ProcessAnalysisTester, valid_process_data: Dict):
+        """Test combined impact calculation and allocation"""
+        allocation_request = {
+            "product_values": {"product1": 10.0, "product2": 5.0},
+            "mass_flows": {"product1": 60.0, "product2": 40.0},
+            "method": "hybrid",
+            "hybrid_weights": {"economic": 0.6, "physical": 0.4}
+        }
+
+        response = await process_tester.client.post(
+            "/api/v1/environmental/impact/calculate-and-allocate",
+            json={
+                "data": valid_process_data,
+                "allocation_request": allocation_request
+            }
+        )
+
+        assert response.status_code == 200
+        result = response.json()
+
+        # Verify response structure
+        assert "status" in result
+        assert result["status"] == "success"
+        assert "impact_results" in result
+        assert "allocation_results" in result
+
+        # Verify impact results
+        impact_results = result["impact_results"]
+        assert "impacts" in impact_results
+        assert "process_contributions" in impact_results
+
+        # Verify allocation results
+        allocation_results = result["allocation_results"]
+        assert "allocation_factors" in allocation_results
+        assert "allocated_impacts" in allocation_results
+
+class TestAllocationEndpoints:
+    """Test suite for allocation endpoints"""
+
+    @pytest.mark.asyncio
+    async def test_allocation_methods(self, process_tester: ProcessAnalysisTester):
+        """Test different allocation methods"""
+        response = await process_tester.client.get(
+            "/api/v1/environmental/allocation/methods"
+        )
+
+        assert response.status_code == 200
+        methods = response.json()
+
+        # Verify all allocation methods are present
+        assert "economic" in methods
+        assert "physical" in methods
+        assert "hybrid" in methods
+
+    @pytest.mark.asyncio
+    async def test_allocation_calculation(self, process_tester: ProcessAnalysisTester):
+        """Test standalone allocation calculation"""
+        allocation_request = {
+            "impacts": {"gwp": 100.0, "hct": 50.0},
+            "product_values": {"product1": 10.0, "product2": 5.0},
+            "mass_flows": {"product1": 60.0, "product2": 40.0},
+            "method": "hybrid",
+            "hybrid_weights": {"economic": 0.6, "physical": 0.4}
+        }
+
+        response = await process_tester.client.post(
+            "/api/v1/environmental/allocation/calculate",
+            json=allocation_request
+        )
+
+        assert response.status_code == 200
+        result = response.json()
+
+        # Verify allocation results
+        assert "status" in result
+        assert result["status"] == "success"
+        assert "method" in result
+        assert "results" in result
+
+        # Verify allocation factors sum to approximately 1
+        factors = result["results"]["allocation_factors"]
+        assert math.isclose(sum(factors.values()), 1.0, rel_tol=1e-9)
+
+    @pytest.mark.asyncio
+    async def test_invalid_allocation_request(self, process_tester: ProcessAnalysisTester):
+        """Test allocation with invalid request data"""
+        invalid_request = {
+            "impacts": {"gwp": -100.0},  # Invalid negative impact
+            "product_values": {"product1": 10.0},
+            "mass_flows": {"product1": 60.0, "product2": 40.0},  # Mismatched products
+            "method": "invalid_method"  # Invalid method
+        }
+
+        response = await process_tester.client.post(
+            "/api/v1/environmental/allocation/calculate",
+            json=invalid_request
+        )
+
+        assert response.status_code == 422  # Validation error
+

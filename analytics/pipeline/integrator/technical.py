@@ -173,14 +173,35 @@ class TechnicalIntegrator:
         particle_results: Dict[str, float],
         process_params: Dict[str, float]
     ) -> Dict[str, Any]:
-        """Compile all analysis results into a single response"""
+        """Compile all analysis results into a single response matching Django model structure"""
         return {
-            "protein_recovery": recovery_results,
-            "separation_efficiency": separation_results,
-            "particle_analysis": particle_results,
+            "technical_results": {
+                "protein_recovery": recovery_results.get("protein_recovery", 0),
+                "separation_efficiency": separation_results.get("separation_efficiency", 0),
+                "process_efficiency": (
+                    recovery_results.get("protein_recovery", 0) * 
+                    separation_results.get("separation_efficiency", 0) / 100
+                ),
+                "particle_size_distribution": {
+                    "d10": particle_results.get("d10", 0),
+                    "d50": particle_results.get("d50", 0),
+                    "d90": particle_results.get("d90", 0)
+                } if particle_results else None
+            },
             "process_parameters": {
-                "feed_rate_actual": process_params.get("feed_rate", 0),
-                "air_flow_actual": process_params.get("air_flow_rate", 0),
-                "classifier_efficiency": process_params.get("classifier_speed", 0)
+                "feed_rate": process_params.get("feed_rate", 0),
+                "air_flow": process_params.get("air_flow_rate", 0),
+                "classifier_speed": process_params.get("classifier_speed", 0)
+            },
+            "metadata": {
+                "units": {
+                    "protein_recovery": "%",
+                    "separation_efficiency": "%",
+                    "process_efficiency": "%",
+                    "particle_size": "μm",
+                    "feed_rate": "kg/h",
+                    "air_flow": "m3/h",
+                    "classifier_speed": "rpm"
+                }
             }
         }

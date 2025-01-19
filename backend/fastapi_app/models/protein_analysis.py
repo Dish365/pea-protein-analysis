@@ -1,5 +1,12 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Dict, List, Optional, Union, Tuple
+from enum import Enum
+
+
+class ProcessType(str, Enum):
+    BASELINE = 'baseline'
+    RF = 'rf'
+    IR = 'ir'
 
 
 class ProteinRecoveryInput(BaseModel):
@@ -11,7 +18,7 @@ class ProteinRecoveryInput(BaseModel):
     output_protein_content: float = Field(
         ..., gt=0, le=100, description="Output protein content in %"
     )
-    process_type: str = Field(..., description="Process type (Baseline/RF/IR)")
+    process_type: ProcessType = Field(..., description="Process type (baseline/rf/ir)")
 
 
 class SeparationEfficiencyInput(BaseModel):
@@ -57,12 +64,41 @@ class SeparationEfficiencyInput(BaseModel):
 
 
 class ParticleSizeInput(BaseModel):
-    particle_sizes: List[float] = Field(..., description="List of particle sizes in μm")
-    weights: Optional[List[float]] = Field(None, description="Optional weights for each particle size")
-    density: Optional[float] = Field(None, gt=0, description="Particle density in g/cm³")
-    target_ranges: Optional[Dict[str, Tuple[float, float]]] = Field(
-        None, description="Target ranges for parameters"
+    """Input model for particle size analysis with moisture content tracking."""
+    
+    particle_sizes: List[float] = Field(
+        ...,
+        description="List of particle sizes in μm"
     )
+    weights: Optional[List[float]] = Field(
+        None,
+        description="Optional weights for each particle size"
+    )
+    density: Optional[float] = Field(
+        None,
+        description="Particle density in g/cm³ for surface area calculations"
+    )
+    target_ranges: Optional[Dict[str, tuple]] = Field(
+        None,
+        description="Target ranges for quality evaluation"
+    )
+    initial_moisture: float = Field(
+        ...,
+        description="Initial moisture content percentage",
+        ge=0.0,
+        le=100.0
+    )
+    treatment_type: Optional[ProcessType] = Field(
+        None,
+        description="Pre-treatment type (rf/ir)"
+    )
+
+    @field_validator("treatment_type")
+    @classmethod
+    def validate_treatment_type(cls, v: Optional[ProcessType]) -> Optional[ProcessType]:
+        if v is not None and v == ProcessType.BASELINE:
+            raise ValueError("Treatment type must be either 'rf' or 'ir'")
+        return v
 
     @field_validator("particle_sizes")
     @classmethod

@@ -10,7 +10,10 @@ from analytics.environmental.impact.gwp import GWPCalculator
 from analytics.environmental.impact.hct import HCTCalculator
 from analytics.environmental.impact.frs import FRSCalculator
 from analytics.environmental.impact.water import WaterConsumptionCalculator
-from .allocation_endpoints import allocate_impacts, AllocationRequest
+from backend.fastapi_app.models.environmental_analysis import (
+    AllocationRequest
+)
+from .allocation_endpoints import allocate_impacts
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -125,11 +125,12 @@ async def analyze_separation_efficiency(input_data: SeparationEfficiencyInput):
         raise HTTPException(status_code=500, detail=f"Separation analysis failed: {str(e)}")
 
 
-@router.post("/particle-size/", response_model=Dict[str, float])
+@router.post("/particle-size/", response_model=Dict[str, Union[float, Dict]])
 async def analyze_particle_size(input_data: ParticleSizeInput):
     """
     Analyze particle size distribution and related quality metrics.
     
+    Includes moisture content tracking and validation through processing stages.
     Uses Rust for computationally intensive calculations.
     """
     logger.info(f"Processing particle size analysis with input: {input_data}")
@@ -137,13 +138,15 @@ async def analyze_particle_size(input_data: ParticleSizeInput):
         analyzer = ParticleSizeAnalyzer()
         logger.debug("Initialized ParticleSizeAnalyzer")
 
-        # Analyze size distribution using Rust
-        logger.debug("Analyzing particle size distribution using Rust...")
-        distribution_results = analyzer.analyze_distribution(
+        # Process sample with moisture tracking
+        logger.debug(f"Processing sample with moisture content: {input_data.initial_moisture}%")
+        distribution_results = analyzer.process_sample(
             particle_sizes=input_data.particle_sizes,
-            weights=input_data.weights,
+            initial_moisture=input_data.initial_moisture,
+            treatment_type=input_data.treatment_type,
+            weights=input_data.weights
         )
-        logger.debug(f"Distribution analysis results: {distribution_results}")
+        logger.debug(f"Sample processing results: {distribution_results}")
 
         # Evaluate quality if target ranges provided
         if input_data.target_ranges:
@@ -166,7 +169,7 @@ async def analyze_particle_size(input_data: ParticleSizeInput):
             distribution_results.update(surface_results)
             logger.debug(f"Surface area calculation results: {surface_results}")
 
-        logger.info(f"Successfully completed particle size analysis: {distribution_results}")
+        logger.info(f"Successfully completed particle size analysis with moisture tracking")
         return distribution_results
 
     except ValueError as ve:

@@ -1,6 +1,6 @@
 import numpy as np
-from typing import Dict, List, Optional
-from scipy import stats
+from typing import Dict, List, Optional, Tuple
+from backend.fastapi_app.models.protein_analysis import ProcessType
 from backend.fastapi_app.process_analysis.services.rust_handler import RustHandler
 
 
@@ -14,6 +14,7 @@ class ParticleSizeAnalyzer:
     - Distribution statistics
     - Quality assessment
     - Surface area calculations
+    - Moisture content tracking and validation
 
     Mathematical Background:
     ----------------------
@@ -39,10 +40,136 @@ class ParticleSizeAnalyzer:
        where:
        - ρ is particle density
        - d is particle diameter
+
+    Moisture Content Requirements:
+    ---------------------------
+    1. Pre-treatment:
+       - RF treatment: Initial ≥ 13.6%
+       - IR treatment: Initial = 15.5%
+
+    2. Post-treatment:
+       - RF treated: ~10.2%
+       - IR treated: ~10.6%
+
+    3. Processing:
+       - Required range: 12-13% for optimal dehulling and fractionation
     """
 
     def __init__(self):
         self.rust_handler = RustHandler()
+        self.moisture_content = None  # Current moisture content
+        self.treatment_type = None    # Current treatment type
+
+    def check_moisture_requirements(
+        self, 
+        moisture_level: float, 
+        stage: str = "processing",
+        treatment: Optional[ProcessType] = None
+    ) -> Tuple[bool, str]:
+        """
+        Verify if moisture content meets requirements for different processing stages.
+
+        Args:
+            moisture_level: Current moisture content percentage
+            stage: Processing stage ('pre_treatment', 'post_treatment', 'processing')
+            treatment: Treatment type ('RF' or 'IR') if applicable
+
+        Returns:
+            Tuple of (bool, str) indicating if requirements are met and any message
+        """
+        if stage == "pre_treatment":
+            if treatment == ProcessType.RF:
+                if moisture_level >= 13.6:
+                    return True, "Sufficient moisture for RF treatment"
+                return False, f"Insufficient moisture for RF treatment (need ≥13.6%, got {moisture_level}%)"
+            elif treatment == ProcessType.IR:
+                if abs(moisture_level - 15.5) <= 0.5:
+                    return True, "Optimal moisture for IR treatment"
+                return False, f"Suboptimal moisture for IR treatment (need 15.5%, got {moisture_level}%)"
+        
+        elif stage == "post_treatment":
+            expected = 10.2 if treatment == ProcessType.RF else 10.6
+            if abs(moisture_level - expected) <= 0.5:
+                return True, f"Expected post-{treatment.value} moisture content"
+            return False, f"Unexpected post-{treatment.value} moisture content (expected ~{expected}%, got {moisture_level}%)"
+        
+        elif stage == "processing":
+            if 12.0 <= moisture_level <= 13.0:
+                return True, "Optimal moisture for processing"
+            return False, f"Suboptimal processing moisture (need 12-13%, got {moisture_level}%)"
+        
+        return False, "Invalid stage specified"
+
+    def process_sample(
+        self,
+        particle_sizes: List[float],
+        initial_moisture: float,
+        treatment_type: Optional[ProcessType] = None,
+        weights: Optional[List[float]] = None
+    ) -> Dict:
+        """
+        Process sample with moisture content validation and tracking.
+
+        Args:
+            particle_sizes: List of particle sizes
+            initial_moisture: Initial moisture content percentage
+            treatment_type: Optional pre-treatment type ('RF' or 'IR')
+            weights: Optional weights for particle sizes
+
+        Returns:
+            Dict containing distribution analysis results and moisture status
+        """
+        self.moisture_content = initial_moisture
+        self.treatment_type = treatment_type
+
+        moisture_status = {}
+        
+        if treatment_type:
+            # Check pre-treatment moisture
+            valid, msg = self.check_moisture_requirements(
+                initial_moisture, 
+                "pre_treatment",
+                treatment_type
+            )
+            moisture_status["pre_treatment"] = {
+                "valid": valid,
+                "message": msg,
+                "moisture": initial_moisture
+            }
+
+            # Update to post-treatment moisture
+            self.moisture_content = 10.2 if treatment_type == ProcessType.RF else 10.6
+            valid, msg = self.check_moisture_requirements(
+                self.moisture_content,
+                "post_treatment",
+                treatment_type
+            )
+            moisture_status["post_treatment"] = {
+                "valid": valid,
+                "message": msg,
+                "moisture": self.moisture_content
+            }
+
+        # Check processing moisture requirements
+        valid, msg = self.check_moisture_requirements(
+            self.moisture_content,
+            "processing"
+        )
+        moisture_status["processing"] = {
+            "valid": valid,
+            "message": msg,
+            "moisture": self.moisture_content
+        }
+
+        # Perform standard distribution analysis
+        distribution_results = self.analyze_distribution(particle_sizes, weights)
+        
+        # Combine results
+        return {
+            **distribution_results,
+            "moisture_status": moisture_status,
+            "current_moisture": self.moisture_content
+        }
 
     def analyze_distribution(
         self, particle_sizes: List[float], weights: Optional[List[float]] = None

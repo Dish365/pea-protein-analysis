@@ -6,6 +6,9 @@ import math
 import json
 
 from analytics.environmental.services.allocation_engine import AllocationEngine
+from backend.fastapi_app.models.environmental_analysis import (
+    AllocationRequest
+)
 from .services.rust_handler import RustHandler
 
 # Configure logging

@@ -126,23 +126,29 @@ class EnvironmentalIntegrator:
         impact_results: Dict[str, Any],
         allocation_results: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Compile all analysis results into a single response"""
+        """Compile all analysis results into a single response matching Django model structure"""
         return {
             'status': 'success',
-            'impact_assessment': {
+            'environmental_results': {
                 'gwp': impact_results.get('impacts', {}).get('gwp'),
                 'hct': impact_results.get('impacts', {}).get('hct'),
                 'frs': impact_results.get('impacts', {}).get('frs'),
-                'water_consumption': impact_results.get('impacts', {}).get('water_consumption')
-            },
-            'allocation_results': {
-                'method': allocation_results.get('method'),
-                'allocated_impacts': allocation_results.get('allocated_impacts', {}),
-                'allocation_factors': allocation_results.get('allocation_factors', {})
+                'water_consumption': impact_results.get('impacts', {}).get('water_consumption'),
+                'allocated_impacts': {
+                    'method': allocation_results.get('method'),
+                    'factors': allocation_results.get('allocation_factors', {}),
+                    'results': allocation_results.get('allocated_impacts', {})
+                }
             },
             'metadata': {
                 'process_type': impact_results.get('process_type'),
-                'calculation_timestamp': impact_results.get('timestamp')
+                'calculation_timestamp': impact_results.get('timestamp'),
+                'units': {
+                    'gwp': 'CO2eq',
+                    'hct': 'CTUh',
+                    'frs': 'kg oil eq',
+                    'water_consumption': 'm3'
+                }
             }
         }
 

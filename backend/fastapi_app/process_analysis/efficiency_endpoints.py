@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Response
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 from pydantic import BaseModel, Field, field_validator
 import logging
 import math
@@ -14,33 +14,31 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["eco-efficiency"])
 
 class EconomicMetrics(BaseModel):
-    capex: float = Field(..., description="Capital expenditure")
-    opex: float = Field(..., description="Operational expenditure")
-    production_volume: float = Field(..., description="Production volume")
-    product_prices: Dict[str, float] = Field(..., description="Product prices per unit")
-    production_volumes: Dict[str, float] = Field(..., description="Production volumes per product")
-    raw_material_cost: float = Field(..., description="Total raw material cost")
-    npv: float = Field(..., description="Net Present Value")
-    net_profit: float = Field(..., description="Net Profit")
+    capex: Dict[str, float] = Field(..., description="Capital expenditure breakdown including equipment_cost, installation_cost, indirect_cost, total_capex")
+    opex: Dict[str, float] = Field(..., description="Operational expenditure breakdown including utilities_cost, materials_cost, labor_cost, maintenance_cost, total_opex")
+    npv: float = Field(..., description="Net Present Value in USD")
+    roi: float = Field(..., description="Return on Investment in %")
+    payback_period: float = Field(..., description="Payback period in years")
+    profitability_index: float = Field(..., description="Profitability index")
+    sensitivity_analysis: Optional[Dict[str, Any]] = Field(None, description="Sensitivity analysis results")
 
 class QualityMetrics(BaseModel):
-    recovered_protein: float = Field(..., description="Amount of recovered protein")
-    initial_protein: float = Field(..., description="Initial protein content")
-    protein_content: float = Field(..., description="Final protein content")
-    total_mass: float = Field(..., description="Total mass of product")
-    purity: float = Field(..., description="Product purity percentage")
-    yield_rate: float = Field(..., description="Product yield rate")
+    protein_recovery: float = Field(..., description="Protein recovery rate in %")
+    separation_efficiency: float = Field(..., description="Overall separation efficiency in %")
+    process_efficiency: float = Field(..., description="Process efficiency metric in %")
+    particle_size_distribution: Dict[str, float] = Field(..., description="Particle size distribution metrics (D10, D50, D90)")
 
 class EnvironmentalImpacts(BaseModel):
-    gwp: float = Field(..., description="Global Warming Potential")
-    hct: float = Field(..., description="Human Carcinogenic Toxicity")
-    frs: float = Field(..., description="Fossil Resource Scarcity")
-    water_consumption: float = Field(..., description="Water Consumption")
+    gwp: float = Field(..., description="Global Warming Potential in CO2eq")
+    hct: float = Field(..., description="Human Carcinogenic Toxicity in CTUh")
+    frs: float = Field(..., description="Fossil Resource Scarcity in kg oil eq")
+    water_consumption: float = Field(..., description="Water consumption impact in m3")
+    allocated_impacts: Dict[str, Any] = Field(..., description="Allocated environmental impacts with method, factors, and results")
 
 class ResourceInputs(BaseModel):
-    energy_consumption: float = Field(..., description="Total energy consumption")
-    water_usage: float = Field(..., description="Total water usage")
-    raw_material_input: float = Field(..., description="Raw material input")
+    energy_consumption: float = Field(..., description="Total energy consumption in kWh")
+    water_usage: float = Field(..., description="Total water usage in m3")
+    raw_material_input: float = Field(..., description="Raw material input in kg")
 
 class EcoEfficiencyRequest(BaseModel):
     economic_data: EconomicMetrics
@@ -53,8 +51,16 @@ class EcoEfficiencyRequest(BaseModel):
     @classmethod
     def validate_process_type(cls, v: str) -> str:
         valid_types = ['baseline', 'RF', 'IR']
-        if v not in valid_types:
+        if v.lower() not in [t.lower() for t in valid_types]:
             raise ValueError(f"Process type must be one of {valid_types}")
+        return v.lower()
+
+    @field_validator('*')
+    @classmethod
+    def validate_non_negative(cls, v: Any, field: Field) -> Any:
+        if isinstance(v, (int, float)) and field.name not in ['roi', 'profitability_index']:
+            if v < 0:
+                raise ValueError(f"{field.name} cannot be negative")
         return v
 
 # Initialize services
@@ -81,7 +87,7 @@ async def calculate_eco_efficiency(request: EcoEfficiencyRequest):
             # Calculate eco-efficiency matrix using Rust
             economic_values = [
                 request.economic_data.npv,
-                request.economic_data.net_profit
+                request.economic_data.roi
             ]
             environmental_impacts = [
                 request.environmental_impacts.gwp,
@@ -229,9 +235,9 @@ def interpret_efficiency_matrix(matrix: List[float]) -> Dict[str, float]:
 def get_economic_reference(process_type: str) -> Dict[str, float]:
     """Get economic reference values for process type"""
     references = {
-        'baseline': {'npv': 1000000, 'profit': 200000},
-        'RF': {'npv': 1200000, 'profit': 240000},
-        'IR': {'npv': 1100000, 'profit': 220000}
+        'baseline': {'npv': 1000000, 'roi': 20},
+        'RF': {'npv': 1200000, 'roi': 24},
+        'IR': {'npv': 1100000, 'roi': 22}
     }
     return references[process_type]
 
@@ -247,8 +253,8 @@ def get_environmental_reference(process_type: str) -> Dict[str, float]:
 def get_quality_reference(process_type: str) -> Dict[str, float]:
     """Get quality reference values for process type"""
     references = {
-        'baseline': {'purity': 0.85, 'yield': 0.75},
-        'RF': {'purity': 0.90, 'yield': 0.80},
-        'IR': {'purity': 0.88, 'yield': 0.78}
+        'baseline': {'protein_recovery': 0.75, 'separation_efficiency': 0.85},
+        'RF': {'protein_recovery': 0.80, 'separation_efficiency': 0.90},
+        'IR': {'protein_recovery': 0.78, 'separation_efficiency': 0.88}
     }
     return references[process_type] 

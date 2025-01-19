@@ -14,6 +14,9 @@ from analytics.economic.profitability.mcsp import (
 )
 
 from analytics.economic.services.cost_tracking import CostTracker
+from backend.fastapi_app.models.economic_analysis import (
+    ProfitabilityInput, EconomicFactors
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -50,44 +53,48 @@ class SensitivityAnalysisInput(BaseModel):
 cost_tracker = CostTracker()
 
 @router.post("/analyze")
-async def analyze_profitability_metrics(input_data: ProfitabilityAnalysisInput):
-    """Calculate profitability metrics for the investment including Monte Carlo simulation"""
+async def analyze_profitability_metrics(input_data: ProfitabilityInput):
+    """Calculate profitability metrics including Monte Carlo simulation"""
     try:
         logger.debug(f"Received profitability analysis request with data: {input_data}")
         
         # Get base economic metrics
         metrics = get_economic_metrics(
             cash_flows=input_data.cash_flows,
-            discount_rate=input_data.discount_rate,
-            initial_investment=input_data.initial_investment,
-            gain_from_investment=input_data.gain_from_investment,
-            cost_of_investment=input_data.cost_of_investment,
-            production_volume=input_data.production_volume
+            discount_rate=input_data.economic_factors.discount_rate,
+            initial_investment=input_data.capex["total_investment"],
+            gain_from_investment=sum(input_data.cash_flows[1:]),
+            cost_of_investment=input_data.capex["total_investment"],
+            production_volume=input_data.economic_factors.production_volume
         )
         
         # Track investment costs
         cost_tracker.track_costs({
-            "initial_investment": input_data.initial_investment,
-            "cost_of_investment": input_data.cost_of_investment
+            "initial_investment": input_data.capex["total_investment"],
+            "annual_opex": input_data.opex["total_annual_cost"]
         })
         
         # Run Monte Carlo simulation if requested
         if input_data.monte_carlo_iterations > 0:
             monte_carlo_results = rust_handler.run_monte_carlo_simulation(
                 cash_flows=input_data.cash_flows,
-                discount_rate=input_data.discount_rate,
-                initial_investment=input_data.initial_investment,
+                discount_rate=input_data.economic_factors.discount_rate,
+                initial_investment=input_data.capex["total_investment"],
                 iterations=input_data.monte_carlo_iterations,
                 uncertainty=input_data.uncertainty
             )
             
             result = {
                 "metrics": metrics,
-                "monte_carlo": monte_carlo_results
+                "monte_carlo": monte_carlo_results,
+                "process_type": input_data.process_type,
+                "production_volume": input_data.economic_factors.production_volume
             }
         else:
             result = {
-                "metrics": metrics
+                "metrics": metrics,
+                "process_type": input_data.process_type,
+                "production_volume": input_data.economic_factors.production_volume
             }
             
         logger.debug(f"Final response: {result}")
@@ -161,3 +168,12 @@ async def analyze_sensitivity(input_data: SensitivityAnalysisInput):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/factors")
+async def get_default_factors() -> EconomicFactors:
+    """Get default economic factors for profitability calculations"""
+    return EconomicFactors(
+        project_duration=10,
+        discount_rate=0.1,
+        production_volume=1000.0
+    )

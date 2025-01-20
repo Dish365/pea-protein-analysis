@@ -1,5 +1,6 @@
 {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
@@ -37,6 +38,8 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
 =======
+=======
+>>>>>>> Stashed changes
   "dependencies": {
     "@ant-design/plots": "^1.2.6",
     "@mui/material": "^6.4.0",
@@ -62,6 +65,9 @@
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3"
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
   }
 }

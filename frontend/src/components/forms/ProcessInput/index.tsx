@@ -1,13 +1,13 @@
-import React from "react";
+import { ProcessForm } from '@/components/processes/ProcessForm'
 
-interface ProcessInputProps {
-  // Add props interface
-}
-
-const ProcessInput: React.FC<ProcessInputProps> = () => {
+export default function NewProcessPage() {
   return (
-    <div className="process-input">{/* Component content will go here */}</div>
-  );
-};
-
-export default ProcessInput;
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">New Process Analysis</h1>
+      
+      <div className="bg-white rounded-lg shadow p-6">
+        <ProcessForm />
+      </div>
+    </div>
+  )
+}

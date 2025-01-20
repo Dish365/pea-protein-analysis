@@ -4,6 +4,9 @@ import httpx
 from django.conf import settings
 from ..services.fastapi_service import FastAPIService
 from tenacity import RetryError
+from process_data.models import Process, AnalysisResults
+
+pytestmark = pytest.mark.django_db
 
 @pytest.mark.asyncio
 class TestFastAPIService:
@@ -214,4 +217,151 @@ class TestFastAPIService:
         # Verify all analyses were called
         assert mock_integrators['technical'].analyze_technical.called
         assert mock_integrators['economic'].analyze_economics.called
-        assert mock_integrators['environmental'].analyze_environmental_impacts.called 
+        assert mock_integrators['environmental'].analyze_environmental_impacts.called
+
+    @pytest.mark.asyncio
+    async def test_service_initialization(self, service):
+        """Test FastAPI service initialization"""
+        assert service.technical_integrator is not None
+        assert service.economic_integrator is not None
+        assert service.environmental_integrator is not None
+
+    @pytest.mark.asyncio
+    async def test_analyze_process(self, service, mock_process_input, mock_fastapi_response):
+        """Test complete process analysis through FastAPI"""
+        # Create test process
+        process = await Process.objects.acreate(
+            technical_params=mock_process_input['technical_params'],
+            economic_params=mock_process_input['economic_params'],
+            environmental_params=mock_process_input['environmental_params']
+        )
+
+        # Mock integrator responses
+        with patch.object(service.technical_integrator, 'analyze_technical', new_callable=AsyncMock) as mock_technical, \
+             patch.object(service.economic_integrator, 'analyze_economics', new_callable=AsyncMock) as mock_economic, \
+             patch.object(service.environmental_integrator, 'analyze_environmental', new_callable=AsyncMock) as mock_environmental:
+            
+            mock_technical.return_value = mock_fastapi_response['technical']
+            mock_economic.return_value = mock_fastapi_response['economic']
+            mock_environmental.return_value = mock_fastapi_response['environmental']
+
+            # Execute analysis
+            results = await service.analyze_process(process.id)
+
+            # Verify results
+            assert results['technical'] == mock_fastapi_response['technical']
+            assert results['economic'] == mock_fastapi_response['economic']
+            assert results['environmental'] == mock_fastapi_response['environmental']
+
+    @pytest.mark.asyncio
+    async def test_technical_analysis(self, service, mock_process_input, mock_fastapi_response):
+        """Test technical analysis integration"""
+        process = await Process.objects.acreate(technical_params=mock_process_input['technical_params'])
+
+        with patch.object(service.technical_integrator, 'analyze_technical', new_callable=AsyncMock) as mock_technical:
+            mock_technical.return_value = mock_fastapi_response['technical']
+            
+            results = await service._analyze_technical_metrics(process)
+            
+            assert results['protein_recovery'] == mock_fastapi_response['technical']['protein_recovery']
+            assert results['moisture_content'] == mock_fastapi_response['technical']['moisture_content']
+            mock_technical.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_economic_analysis(self, service, mock_process_input, mock_fastapi_response):
+        """Test economic analysis integration"""
+        process = await Process.objects.acreate(economic_params=mock_process_input['economic_params'])
+
+        with patch.object(service.economic_integrator, 'analyze_economics', new_callable=AsyncMock) as mock_economic:
+            mock_economic.return_value = mock_fastapi_response['economic']
+            
+            results = await service._analyze_economics(process)
+            
+            assert results['capex'] == mock_fastapi_response['economic']['capex']
+            assert results['opex'] == mock_fastapi_response['economic']['opex']
+            assert results['profitability'] == mock_fastapi_response['economic']['profitability']
+            mock_economic.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_environmental_analysis(self, service, mock_process_input, mock_fastapi_response):
+        """Test environmental analysis integration"""
+        process = await Process.objects.acreate(environmental_params=mock_process_input['environmental_params'])
+
+        with patch.object(service.environmental_integrator, 'analyze_environmental', new_callable=AsyncMock) as mock_environmental:
+            mock_environmental.return_value = mock_fastapi_response['environmental']
+            
+            results = await service._analyze_environmental(process)
+            
+            assert results['direct_impacts'] == mock_fastapi_response['environmental']['direct_impacts']
+            assert results['allocated_impacts'] == mock_fastapi_response['environmental']['allocated_impacts']
+            mock_environmental.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_efficiency_analysis(self, service, mock_fastapi_response):
+        """Test efficiency analysis integration"""
+        economic_results = mock_fastapi_response['economic']
+        environmental_results = mock_fastapi_response['environmental']
+
+        with patch.object(service, '_calculate_efficiency', new_callable=AsyncMock) as mock_efficiency:
+            mock_efficiency.return_value = mock_fastapi_response['efficiency']
+            
+            results = await service._analyze_efficiency(economic_results, environmental_results)
+            
+            assert results['technical_score'] == mock_fastapi_response['efficiency']['technical_score']
+            assert results['economic_score'] == mock_fastapi_response['efficiency']['economic_score']
+            assert results['environmental_score'] == mock_fastapi_response['efficiency']['environmental_score']
+            assert results['overall_efficiency'] == mock_fastapi_response['efficiency']['overall_efficiency']
+
+    @pytest.mark.asyncio
+    async def test_error_handling(self, service, mock_process_input):
+        """Test error handling in FastAPI service"""
+        process = await Process.objects.acreate(
+            technical_params=mock_process_input['technical_params'],
+            economic_params=mock_process_input['economic_params'],
+            environmental_params=mock_process_input['environmental_params']
+        )
+
+        with patch.object(service.technical_integrator, 'analyze_technical', new_callable=AsyncMock) as mock_technical:
+            mock_technical.side_effect = Exception("Technical analysis failed")
+            
+            with pytest.raises(Exception) as exc_info:
+                await service.analyze_process(process.id)
+            
+            assert "Technical analysis failed" in str(exc_info.value)
+            assert process.status == 'failed'
+
+    @pytest.mark.asyncio
+    async def test_status_tracking(self, service, mock_process_input):
+        """Test analysis status tracking"""
+        process = await Process.objects.acreate(
+            technical_params=mock_process_input['technical_params']
+        )
+
+        # Test status updates
+        await service._update_status(process.id, 'processing', 25)
+        updated_process = await Process.objects.aget(id=process.id)
+        assert updated_process.status == 'processing'
+        assert updated_process.progress == 25
+
+    @pytest.mark.asyncio
+    async def test_results_storage(self, service, mock_process_input, mock_fastapi_response):
+        """Test analysis results storage"""
+        process = await Process.objects.acreate(
+            technical_params=mock_process_input['technical_params']
+        )
+
+        # Store results
+        await service._store_results(
+            process.id,
+            mock_fastapi_response['technical'],
+            mock_fastapi_response['economic'],
+            mock_fastapi_response['environmental'],
+            mock_fastapi_response['efficiency']
+        )
+
+        # Verify stored results
+        results = await AnalysisResults.objects.aget(process_id=process.id)
+        assert results.technical_results == mock_fastapi_response['technical']
+        assert results.economic_results == mock_fastapi_response['economic']
+        assert results.environmental_results == mock_fastapi_response['environmental']
+        assert results.efficiency_results == mock_fastapi_response['efficiency'] 

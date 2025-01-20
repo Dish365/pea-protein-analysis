@@ -42,6 +42,14 @@ INSTALLED_APPS = [
     "process_data.apps.ProcessDataConfig",
 ]
 
+# Debug Toolbar Settings (only added in development.py)
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
+
+# Use Django's default user model
+AUTH_USER_MODEL = 'auth.User'
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",  # CORS middleware
@@ -75,6 +83,18 @@ WSGI_APPLICATION = "core.wsgi.application"
 
 # Import database settings
 from .database import DATABASES
+
+# Database configurations
+DATABASES = DATABASES
+
+# Database connection age
+CONN_MAX_AGE = 60
+
+# Default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Database routers
+DATABASE_ROUTERS = []
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -146,9 +166,6 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Default primary key field type
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
 # Logging configuration
 LOGGING = {
     "version": 1,
@@ -184,8 +201,6 @@ LOGGING = {
         },
     },
 }
-
-AUTH_USER_MODEL = "users.User"
 
 # FastAPI Service Configuration
 FASTAPI_BASE_URL = os.environ.get('FASTAPI_BASE_URL', 'http://localhost:8001/api/v1')

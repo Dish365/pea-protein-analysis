@@ -8,7 +8,6 @@ from backend.fastapi_app.process_analysis import (
     opex_endpoints,
     profitability_endpoints,
     economic_endpoints,
-    pipeline_endpoints,
     efficiency_endpoints,
     impact_endpoints,
     allocation_endpoints,
@@ -105,14 +104,6 @@ economic_router.include_router(
 # Include economic router in main API router
 logger.debug("Including economic router in main API router")
 api_router.include_router(economic_router, prefix="/economic")
-
-# Pipeline endpoints
-logger.debug("Including Pipeline endpoints")
-api_router.include_router(
-    pipeline_endpoints.router,
-    prefix="/pipeline",
-    tags=["Pipeline Analysis"]
-)
 
 # Environmental analysis endpoints
 

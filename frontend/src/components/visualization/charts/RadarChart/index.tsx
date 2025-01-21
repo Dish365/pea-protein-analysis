@@ -1,8 +1,12 @@
 import React from "react";
 import { ResponsiveRadar } from "@nivo/radar";
 
+interface RadarDataPoint {
+  [key: string]: number | string;
+}
+
 interface RadarChartProps {
-  data: Array<any>; // TODO: Define proper type
+  data: RadarDataPoint[];
   keys: string[];
   indexBy: string;
 }

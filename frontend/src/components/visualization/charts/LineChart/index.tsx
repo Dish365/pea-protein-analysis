@@ -1,8 +1,12 @@
 import React from "react";
 import { Line } from "@ant-design/plots";
 
+interface DataPoint {
+  [key: string]: number | string;
+}
+
 interface LineChartProps {
-  data: any[];
+  data: DataPoint[];
   xField: string;
   yField: string;
   seriesField?: string;

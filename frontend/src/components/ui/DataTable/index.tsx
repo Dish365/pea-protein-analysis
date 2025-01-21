@@ -5,12 +5,15 @@ interface Column {
   accessor: string; // or whatever type your accessor is
 }
 
-interface DataTableProps {
-  data: Array<{ [key: string]: any }>; // Replace `any` with specific field types if known
+interface DataTableProps<T> {
+  data: T[];
   columns: Column[];
 }
 
-export const DataTable: React.FC<DataTableProps> = ({ data, columns }) => {
+export const DataTable = <T extends Record<string, unknown>>({
+  data,
+  columns,
+}: DataTableProps<T>) => {
   return (
     <div className="data-table-container">
       <table>
@@ -25,7 +28,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, columns }) => {
           {data.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {columns.map((column, colIndex) => (
-                <td key={colIndex}>{row[column.accessor]}</td>
+                <td key={colIndex}>{String(row[column.accessor])}</td>
               ))}
             </tr>
           ))}

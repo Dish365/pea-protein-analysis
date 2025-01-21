@@ -1,8 +1,17 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { apiClient } from '@/lib/api/client';
+import { useQuery } from "@tanstack/react-query";
+import {
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Line,
+  ComposedChart,
+  ReferenceLine,
+} from "recharts";
+import apiClient from "@/lib/api/client";
 
 interface ParticleSizeData {
   distribution: {
@@ -25,12 +34,14 @@ interface ParticleSizeData {
 
 export function ParticleSizeDisplay() {
   const { data, isLoading, error } = useQuery<ParticleSizeData>({
-    queryKey: ['particle-size'],
-    queryFn: () => apiClient.get('/api/analysis/technical/particle-size'),
+    queryKey: ["particle-size"],
+    queryFn: () => apiClient.get("/api/analysis/technical/particle-size"),
   });
 
-  if (isLoading) return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error) return <div className="text-red-500">Error loading particle size data</div>;
+  if (isLoading)
+    return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
+  if (error)
+    return <div className="text-red-500">Error loading particle size data</div>;
 
   const isWithinTarget = (size: number) => {
     return size >= data!.targetRange.min && size <= data!.targetRange.max;
@@ -74,33 +85,43 @@ export function ParticleSizeDisplay() {
 
       {/* Distribution Chart */}
       <div className="bg-white rounded-lg p-4 shadow-sm">
-        <h3 className="text-lg font-semibold mb-4">Particle Size Distribution</h3>
+        <h3 className="text-lg font-semibold mb-4">
+          Particle Size Distribution
+        </h3>
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data?.distribution}>
-              <XAxis 
-                dataKey="size" 
-                label={{ value: 'Particle Size (μm)', position: 'bottom' }}
+              <XAxis
+                dataKey="size"
+                label={{ value: "Particle Size (μm)", position: "bottom" }}
               />
-              <YAxis 
+              <YAxis
                 yAxisId="left"
-                label={{ value: 'Frequency (%)', angle: -90, position: 'insideLeft' }}
+                label={{
+                  value: "Frequency (%)",
+                  angle: -90,
+                  position: "insideLeft",
+                }}
               />
-              <YAxis 
+              <YAxis
                 yAxisId="right"
                 orientation="right"
-                label={{ value: 'Cumulative (%)', angle: 90, position: 'insideRight' }}
+                label={{
+                  value: "Cumulative (%)",
+                  angle: 90,
+                  position: "insideRight",
+                }}
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value: number, name: string) => [
                   `${value.toFixed(2)}%`,
-                  name === 'frequency' ? 'Frequency' : 'Cumulative'
+                  name === "frequency" ? "Frequency" : "Cumulative",
                 ]}
               />
-              <Bar 
+              <Bar
                 yAxisId="left"
-                dataKey="frequency" 
-                fill="#4F46E5" 
+                dataKey="frequency"
+                fill="#4F46E5"
                 opacity={0.8}
                 name="Frequency"
               />
@@ -135,17 +156,21 @@ export function ParticleSizeDisplay() {
         <h3 className="text-lg font-semibold mb-2">Distribution Analysis</h3>
         <div className="text-sm text-gray-600">
           <p>
-            The particle size distribution shows a 
-            {data?.metrics.d50 > (data?.targetRange.max + data?.targetRange.min) / 2 
-              ? 'right-skewed' 
-              : 'left-skewed'} 
+            The particle size distribution shows a
+            {(data?.metrics?.d50 ?? 0) >
+            ((data?.targetRange?.max ?? 0) + (data?.targetRange?.min ?? 0)) / 2
+              ? "right-skewed"
+              : "left-skewed"}
             pattern with a median size of {data?.metrics.d50}μm.
           </p>
           <p className="mt-2">
-            {data?.metrics.d90 - data?.metrics.d10}μm span between D10 and D90 indicates a
-            {(data?.metrics.d90 - data?.metrics.d10) / data?.metrics.d50 > 2 
-              ? ' wide ' 
-              : ' narrow '} 
+            {(data?.metrics?.d90 ?? 0) - (data?.metrics?.d10 ?? 0)}μm span
+            between D10 and D90 indicates a
+            {((data?.metrics?.d90 ?? 0) - (data?.metrics?.d10 ?? 0)) /
+              (data?.metrics?.d50 ?? 1) >
+            2
+              ? " wide "
+              : " narrow "}
             distribution range.
           </p>
         </div>
@@ -158,13 +183,13 @@ interface MetricCardProps {
   label: string;
   value?: number;
   unit: string;
-  status: boolean | 'neutral';
+  status: boolean | "neutral";
 }
 
 function MetricCard({ label, value, unit, status }: MetricCardProps) {
   const getStatusColor = () => {
-    if (status === 'neutral') return 'text-gray-600';
-    return status ? 'text-green-600' : 'text-red-600';
+    if (status === "neutral") return "text-gray-600";
+    return status ? "text-green-600" : "text-red-600";
   };
 
   return (

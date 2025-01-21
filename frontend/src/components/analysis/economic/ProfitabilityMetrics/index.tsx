@@ -1,8 +1,15 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { apiClient } from '@/lib/api/client';
+import { useQuery } from "@tanstack/react-query";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import apiClient from "@/lib/api/client";
 
 interface ProfitabilityData {
   metrics: {
@@ -27,12 +34,14 @@ interface ProfitabilityData {
 
 export function ProfitabilityMetrics() {
   const { data, isLoading, error } = useQuery<ProfitabilityData>({
-    queryKey: ['profitability-metrics'],
-    queryFn: () => apiClient.get('/api/analysis/economic/profitability'),
+    queryKey: ["profitability-metrics"],
+    queryFn: () => apiClient.get("/api/analysis/economic/profitability"),
   });
 
-  if (isLoading) return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error) return <div className="text-red-500">Error loading profitability data</div>;
+  if (isLoading)
+    return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
+  if (error)
+    return <div className="text-red-500">Error loading profitability data</div>;
 
   return (
     <div className="space-y-6">
@@ -75,24 +84,34 @@ export function ProfitabilityMetrics() {
         <div className="h-2 bg-gray-100 rounded-full">
           <div
             className="h-full bg-green-600 rounded-full"
-            style={{ width: `${Math.max(0, Math.min(100, data?.metrics.profitMargin || 0))}%` }}
+            style={{
+              width: `${Math.max(
+                0,
+                Math.min(100, data?.metrics.profitMargin || 0)
+              )}%`,
+            }}
           />
         </div>
       </div>
 
       {/* Revenue vs Costs Trend */}
       <div className="bg-white rounded-lg p-4 shadow-sm">
-        <h3 className="text-lg font-semibold mb-4">Financial Performance Trend</h3>
+        <h3 className="text-lg font-semibold mb-4">
+          Financial Performance Trend
+        </h3>
         <div className="h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data?.trends}>
-              <XAxis 
+              <XAxis
                 dataKey="timestamp"
                 tickFormatter={(value) => new Date(value).toLocaleDateString()}
               />
               <YAxis />
               <Tooltip
-                formatter={(value: number) => [`$${value.toLocaleString()}`, '']}
+                formatter={(value: number) => [
+                  `$${value.toLocaleString()}`,
+                  "",
+                ]}
                 labelFormatter={(label) => new Date(label).toLocaleDateString()}
               />
               <Line
@@ -127,7 +146,7 @@ export function ProfitabilityMetrics() {
 interface MetricCardProps {
   label: string;
   value?: number;
-  format: 'percentage' | 'currency' | 'years';
+  format: "percentage" | "currency" | "years";
   trend?: {
     current: number;
     previous: number;
@@ -137,13 +156,13 @@ interface MetricCardProps {
 
 function MetricCard({ label, value, format, trend }: MetricCardProps) {
   const formatValue = (val?: number) => {
-    if (val === undefined) return '-';
+    if (val === undefined) return "-";
     switch (format) {
-      case 'percentage':
+      case "percentage":
         return `${val.toFixed(1)}%`;
-      case 'currency':
+      case "currency":
         return `$${val.toLocaleString()}`;
-      case 'years':
+      case "years":
         return `${val.toFixed(1)} years`;
       default:
         return val.toString();
@@ -153,14 +172,14 @@ function MetricCard({ label, value, format, trend }: MetricCardProps) {
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm">
       <div className="text-sm text-gray-600">{label}</div>
-      <div className="text-2xl font-bold mt-1">
-        {formatValue(value)}
-      </div>
+      <div className="text-2xl font-bold mt-1">{formatValue(value)}</div>
       {trend && (
-        <div className={`text-sm mt-1 ${
-          trend.change >= 0 ? 'text-green-600' : 'text-red-600'
-        }`}>
-          {trend.change >= 0 ? '↑' : '↓'} {Math.abs(trend.change)}%
+        <div
+          className={`text-sm mt-1 ${
+            trend.change >= 0 ? "text-green-600" : "text-red-600"
+          }`}
+        >
+          {trend.change >= 0 ? "↑" : "↓"} {Math.abs(trend.change)}%
         </div>
       )}
     </div>

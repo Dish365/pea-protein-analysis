@@ -2,8 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,

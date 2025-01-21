@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 from analytics.economic.capex.equipment_costs import calculate_equipment_costs
 from analytics.economic.capex.installation import calculate_installation_costs
 from analytics.economic.capex.indirect_costs import calculate_indirect_costs
@@ -23,9 +23,13 @@ class CapitalExpenditureAnalysis:
         self.indirect_factors.append(factor)
 
     def calculate_total_capex(
-        self, installation_factor: float = 0.2, indirect_costs_factor: float = 0.15
-    ) -> Dict[str, float]:
-        """Calculate total capital expenditure including all components"""
+        self, installation_factor: float,
+        indirect_costs_factor: float,
+        indirect_factors: List[Dict[str, Any]]) -> Dict[str, float]:
+        """Calculate total capital expenditure including all factors"""
+        if not indirect_factors:
+            raise ValueError("Indirect factors list cannot be empty")
+        
         # Calculate equipment costs
         equipment_costs = calculate_equipment_costs(self.equipment_list)
 
@@ -35,7 +39,7 @@ class CapitalExpenditureAnalysis:
         )
 
         # Calculate indirect costs
-        indirect_costs = calculate_indirect_costs(self.indirect_factors)
+        indirect_costs = calculate_indirect_costs(indirect_factors)
 
         # Calculate total CAPEX
         total_capex = equipment_costs + installation_costs + indirect_costs

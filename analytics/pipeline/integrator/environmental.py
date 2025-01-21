@@ -64,34 +64,90 @@ class EnvironmentalIntegrator:
             raise RuntimeError(f"Environmental analysis failed: {str(e)}")
 
     def _extract_process_parameters(self, process_data: Dict[str, Any]) -> Dict[str, Dict]:
-        """Extract and organize process parameters for analysis"""
-        impact_params = {
-            'energy_consumption': {
-                'electricity': process_data.get('electricity_kwh', 0),
-                'cooling': process_data.get('cooling_kwh', 0)
-            },
-            'water_consumption': process_data.get('water_kg', 0),
-            'emission_factors': process_data.get('emission_factors', {}),
-            'process_type': process_data.get('process_type', 'baseline')
-        }
+        """
+        Extract and organize process parameters for analysis.
         
-        allocation_params = {
-            'product_values': process_data.get('product_values', {}),
-            'mass_flows': process_data.get('mass_flows', {}),
-            'method': process_data.get('allocation_method', 'hybrid'),
-            'hybrid_weights': process_data.get('hybrid_weights')
-        }
-        
-        return {
-            'impact_params': impact_params,
-            'allocation_params': allocation_params
-        }
+        Args:
+            process_data: Raw process data dictionary
+            
+        Returns:
+            Dictionary containing formatted impact and allocation parameters
+            
+        Raises:
+            ValueError: If required fields are missing or invalid
+        """
+        try:
+            # Extract nested data with validation
+            energy = process_data.get('energy_consumption', {})
+            if not isinstance(energy, dict):
+                raise ValueError("energy_consumption must be a dictionary")
+                
+            production = process_data.get('production_data', {})
+            if not isinstance(production, dict):
+                raise ValueError("production_data must be a dictionary")
+            
+            # Calculate waste from mass balance
+            input_mass = production.get('input_mass', 0)
+            output_mass = production.get('output_mass', 0)
+            waste_mass = max(0, input_mass - output_mass)  # Ensure non-negative
+            
+            # Map and validate impact parameters
+            impact_params = {
+                'electricity_kwh': float(energy.get('electricity', 0)),
+                'cooling_kwh': float(energy.get('cooling', 0)),
+                'water_kg': float(process_data.get('water_consumption', 0)),
+                'transport_ton_km': float(process_data.get('transport_consumption', 0)),
+                'product_kg': float(output_mass),
+                'equipment_kg': float(process_data.get('equipment_mass', 0)),
+                'waste_kg': float(waste_mass),
+                'thermal_ratio': min(1.0, max(0.0, float(process_data.get('thermal_ratio', 0.3)))),
+                'process_type': str(process_data.get('process_type', 'baseline'))
+            }
+            
+            # Validate non-negative values
+            for key, value in impact_params.items():
+                if key != 'process_type' and value < 0:
+                    raise ValueError(f"Parameter {key} cannot be negative")
+            
+            # Map allocation parameters with matching product keys
+            product_values = {
+                'main_product': process_data.get('revenue_per_year', 100000.0),  # Default value if not provided
+                'waste_product': process_data.get('waste_value', 0.0)  # Default to 0 if not provided
+            }
+            
+            mass_flows = {
+                'main_product': float(output_mass),
+                'waste_product': float(waste_mass)
+            }
+            
+            allocation_params = {
+                'product_values': product_values,
+                'mass_flows': mass_flows,
+                'method': process_data.get('allocation_method', 'hybrid'),
+                'hybrid_weights': process_data.get('hybrid_weights', {'physical': 0.5, 'economic': 0.5})
+            }
+            
+            # Validate allocation method
+            if allocation_params['method'] not in ['economic', 'physical', 'hybrid']:
+                raise ValueError(f"Invalid allocation method: {allocation_params['method']}")
+            
+            return {
+                'impact_params': impact_params,
+                'allocation_params': allocation_params
+            }
+            
+        except (TypeError, ValueError) as e:
+            logger.error(f"Error extracting process parameters: {str(e)}")
+            raise ValueError(f"Invalid process data: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error in parameter extraction: {str(e)}")
+            raise RuntimeError(f"Failed to extract process parameters: {str(e)}")
 
     async def calculate_impacts(self, process_data: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate environmental impacts using impact endpoints"""
         try:
             response = await self.client.post(
-                f"{self.api_base_url}/impact/calculate",
+                f"{self.api_base_url}/impact/calculate-impacts",
                 json=process_data
             )
             

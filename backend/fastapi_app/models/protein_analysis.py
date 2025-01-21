@@ -76,6 +76,8 @@ class ParticleSizeInput(BaseModel):
     )
     density: Optional[float] = Field(
         None,
+        gt=0.0,
+        lt=10.0,  # Most protein materials have density < 10 g/cm³
         description="Particle density in g/cm³ for surface area calculations"
     )
     target_ranges: Optional[Dict[str, tuple]] = Field(
@@ -88,16 +90,34 @@ class ParticleSizeInput(BaseModel):
         ge=0.0,
         le=100.0
     )
+    final_moisture: Optional[float] = Field(
+        None,
+        description="Final moisture content percentage",
+        ge=0.0,
+        le=100.0
+    )
     treatment_type: Optional[ProcessType] = Field(
         None,
         description="Pre-treatment type (rf/ir)"
     )
 
-    @field_validator("treatment_type")
+    @field_validator("density")
     @classmethod
-    def validate_treatment_type(cls, v: Optional[ProcessType]) -> Optional[ProcessType]:
-        if v is not None and v == ProcessType.BASELINE:
-            raise ValueError("Treatment type must be either 'rf' or 'ir'")
+    def validate_density(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None:
+            if v <= 0:
+                raise ValueError("Density must be positive")
+            if v >= 10.0:
+                raise ValueError("Density value is unrealistic for protein materials")
+        return v
+
+    @field_validator("final_moisture")
+    @classmethod
+    def validate_final_moisture(cls, v: Optional[float], values) -> Optional[float]:
+        if v is not None:
+            initial = values.data.get("initial_moisture")
+            if initial is not None and v >= initial:
+                raise ValueError("Final moisture content should be less than initial moisture content")
         return v
 
     @field_validator("particle_sizes")
@@ -107,7 +127,9 @@ class ParticleSizeInput(BaseModel):
             raise ValueError("At least 2 particle sizes are required for analysis")
         if not all(x > 0 for x in v):
             raise ValueError("All particle sizes must be positive")
-        return v
+        if any(x > 10000 for x in v):  # 10mm upper limit
+            raise ValueError("Particle sizes exceeding 10000 μm are unrealistic for protein processing")
+        return sorted(v)  # Return sorted list for efficiency
 
     @field_validator("weights")
     @classmethod
@@ -119,7 +141,12 @@ class ParticleSizeInput(BaseModel):
         if not all(w >= 0 for w in v):
             raise ValueError("All weights must be non-negative")
         if abs(sum(v) - 1.0) > 0.001:  # Allow small floating point variance
-            raise ValueError("Weights must sum to 1.0")
+            # Normalize weights if they don't sum to 1
+            total = sum(v)
+            if total > 0:
+                v = [w/total for w in v]
+            else:
+                raise ValueError("Sum of weights must be positive")
         return v
 
     @field_validator("target_ranges")
@@ -127,11 +154,16 @@ class ParticleSizeInput(BaseModel):
     def validate_target_ranges(cls, v: Optional[Dict[str, Tuple[float, float]]]) -> Optional[Dict[str, Tuple[float, float]]]:
         if v is None:
             return v
+        valid_keys = {"D10", "D50", "D90", "span", "cv"}
         for key, (min_val, max_val) in v.items():
+            if key not in valid_keys:
+                raise ValueError(f"Invalid target range key: {key}. Must be one of {valid_keys}")
             if min_val >= max_val:
                 raise ValueError(f"Invalid range for {key}: min value must be less than max value")
             if min_val < 0:
                 raise ValueError(f"Invalid range for {key}: values cannot be negative")
+            if key in {"D10", "D50", "D90"} and max_val > 10000:
+                raise ValueError(f"Invalid range for {key}: particle sizes cannot exceed 10000 μm")
         return v
 
 

@@ -7,7 +7,6 @@ from backend.fastapi_app.process_analysis import (
     capex_endpoints,
     opex_endpoints,
     profitability_endpoints,
-    economic_endpoints,
     efficiency_endpoints,
     impact_endpoints,
     allocation_endpoints,
@@ -93,12 +92,6 @@ economic_router.include_router(
     profitability_endpoints.router,
     prefix="/profitability",
     tags=["Profitability Analysis"]
-)
-
-logger.debug("Including Economic Analysis endpoints")
-economic_router.include_router(
-    economic_endpoints.router,
-    tags=["Economic Analysis"]
 )
 
 # Include economic router in main API router

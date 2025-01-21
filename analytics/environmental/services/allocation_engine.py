@@ -57,7 +57,7 @@ class AllocationEngine:
         }
         
     def get_allocation_factors(self, 
-                             method: Literal['economic', 'physical'] = 'economic'
+                             method: Literal['economic', 'physical', 'hybrid'] = 'economic'
                              ) -> Dict[str, float]:
         """Get allocation factors for specified method
         
@@ -67,6 +67,23 @@ class AllocationEngine:
         Returns:
             Dictionary mapping products to their allocation factors
         """
+        if method == 'hybrid':
+            # For hybrid, combine economic and physical factors using configured weights
+            economic_factors = self.economic_allocator.get_allocation_factors()
+            physical_factors = self.physical_allocator.get_allocation_factors()
+            
+            # Get weights, defaulting to 0.5 each if not set
+            weights = getattr(self.hybrid_allocator, '_weights', {'economic': 0.5, 'physical': 0.5})
+            
+            # Combine factors using weights
+            hybrid_factors = {}
+            for product in economic_factors:
+                hybrid_factors[product] = (
+                    weights['economic'] * economic_factors[product] +
+                    weights['physical'] * physical_factors[product]
+                )
+            return hybrid_factors
+            
         return {
             'economic': self.economic_allocator.get_allocation_factors(),
             'physical': self.physical_allocator.get_allocation_factors()

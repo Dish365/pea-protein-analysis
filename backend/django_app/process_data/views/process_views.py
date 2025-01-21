@@ -246,21 +246,91 @@ class ProcessAnalysisView(APIView):
 
     def _get_technical_summary(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Extract key technical metrics for summary"""
-        technical = results['technical_analysis']
+        technical = results.get('technical_results', {})
+        
+        # Extract protein recovery metrics
+        protein_metrics = technical.get('recovery_metrics', {})
+        recovery_rate = protein_metrics.get('recovery_rate', 0)
+        protein_loss = protein_metrics.get('protein_loss', 0)
+        concentration_factor = protein_metrics.get('concentration_factor', 0)
+        
+        # Extract process efficiency metrics
+        efficiency_metrics = technical.get('process_efficiency', {})
+        process_efficiency = efficiency_metrics.get('process_efficiency', 0)
+        yield_gap = efficiency_metrics.get('yield_gap', 0)
+        
         return {
-            'protein_recovery': technical['protein_recovery'],
-            'separation_efficiency': technical['separation_efficiency'],
-            'process_efficiency': technical['process_efficiency']
+            'protein_recovery': {
+                'recovery_rate': recovery_rate,
+                'protein_loss': protein_loss,
+                'concentration_factor': concentration_factor
+            },
+            'process_efficiency': {
+                'efficiency': process_efficiency,
+                'yield_gap': yield_gap
+            },
+            'separation_efficiency': technical.get('separation_efficiency', 0),
+            'particle_metrics': technical.get('particle_metrics', {})
         }
 
     def _get_economic_summary(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Extract key economic metrics for summary"""
         economic = results['economic_analysis']
+        
+        # Extract CAPEX breakdown
+        capex_analysis = economic['capex_analysis']
+        capex_summary = {
+            'total_capex': capex_analysis['total_capex'],
+            'equipment_costs': capex_analysis['equipment_costs'],
+            'installation_costs': capex_analysis['installation_costs'],
+            'indirect_costs': capex_analysis['indirect_costs']
+        }
+        
+        # Extract OPEX breakdown
+        opex_analysis = economic['opex_analysis']
+        opex_summary = {
+            'total_opex': opex_analysis['total_opex'],
+            'utilities_cost': opex_analysis['utilities_cost'],
+            'materials_cost': opex_analysis['materials_cost'],
+            'labor_cost': opex_analysis['labor_cost'],
+            'maintenance_cost': opex_analysis['maintenance_cost']
+        }
+        
+        # Extract profitability metrics
+        profitability = economic['profitability_analysis']['metrics']
+        profitability_summary = {
+            'npv': profitability['npv'],
+            'roi': profitability['roi'],
+            'payback_period': profitability['payback_period'],
+            'discounted_payback': profitability['discounted_payback']
+        }
+        
+        # Extract Monte Carlo results if available
+        monte_carlo = economic['profitability_analysis'].get('monte_carlo')
+        if monte_carlo:
+            profitability_summary.update({
+                'monte_carlo_mean': monte_carlo.get('mean_npv'),
+                'monte_carlo_std': monte_carlo.get('std_npv'),
+                'confidence_interval': monte_carlo.get('confidence_interval')
+            })
+        
+        # Extract cost tracking summary if available
+        cost_tracking = economic.get('cost_tracking', {})
+        if cost_tracking:
+            cost_summary = {
+                'total_costs': cost_tracking['cost_summary'].get('total', 0),
+                'cost_breakdown': cost_tracking['cost_summary']
+            }
+        else:
+            cost_summary = None
+        
         return {
-            'capex': economic['capex']['total_capex'],
-            'opex': economic['opex']['total_opex'],
-            'npv': economic['profitability']['metrics']['npv'],
-            'roi': economic['profitability']['metrics']['roi']
+            'capex': capex_summary,
+            'opex': opex_summary,
+            'profitability': profitability_summary,
+            'cost_tracking': cost_summary,
+            'process_type': economic.get('process_type', 'baseline'),
+            'production_volume': economic.get('production_volume', 0)
         }
 
     def _get_environmental_summary(self, results: Dict[str, Any]) -> Dict[str, Any]:
@@ -319,35 +389,42 @@ class ProcessAnalysisView(APIView):
 
     def _prepare_result_data(self, process_id: int, results: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare analysis results for storage"""
-        technical = results['technical_analysis']
-        economic = results['economic_analysis']
-        environmental = results['environmental_analysis']
-        efficiency = results['eco_efficiency_analysis']
+        technical = results.get('technical_results', {})
+        economic = results.get('economic_analysis', {})
+        environmental = results.get('environmental_results', {})
+        efficiency = results.get('efficiency_results', {})
+        
+        # Extract protein recovery metrics
+        protein_metrics = technical.get('recovery_metrics', {})
         
         return {
             'process': process_id,
             # Technical Results
-            'protein_yield': technical['protein_recovery']['yield'],
-            'separation_efficiency': technical['separation_efficiency'],
-            'particle_size_distribution': {
-                'd10': technical['particle_analysis']['d10'],
-                'd50': technical['particle_analysis']['d50'],
-                'd90': technical['particle_analysis']['d90']
+            'protein_recovery': {
+                'recovery_rate': protein_metrics.get('recovery_rate', 0),
+                'protein_loss': protein_metrics.get('protein_loss', 0),
+                'concentration_factor': protein_metrics.get('concentration_factor', 0)
             },
+            'separation_efficiency': technical.get('separation_efficiency', 0),
+            'particle_size_distribution': technical.get('particle_metrics', {
+                'd10': 0,
+                'd50': 0,
+                'd90': 0
+            }),
             
             # Economic Results
-            'capex': economic['capex_analysis']['total_capex'],
-            'opex': economic['opex_analysis']['total_opex'],
-            'npv': economic['profitability_analysis']['npv'],
-            'roi': economic['profitability_analysis']['roi'],
+            'capex': economic.get('capex_analysis', {}).get('total_capex', 0),
+            'opex': economic.get('opex_analysis', {}).get('total_opex', 0),
+            'npv': economic.get('profitability_analysis', {}).get('npv', 0),
+            'roi': economic.get('profitability_analysis', {}).get('roi', 0),
             
             # Environmental Results
-            'gwp': environmental['impact_assessment']['gwp'],
-            'hct': environmental['impact_assessment']['hct'],
-            'frs': environmental['impact_assessment']['frs'],
-            'water_impact': environmental['impact_assessment']['water_consumption'],
+            'gwp': environmental.get('impact_assessment', {}).get('gwp', 0),
+            'hct': environmental.get('impact_assessment', {}).get('hct', 0),
+            'frs': environmental.get('impact_assessment', {}).get('frs', 0),
+            'water_impact': environmental.get('impact_assessment', {}).get('water_consumption', 0),
             
             # Eco-efficiency Results
-            'eco_efficiency_index': efficiency['efficiency_metrics']['eco_efficiency_index'],
-            'relative_performance': efficiency['performance_indicators']['relative_performance']
+            'eco_efficiency_index': efficiency.get('efficiency_metrics', {}).get('eco_efficiency_index', 0),
+            'relative_performance': efficiency.get('performance_indicators', {}).get('relative_performance', 0)
         } 

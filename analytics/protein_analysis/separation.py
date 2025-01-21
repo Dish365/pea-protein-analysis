@@ -43,6 +43,50 @@ class SeparationEfficiencyAnalyzer:
        - ηᵢ = Efficiency of stage i
     """
 
+    def _validate_composition(self, composition: Dict[str, float]) -> None:
+        """
+        Validate composition percentages sum to approximately 100%.
+
+        Args:
+            composition: Dict of component names and their percentages
+
+        Raises:
+            ValueError: If percentages don't sum to approximately 100%
+        """
+        total = sum(composition.values())
+        if not (99.5 <= total <= 100.5):  # Allow small rounding errors
+            raise ValueError(f"Composition percentages must sum to 100% (got {total}%)")
+
+    def _validate_mass_flows(self, mass_flow: Dict[str, float]) -> None:
+        """
+        Validate mass flow values.
+
+        Args:
+            mass_flow: Dict with input and output mass flows
+
+        Raises:
+            ValueError: If mass flows violate physical constraints
+        """
+        if mass_flow["output"] > mass_flow["input"]:
+            raise ValueError("Output mass cannot exceed input mass")
+        if any(flow <= 0 for flow in mass_flow.values()):
+            raise ValueError("Mass flows must be positive")
+
+    def _validate_component_match(self, feed_composition: Dict[str, float],
+                                product_composition: Dict[str, float]) -> None:
+        """
+        Validate that feed and product have matching components.
+
+        Args:
+            feed_composition: Dict of feed components and percentages
+            product_composition: Dict of product components and percentages
+
+        Raises:
+            ValueError: If component sets don't match
+        """
+        if set(feed_composition.keys()) != set(product_composition.keys()):
+            raise ValueError("Feed and product compositions must have the same components")
+
     def calculate_efficiency(
         self,
         feed_composition: Dict[str, float],
@@ -84,13 +128,19 @@ class SeparationEfficiencyAnalyzer:
             - component_recoveries: Recovery rates for each component
 
         Raises:
-            ValueError: If compositions don't contain required components
+            ValueError: If compositions don't contain required components or violate constraints
         """
         # Validate inputs
         if "protein" not in feed_composition or "protein" not in product_composition:
             raise ValueError("Compositions must include protein content")
         if "input" not in mass_flow or "output" not in mass_flow:
             raise ValueError("Mass flow must include input and output")
+
+        # Additional validations
+        self._validate_composition(feed_composition)
+        self._validate_composition(product_composition)
+        self._validate_mass_flows(mass_flow)
+        self._validate_component_match(feed_composition, product_composition)
 
         # Extract flow rates
         input_flow = mass_flow["input"]
@@ -101,37 +151,48 @@ class SeparationEfficiencyAnalyzer:
             product_composition["protein"] - feed_composition["protein"]
         )
 
-        # Calculate separation efficiency
+        # Calculate separation efficiency with zero check
+        if feed_composition["protein"] <= 0:
+            raise ValueError("Feed protein content must be greater than 0")
+        
         separation_efficiency = (
             (output_flow * product_composition["protein"])
             / (input_flow * feed_composition["protein"])
         ) * 100
 
-        # Calculate component recoveries
+        # Calculate component recoveries with zero handling
         component_recoveries = {}
         for component in feed_composition:
             if component in product_composition:
-                recovery = (
-                    (output_flow * product_composition[component])
-                    / (input_flow * feed_composition[component])
-                ) * 100
-                component_recoveries[component] = recovery
+                if feed_composition[component] <= 0:
+                    if product_composition[component] <= 0:
+                        # Both feed and product are zero - perfect recovery
+                        component_recoveries[component] = 100.0
+                    else:
+                        # Component appears in product but not in feed - invalid
+                        raise ValueError(
+                            f"Invalid mass balance: {component} appears in product but not in feed"
+                        )
+                else:
+                    recovery = (
+                        (output_flow * product_composition[component])
+                        / (input_flow * feed_composition[component])
+                    ) * 100
+                    component_recoveries[component] = recovery
 
-        # Calculate separation factor (protein vs non-protein)
+        # Calculate separation factor with zero handling
         protein_ratio = product_composition["protein"] / feed_composition["protein"]
         non_protein_feed = 100 - feed_composition["protein"]
         non_protein_product = 100 - product_composition["protein"]
-        non_protein_ratio = (
-            (non_protein_product / non_protein_feed)
-            if non_protein_feed > 0
-            else float("inf")
-        )
-
-        separation_factor = (
-            (protein_ratio / non_protein_ratio)
-            if non_protein_ratio > 0
-            else float("inf")
-        )
+        
+        if non_protein_feed <= 0:
+            separation_factor = float("inf")
+        else:
+            non_protein_ratio = non_protein_product / non_protein_feed
+            if non_protein_ratio <= 0:
+                separation_factor = float("inf")
+            else:
+                separation_factor = protein_ratio / non_protein_ratio
 
         return {
             "separation_factor": separation_factor,
@@ -203,9 +264,11 @@ class SeparationEfficiencyAnalyzer:
 
         # Calculate purity achievement if target specified
         if target_purity is not None:
+            if target_purity <= 0:
+                raise ValueError("Target purity must be positive")
             final_purity = process_data[-1]["product"]["protein"]
             purity_achievement = (final_purity / target_purity) * 100
-            results["purity_achievement"] = purity_achievement
+            results["purity_achievement"] = min(purity_achievement, 100.0)  # Cap at 100%
 
         return results
 
@@ -258,7 +321,7 @@ class SeparationEfficiencyAnalyzer:
             efficiencies.append(efficiency)
 
         # Calculate average efficiency
-        avg_efficiency = np.mean(efficiencies)
+        avg_efficiency = np.mean(efficiencies) if efficiencies else 0.0
 
         # Second pass: calculate contributions and ratios
         for step in process_data:

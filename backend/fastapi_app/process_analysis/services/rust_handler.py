@@ -62,6 +62,18 @@ class RustHandler:
             ]
             self.lib.run_economic_monte_carlo.restype = None
 
+            # Configure sensitivity analysis function
+            self.lib.run_sensitivity_analysis.argtypes = [
+                ctypes.POINTER(ctypes.c_double),  # base_values
+                ctypes.c_size_t,                  # len
+                ctypes.c_size_t,                  # variable_index
+                ctypes.c_double,                  # range_min
+                ctypes.c_double,                  # range_max
+                ctypes.c_size_t,                  # steps
+                ctypes.POINTER(ctypes.c_double),  # results
+            ]
+            self.lib.run_sensitivity_analysis.restype = None
+
             # Configure allocation functions
             self.lib.calculate_allocation.argtypes = [
                 ctypes.POINTER(ctypes.c_double),  # impacts
@@ -94,6 +106,19 @@ class RustHandler:
                 ctypes.POINTER(ctypes.c_double),  # results
             ]
             self.lib.calculate_eco_efficiency_matrix.restype = ctypes.c_bool
+
+            # Configure particle distribution analysis
+            self.lib.analyze_particle_distribution.argtypes = [
+                ctypes.POINTER(ctypes.c_double),  # sizes
+                ctypes.POINTER(ctypes.c_double),  # weights
+                ctypes.c_size_t,                  # len
+                ctypes.POINTER(ctypes.c_double),  # d10
+                ctypes.POINTER(ctypes.c_double),  # d50
+                ctypes.POINTER(ctypes.c_double),  # d90
+                ctypes.POINTER(ctypes.c_double),  # mean
+                ctypes.POINTER(ctypes.c_double),  # std_dev
+            ]
+            self.lib.analyze_particle_distribution.restype = ctypes.c_bool
             
             logger.debug("Rust functions configured successfully")
             
@@ -157,16 +182,37 @@ class RustHandler:
         weights: List[float]
     ) -> Dict[str, float]:
         """
-        Analyze particle size distribution using Rust implementation
+        Analyze particle size distribution using optimized Rust implementation
         
         Args:
-            particle_sizes: List of particle sizes
-            weights: List of weights for each size
+            particle_sizes: List of particle sizes (must be non-empty)
+            weights: List of weights for each size (must match particle_sizes length)
             
         Returns:
-            Dictionary containing distribution metrics
+            Dictionary containing distribution metrics:
+            - D10: 10th percentile diameter
+            - D50: Median diameter
+            - D90: 90th percentile diameter
+            - mean: Weighted mean diameter
+            - std_dev: Weighted standard deviation
+            
+        Raises:
+            ValueError: If input validation fails
+            RuntimeError: If Rust computation fails
         """
         try:
+            # Validate inputs
+            if not particle_sizes or not weights:
+                raise ValueError("Particle sizes and weights cannot be empty")
+            if len(particle_sizes) != len(weights):
+                raise ValueError("Particle sizes and weights must have the same length")
+            if any(not isinstance(x, (int, float)) for x in particle_sizes + weights):
+                raise ValueError("All values must be numeric")
+            if any(x <= 0 for x in particle_sizes):
+                raise ValueError("Particle sizes must be positive")
+            if any(x < 0 for x in weights):
+                raise ValueError("Weights cannot be negative")
+                
             # Convert lists to C arrays
             size_array = (ctypes.c_double * len(particle_sizes))(*particle_sizes)
             weight_array = (ctypes.c_double * len(weights))(*weights)
@@ -178,8 +224,8 @@ class RustHandler:
             mean = ctypes.c_double()
             std_dev = ctypes.c_double()
             
-            # Call Rust function
-            self.lib.analyze_particle_distribution(
+            # Call Rust function with error handling
+            success = self.lib.analyze_particle_distribution(
                 size_array,
                 weight_array,
                 len(particle_sizes),
@@ -189,6 +235,9 @@ class RustHandler:
                 ctypes.byref(mean),
                 ctypes.byref(std_dev)
             )
+            
+            if not success:
+                raise RuntimeError("Particle size analysis failed in Rust implementation")
             
             return {
                 "D10": d10.value,
@@ -354,4 +403,48 @@ class RustHandler:
 
         except Exception as e:
             logger.error(f"Error in eco-efficiency calculation: {str(e)}", exc_info=True)
-            raise RuntimeError(f"Eco-efficiency calculation failed: {str(e)}") 
+            raise RuntimeError(f"Eco-efficiency calculation failed: {str(e)}")
+
+    def run_sensitivity_analysis(
+        self,
+        base_values: List[float],
+        variable_index: int,
+        range_min: float,
+        range_max: float,
+        steps: int = 10
+    ) -> List[float]:
+        """
+        Run sensitivity analysis using Rust implementation
+        
+        Args:
+            base_values: List of cash flows starting with initial investment
+            variable_index: Index of variable to analyze (0 for discount rate, 1 for production volume)
+            range_min: Minimum value for sensitivity range
+            range_max: Maximum value for sensitivity range
+            steps: Number of steps in sensitivity analysis
+            
+        Returns:
+            List of NPV values for each sensitivity step
+        """
+        try:
+            # Convert inputs to C types
+            values_array = (ctypes.c_double * len(base_values))(*base_values)
+            results_array = (ctypes.c_double * (steps + 1))()  # +1 for inclusive range
+            
+            # Call Rust function
+            self.lib.run_sensitivity_analysis(
+                values_array,
+                len(base_values),
+                variable_index,
+                range_min,
+                range_max,
+                steps,
+                results_array
+            )
+            
+            # Convert results back to Python list
+            return [results_array[i] for i in range(steps + 1)]
+            
+        except Exception as e:
+            logger.error(f"Error in sensitivity analysis: {str(e)}", exc_info=True)
+            raise RuntimeError(f"Sensitivity analysis failed: {str(e)}") 

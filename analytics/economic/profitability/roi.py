@@ -30,8 +30,11 @@ def calculate_roi(
     Raises:
         ValueError: If inputs are invalid
     """
+    if not isinstance(cost_of_investment, (int, float)):
+        raise ValueError("Cost of investment must be a number")
+    
     if cost_of_investment <= 0:
-        raise ValueError("Cost of investment must be positive")
+        raise ValueError(f"Cost of investment must be positive, got: {cost_of_investment}")
 
     if isinstance(gain_from_investment, list):
         if not gain_from_investment:

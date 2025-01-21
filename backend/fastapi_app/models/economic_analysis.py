@@ -2,7 +2,7 @@
 Shared economic analysis models to ensure consistency across endpoints.
 """
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from typing import Dict, List, Optional
 from enum import Enum
 
@@ -11,6 +11,20 @@ class ProcessType(str, Enum):
     BASELINE = 'baseline'
     RF = 'rf'
     IR = 'ir'
+
+
+class IndirectFactor(BaseModel):
+    """Model for indirect cost factors in CAPEX calculations."""
+    name: str = Field(..., description="Name of the indirect cost factor")
+    cost: float = Field(..., gt=0, description="Base cost to apply percentage to")
+    percentage: float = Field(..., gt=0, lt=1, description="Percentage as decimal (0-1)")
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Name cannot be empty")
+        return v.strip()
 
 
 class Equipment(BaseModel):
@@ -31,11 +45,14 @@ class Utility(BaseModel):
     unit: str
     annual_cost: Optional[float] = None
 
-    @field_validator("annual_cost")
+    @field_validator('annual_cost')
     @classmethod
-    def calculate_annual_cost(cls, v: Optional[float], values: Dict) -> float:
-        if v is None and all(k in values for k in ["consumption", "unit_price"]):
-            return values["consumption"] * values["unit_price"]
+    def calculate_annual_cost(cls, v: Optional[float], info: ValidationInfo) -> float:
+        """Calculate annual cost if not provided"""
+        if v is None:
+            data = info.data
+            if 'consumption' in data and 'unit_price' in data:
+                return data['consumption'] * data['unit_price']
         return v or 0.0
 
 
@@ -49,9 +66,12 @@ class RawMaterial(BaseModel):
 
     @field_validator("annual_cost")
     @classmethod
-    def calculate_annual_cost(cls, v: Optional[float], values: Dict) -> float:
-        if v is None and all(k in values for k in ["quantity", "unit_price"]):
-            return values["quantity"] * values["unit_price"]
+    def calculate_annual_cost(cls, v: Optional[float], info: ValidationInfo) -> float:
+        """Calculate annual cost if not provided"""
+        if v is None:
+            data = info.data
+            if 'quantity' in data and 'unit_price' in data:
+                return data['quantity'] * data['unit_price']
         return v or 0.0
 
 
@@ -65,14 +85,17 @@ class LaborConfig(BaseModel):
 
     @field_validator("annual_cost")
     @classmethod
-    def calculate_annual_cost(cls, v: Optional[float], values: Dict) -> float:
-        if v is None and all(k in values for k in ["hourly_wage", "hours_per_week", "weeks_per_year", "num_workers"]):
-            return (
-                values["hourly_wage"] 
-                * values["hours_per_week"] 
-                * values["weeks_per_year"] 
-                * values["num_workers"]
-            )
+    def calculate_annual_cost(cls, v: Optional[float], info: ValidationInfo) -> float:
+        """Calculate annual cost if not provided"""
+        if v is None:
+            data = info.data
+            if all(k in data for k in ["hourly_wage", "hours_per_week", "weeks_per_year", "num_workers"]):
+                return (
+                    data["hourly_wage"] 
+                    * data["hours_per_week"] 
+                    * data["weeks_per_year"] 
+                    * data["num_workers"]
+                )
         return v or 0.0
 
 
@@ -89,8 +112,37 @@ class EconomicFactors(BaseModel):
 class CapexInput(BaseModel):
     """Capital expenditure input model."""
     equipment_list: List[Equipment]
+    indirect_factors: List[IndirectFactor] = Field(
+        default_factory=list,
+        description="List of indirect cost factors. If empty, defaults will be used."
+    )
     economic_factors: EconomicFactors
     process_type: ProcessType
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{
+                "equipment_list": [{
+                    "name": "main_equipment",
+                    "cost": 50000.0,
+                    "efficiency": 0.85,
+                    "maintenance_cost": 5000.0,
+                    "energy_consumption": 1000.0,
+                    "processing_capacity": 100.0
+                }],
+                "indirect_factors": [],
+                "economic_factors": {
+                    "installation_factor": 0.2,
+                    "indirect_costs_factor": 0.15,
+                    "maintenance_factor": 0.05,
+                    "project_duration": 10,
+                    "discount_rate": 0.1,
+                    "production_volume": 1000.0
+                },
+                "process_type": "baseline"
+            }]
+        }
+    }
 
 
 class OpexInput(BaseModel):

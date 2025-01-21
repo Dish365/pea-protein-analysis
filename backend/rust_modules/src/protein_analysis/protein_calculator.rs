@@ -21,59 +21,72 @@ pub extern "C" fn analyze_particle_distribution(
     d90: *mut f64,
     mean: *mut f64,
     std_dev: *mut f64
-) {
-    // Convert raw pointers to slices
-    let sizes = unsafe { std::slice::from_raw_parts(sizes, len) };
-    let weights = unsafe { std::slice::from_raw_parts(weights, len) };
+) -> bool {
+    if sizes.is_null() || weights.is_null() || len == 0 {
+        return false;
+    }
+
+    // Convert raw pointers to slices with safety checks
+    let (sizes, weights) = match (
+        unsafe { std::slice::from_raw_parts(sizes, len) },
+        unsafe { std::slice::from_raw_parts(weights, len) }
+    ) {
+        (s, w) if s.iter().any(|x| x.is_nan()) || w.iter().any(|x| x.is_nan()) => return false,
+        (s, w) => (s, w),
+    };
     
-    // Create mutable vectors for sorting
-    let mut size_weight: Vec<(f64, f64)> = sizes.iter()
-        .zip(weights.iter())
-        .map(|(&s, &w)| (s, w))
-        .collect();
+    // Pre-allocate with capacity
+    let mut size_weight: Vec<(f64, f64)> = Vec::with_capacity(len);
+    size_weight.extend(sizes.iter().zip(weights.iter()).map(|(&s, &w)| (s, w)));
     
-    // Sort by size
-    size_weight.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(Ordering::Equal));
+    // Sort by size using unstable sort (faster)
+    size_weight.sort_unstable_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(Ordering::Equal));
     
-    // Calculate cumulative weights
+    // Calculate total weight once
     let total_weight: f64 = weights.iter().sum();
+    if total_weight <= 0.0 {
+        return false;
+    }
+
+    // Pre-allocate cumulative weights
     let mut cumulative = Vec::with_capacity(len);
     let mut cum_sum = 0.0;
+    let weight_factor = 1.0 / total_weight;
     
+    // Optimize cumulative weight calculation
     for (_, w) in &size_weight {
-        cum_sum += w / total_weight;
+        cum_sum += w * weight_factor;
         cumulative.push(cum_sum);
     }
     
-    // Calculate weighted mean
+    // Calculate weighted mean with single pass
     let weighted_mean: f64 = size_weight.iter()
-        .map(|(s, w)| s * (w / total_weight))
-        .sum();
+        .fold(0.0, |acc, (s, w)| acc + s * (w * weight_factor));
     
-    // Calculate weighted variance and std dev
+    // Calculate weighted variance with single pass
     let weighted_var: f64 = size_weight.iter()
-        .map(|(s, w)| (s - weighted_mean) * (s - weighted_mean) * (w / total_weight))
-        .sum();
+        .fold(0.0, |acc, (s, w)| {
+            let diff = s - weighted_mean;
+            acc + diff * diff * (w * weight_factor)
+        });
+    
     let weighted_std = weighted_var.sqrt();
     
-    // Helper function for percentile calculation
+    // Optimize percentile calculation with binary search
     let get_percentile = |p: f64| {
-        let idx = match cumulative.iter().position(|&x| x >= p) {
-            Some(i) => i,
-            None => return size_weight.last().unwrap().0,
-        };
-        
-        if idx == 0 {
-            return size_weight[0].0;
+        match cumulative.binary_search_by(|&x| x.partial_cmp(&p).unwrap_or(Ordering::Equal)) {
+            Ok(idx) => size_weight[idx].0,
+            Err(idx) if idx == 0 => size_weight[0].0,
+            Err(idx) if idx >= len => size_weight[len-1].0,
+            Err(idx) => {
+                let (x0, x1) = (size_weight[idx-1].0, size_weight[idx].0);
+                let (y0, y1) = (cumulative[idx-1], cumulative[idx]);
+                x0 + (x1 - x0) * (p - y0) / (y1 - y0)
+            }
         }
-        
-        let (x0, x1) = (size_weight[idx-1].0, size_weight[idx].0);
-        let (y0, y1) = (cumulative[idx-1], cumulative[idx]);
-        
-        x0 + (x1 - x0) * (p - y0) / (y1 - y0)
     };
     
-    // Calculate D10, D50, D90
+    // Calculate percentiles safely
     unsafe {
         *d10 = get_percentile(0.1);
         *d50 = get_percentile(0.5);
@@ -81,6 +94,8 @@ pub extern "C" fn analyze_particle_distribution(
         *mean = weighted_mean;
         *std_dev = weighted_std;
     }
+    
+    true
 }
 
 #[no_mangle]

@@ -192,3 +192,128 @@ def test_rust_particle_analysis_accuracy(client):
     assert abs(data["D50"] - np.median(sizes)) < 1e-6  # Median should match
     assert abs(data["mean"] - np.mean(sizes)) < 1e-6  # Mean should match
     assert abs(data["std_dev"] - np.std(sizes)) < 1e-6  # Standard deviation should match
+
+
+def test_separation_efficiency_caching(client, separation_efficiency_data):
+    """Test that separation efficiency calculations are properly cached"""
+    # First call
+    response1 = client.post(
+        "/protein-analysis/separation/", json=separation_efficiency_data
+    )
+    assert response1.status_code == 200
+    data1 = response1.json()
+
+    # Second call with same data should use cache
+    response2 = client.post(
+        "/protein-analysis/separation/", json=separation_efficiency_data
+    )
+    assert response2.status_code == 200
+    data2 = response2.json()
+
+    # Results should be identical
+    assert data1 == data2
+
+    # Modify input slightly
+    modified_data = separation_efficiency_data.copy()
+    modified_data["mass_flow"]["input"] += 1.0
+
+    # Call with modified data should calculate new results
+    response3 = client.post(
+        "/protein-analysis/separation/", json=modified_data
+    )
+    assert response3.status_code == 200
+    data3 = response3.json()
+
+    # Results should be different
+    assert data1 != data3
+
+
+def test_separation_efficiency_process_performance(client, separation_efficiency_data):
+    """Test process performance analysis with multi-stage data"""
+    response = client.post(
+        "/protein-analysis/separation/", json=separation_efficiency_data
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Check process performance metrics
+    assert "cumulative_efficiency" in data
+    assert "average_step_efficiency" in data
+    assert "purity_achievement" in data
+    assert 0 <= data["cumulative_efficiency"] <= 100
+    assert 0 <= data["average_step_efficiency"] <= 100
+    assert 0 <= data["purity_achievement"] <= 100
+
+    # Check stage analysis
+    assert "stage_analysis" in data
+    stage_analysis = data["stage_analysis"]
+    assert "enrichment_contributions" in stage_analysis
+    assert "efficiency_ratios" in stage_analysis
+    assert "bottleneck_scores" in stage_analysis
+    assert len(stage_analysis["enrichment_contributions"]) == len(separation_efficiency_data["process_data"])
+
+
+def test_separation_efficiency_validation_errors(client):
+    """Test various validation error cases for separation efficiency"""
+    # Test missing protein in composition
+    invalid_data = {
+        "feed_composition": {"starch": 60.0, "fiber": 40.0},  # Missing protein
+        "product_composition": {"protein": 65.0, "starch": 20.0, "fiber": 15.0},
+        "mass_flow": {"input": 100.0, "output": 25.0}
+    }
+    response = client.post("/protein-analysis/separation/", json=invalid_data)
+    assert response.status_code == 422
+    assert "error" in response.json()
+    assert response.json()["type"] == "ValueError"
+
+    # Test composition not summing to 100%
+    invalid_data = {
+        "feed_composition": {"protein": 20.0, "starch": 45.0, "fiber": 45.0},  # Sums to 110%
+        "product_composition": {"protein": 65.0, "starch": 20.0, "fiber": 15.0},
+        "mass_flow": {"input": 100.0, "output": 25.0}
+    }
+    response = client.post("/protein-analysis/separation/", json=invalid_data)
+    assert response.status_code == 422
+    assert "error" in response.json()
+    assert "sum to 100%" in response.json()["message"].lower()
+
+    # Test invalid mass flow
+    invalid_data = {
+        "feed_composition": {"protein": 20.0, "starch": 45.0, "fiber": 35.0},
+        "product_composition": {"protein": 65.0, "starch": 20.0, "fiber": 15.0},
+        "mass_flow": {"input": 100.0, "output": 150.0}  # Output > Input
+    }
+    response = client.post("/protein-analysis/separation/", json=invalid_data)
+    assert response.status_code == 422
+    assert "error" in response.json()
+    assert "output mass cannot" in response.json()["message"].lower()
+
+
+def test_separation_efficiency_process_errors(client, separation_efficiency_data):
+    """Test error handling in process performance analysis"""
+    # Test invalid target purity
+    invalid_data = separation_efficiency_data.copy()
+    invalid_data["target_purity"] = -10.0
+    response = client.post("/protein-analysis/separation/", json=invalid_data)
+    assert response.status_code == 422
+    assert "error" in response.json()
+    assert "target purity" in response.json()["message"].lower()
+
+    # Test inconsistent process data
+    invalid_data = separation_efficiency_data.copy()
+    invalid_data["process_data"] = [
+        {
+            "feed": {"protein": 20.0},
+            "product": {"protein": 40.0},
+            "mass_flow": {"input": 100.0, "output": 45.0}
+        },
+        {
+            "feed": {"protein": 50.0},  # Inconsistent with previous stage
+            "product": {"protein": 65.0},
+            "mass_flow": {"input": 45.0, "output": 25.0}
+        }
+    ]
+    response = client.post("/protein-analysis/separation/", json=invalid_data)
+    assert response.status_code == 422
+    assert "error" in response.json()
+    assert "process performance" in response.json()["error"].lower()

@@ -91,13 +91,15 @@ class ProteinRecoveryCalculator:
             - concentration_factor: Ratio of output to input concentration
 
         Raises:
-            ValueError: If input parameters are invalid
+            ValueError: If input parameters are invalid or violate mass conservation
         """
         # Validate inputs
         if output_mass <= 0 or input_mass <= 0:
             raise ValueError("Masses must be positive")
         if not 0 < output_protein_content <= 100:
             raise ValueError("Protein content must be between 0 and 100%")
+        if output_mass > input_mass:
+            raise ValueError("Output mass cannot be greater than input mass")
 
         # Calculate initial protein mass
         initial_protein_mass = input_mass * (self.initial_protein_content / 100)
@@ -105,10 +107,17 @@ class ProteinRecoveryCalculator:
         # Calculate final protein mass
         final_protein_mass = output_mass * (output_protein_content / 100)
 
+        # Validate mass conservation
+        if final_protein_mass > initial_protein_mass:
+            raise ValueError(
+                f"Final protein mass ({final_protein_mass:.2f} kg) cannot exceed initial protein mass ({initial_protein_mass:.2f} kg). "
+                "This would violate mass conservation."
+            )
+
         # Calculate recovery rate
         recovery_rate = (final_protein_mass / initial_protein_mass) * 100
 
-        # Calculate protein loss
+        # Calculate protein loss (always non-negative due to mass conservation check)
         protein_loss = initial_protein_mass - final_protein_mass
 
         # Calculate concentration factor

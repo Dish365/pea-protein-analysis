@@ -14,7 +14,7 @@ from .services.rust_handler import RustHandler
 # Configure logging
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/allocation", tags=["environmental-allocation"])
+router = APIRouter(tags=["environmental-allocation"])
 
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -80,10 +80,10 @@ async def allocate_impacts(request: AllocationRequest):
         logger.debug(f"Received allocation request: {request.dict()}")
         logger.info(f"Starting impact allocation using {request.method} method")
 
-        # Validate that all dictionaries have the same keys
+        # Validate that product_values and mass_flows have the same keys
         products = set(request.product_values.keys())
-        if set(request.mass_flows.keys()) != products or any(set(impacts.keys()) != products for impacts in request.impacts.values()):
-            raise ValueError("All dictionaries must have the same product keys")
+        if set(request.mass_flows.keys()) != products:
+            raise ValueError("Product values and mass flows must have the same product keys")
 
         try:
             # Configure allocation engine with process data
@@ -93,33 +93,49 @@ async def allocate_impacts(request: AllocationRequest):
                 hybrid_weights=request.hybrid_weights
             )
 
+            # Convert dictionary values to lists, ensuring matching order
+            products_list = list(products)
+            impact_values = []
+            for impact_type in request.impacts.values():
+                # Replicate impact value for each product to match length
+                impact_values.extend([impact_type] * len(products_list))
+
             # Use Rust for performance-critical calculations
             if request.method == "economic":
                 # Get economic allocation factors using Rust
+                economic_values = [request.product_values[product] for product in products_list]
+                economic_values = economic_values * len(request.impacts)  # Replicate for each impact type
                 rust_results = rust_handler.calculate_allocation_factors(
-                    list(request.impacts.values()),
-                    list(request.product_values.values())
+                    impact_values,
+                    economic_values
                 )
                 allocation_factors = rust_results["allocation_factors"]
             elif request.method == "physical":
                 # Get physical allocation factors using Rust
+                mass_values = [request.mass_flows[product] for product in products_list]
+                mass_values = mass_values * len(request.impacts)  # Replicate for each impact type
                 rust_results = rust_handler.calculate_allocation_factors(
-                    list(request.impacts.values()),
-                    list(request.mass_flows.values())
+                    impact_values,
+                    mass_values
                 )
                 allocation_factors = rust_results["allocation_factors"]
             else:  # hybrid
                 # Calculate hybrid allocation using both services
                 weights = request.hybrid_weights or {"physical": 0.5, "economic": 0.5}
                 
-                # Get base factors using Rust
+                # Get base factors using Rust with matched lengths
+                economic_values = [request.product_values[product] for product in products_list]
+                economic_values = economic_values * len(request.impacts)
+                mass_values = [request.mass_flows[product] for product in products_list]
+                mass_values = mass_values * len(request.impacts)
+                
                 economic_results = rust_handler.calculate_allocation_factors(
-                    list(request.impacts.values()),
-                    list(request.product_values.values())
+                    impact_values,
+                    economic_values
                 )
                 physical_results = rust_handler.calculate_allocation_factors(
-                    list(request.impacts.values()),
-                    list(request.mass_flows.values())
+                    impact_values,
+                    mass_values
                 )
                 
                 # Calculate final hybrid factors
@@ -136,18 +152,23 @@ async def allocate_impacts(request: AllocationRequest):
             )
 
             # Map results back to product keys
-            products_list = list(products)
             allocated_results = {
-                "allocation_factors": dict(zip(products_list, allocation_factors)),
+                "allocation_factors": dict(zip(products_list, allocation_factors[:len(products_list)])),
                 "allocated_impacts": allocated_impacts
             }
 
             logger.info("Impact allocation completed successfully")
+            
+            # Get allocation factors based on method
+            method_factors = allocation_engine.get_allocation_factors(
+                'hybrid' if request.method == 'hybrid' else request.method
+            )
+            
             return create_json_response({
                 "status": "success",
                 "method": request.method,
                 "results": allocated_results,
-                "allocation_factors": allocation_engine.get_allocation_factors(request.method)
+                "allocation_factors": method_factors
             })
 
         except ValueError as e:

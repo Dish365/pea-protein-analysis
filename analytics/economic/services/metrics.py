@@ -16,6 +16,13 @@ def get_economic_metrics(
     confidence_interval: float = 0.95
 ):
     """Calculate comprehensive economic metrics for the investment."""
+    # Validate inputs
+    if initial_investment <= 0:
+        raise ValueError(f"Initial investment must be positive, got: {initial_investment}")
+    
+    if cost_of_investment <= 0:
+        raise ValueError(f"Cost of investment must be positive, got: {cost_of_investment}")
+
     # Calculate NPV with initial investment
     npv_result = calculate_npv(
         cash_flows=cash_flows,

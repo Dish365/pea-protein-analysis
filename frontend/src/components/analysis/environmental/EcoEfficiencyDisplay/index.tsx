@@ -1,8 +1,17 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis } from 'recharts';
-import { apiClient } from '@/lib/api/client';
+import { useQuery } from "@tanstack/react-query";
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ZAxis,
+} from "recharts";
+import apiClient from "@/lib/api/client";
 
 interface EcoEfficiencyData {
   score: {
@@ -25,12 +34,16 @@ interface EcoEfficiencyData {
 
 export function EcoEfficiencyDisplay() {
   const { data, isLoading, error } = useQuery<EcoEfficiencyData>({
-    queryKey: ['eco-efficiency'],
-    queryFn: () => apiClient.get('/api/analysis/environmental/efficiency'),
+    queryKey: ["eco-efficiency"],
+    queryFn: () => apiClient.get("/api/analysis/environmental/efficiency"),
   });
 
-  if (isLoading) return <div className="h-[500px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error) return <div className="text-red-500">Error loading eco-efficiency data</div>;
+  if (isLoading)
+    return <div className="h-[500px] animate-pulse bg-gray-100 rounded-lg" />;
+  if (error)
+    return (
+      <div className="text-red-500">Error loading eco-efficiency data</div>
+    );
 
   return (
     <div className="space-y-6">
@@ -41,10 +54,12 @@ export function EcoEfficiencyDisplay() {
           <div className="text-3xl font-bold text-emerald-600">
             {data?.score.current.toFixed(1)}
           </div>
-          <div className={`text-sm ${
-            data?.score.change > 0 ? 'text-green-600' : 'text-red-600'
-          }`}>
-            {data?.score.change > 0 ? '↑' : '↓'} {Math.abs(data?.score.change)}%
+          <div
+            className={`text-sm ${
+              data?.score.change > 0 ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {data?.score.change > 0 ? "↑" : "↓"} {Math.abs(data?.score.change)}%
           </div>
         </div>
 
@@ -72,31 +87,28 @@ export function EcoEfficiencyDisplay() {
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
+              <XAxis
                 type="number"
                 dataKey="environmentalImpact"
                 name="Environmental Impact"
-                label={{ value: 'Environmental Impact', position: 'bottom' }}
+                label={{ value: "Environmental Impact", position: "bottom" }}
               />
-              <YAxis 
+              <YAxis
                 type="number"
                 dataKey="economicValue"
                 name="Economic Value"
-                label={{ value: 'Economic Value (USD)', angle: -90, position: 'insideLeft' }}
+                label={{
+                  value: "Economic Value (USD)",
+                  angle: -90,
+                  position: "insideLeft",
+                }}
               />
-              <ZAxis 
-                type="number"
-                dataKey="efficiency"
-                range={[50, 400]}
-              />
-              <Tooltip 
-                cursor={{ strokeDasharray: '3 3' }}
+              <ZAxis type="number" dataKey="efficiency" range={[50, 400]} />
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3" }}
                 content={CustomTooltip}
               />
-              <Scatter 
-                data={data?.metrics} 
-                fill="#10B981"
-              />
+              <Scatter data={data?.metrics} fill="#10B981" />
             </ScatterChart>
           </ResponsiveContainer>
         </div>
@@ -108,13 +120,21 @@ export function EcoEfficiencyDisplay() {
         <div className="text-sm text-gray-600">
           <p>
             Current eco-efficiency score is
-            {data?.score.current > data?.benchmarks.industry ? ' above ' : ' below '}
-            industry average by {Math.abs(data?.score.current - data?.benchmarks.industry).toFixed(1)} points.
+            {data?.score.current > data?.benchmarks.industry
+              ? " above "
+              : " below "}
+            industry average by{" "}
+            {Math.abs(data?.score.current - data?.benchmarks.industry).toFixed(
+              1
+            )}{" "}
+            points.
           </p>
           <p className="mt-2">
-            {data?.score.current >= data?.benchmarks.target 
-              ? 'Target achievement: Met or exceeded'
-              : `Gap to target: ${(data?.benchmarks.target - data?.score.current).toFixed(1)} points`}
+            {data?.score.current >= data?.benchmarks.target
+              ? "Target achievement: Met or exceeded"
+              : `Gap to target: ${(
+                  data?.benchmarks.target - data?.score.current
+                ).toFixed(1)} points`}
           </p>
         </div>
       </div>

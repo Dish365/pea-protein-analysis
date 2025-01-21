@@ -1,16 +1,27 @@
 import React from "react";
 
-interface CardProps {
-  children: React.ReactNode;
-  className?: string;
+interface ProcessCardProps {
+  title: string;
+  metric: string;
+  value: string;
+  trend: string;
 }
 
-const Card: React.FC<CardProps> = ({ children, className = "" }) => {
+const ProcessCard: React.FC<ProcessCardProps> = ({
+  title,
+  metric,
+  value,
+  trend,
+}) => {
   return (
-    <div className={`rounded-lg shadow-md bg-white p-4 ${className}`}>
-      {children}
+    <div className="rounded-lg shadow-md bg-white p-4">
+      <h3 className="text-lg font-bold">{title}</h3>
+      <p>
+        {metric}: {value}
+      </p>
+      <p>Trend: {trend}</p>
     </div>
   );
 };
 
-export default Card;
+export default ProcessCard;

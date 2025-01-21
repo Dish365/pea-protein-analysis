@@ -1,8 +1,15 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts';
-import { apiClient } from '@/lib/api/client';
+import { useQuery } from "@tanstack/react-query";
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  Radar,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
+import apiClient from "@/lib/api/client";
 
 interface ImpactData {
   metrics: {
@@ -24,26 +31,36 @@ interface ImpactData {
 
 export function ImpactMetrics() {
   const { data, isLoading, error } = useQuery<ImpactData>({
-    queryKey: ['environmental-impact'],
-    queryFn: () => apiClient.get('/api/analysis/environmental/impact'),
+    queryKey: ["environmental-impact"],
+    queryFn: () => apiClient.get("/api/analysis/environmental/impact"),
   });
 
-  if (isLoading) return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error) return <div className="text-red-500">Error loading environmental impact data</div>;
+  if (isLoading)
+    return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
+  if (error)
+    return (
+      <div className="text-red-500">
+        Error loading environmental impact data
+      </div>
+    );
 
   return (
     <div className="space-y-6">
       {/* Impact Score Overview */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="text-sm text-gray-600">Environmental Impact Score</div>
+          <div className="text-sm text-gray-600">
+            Environmental Impact Score
+          </div>
           <div className="text-3xl font-bold text-green-600">
             {data?.totalScore.current}
           </div>
-          <div className={`text-sm ${
-            data?.totalScore.change >= 0 ? 'text-red-600' : 'text-green-600'
-          }`}>
-            {data?.totalScore.change >= 0 ? '↑' : '↓'}
+          <div
+            className={`text-sm ${
+              data?.totalScore.change >= 0 ? "text-red-600" : "text-green-600"
+            }`}
+          >
+            {data?.totalScore.change >= 0 ? "↑" : "↓"}
             {Math.abs(data?.totalScore.change)}% vs previous
           </div>
         </div>
@@ -106,9 +123,13 @@ interface ImpactMetricCardProps {
   benchmark: number;
 }
 
-function ImpactMetricCard({ category, value, benchmark }: ImpactMetricCardProps) {
+function ImpactMetricCard({
+  category,
+  value,
+  benchmark,
+}: ImpactMetricCardProps) {
   const performance = ((benchmark - value) / benchmark) * 100;
-  
+
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm">
       <div className="text-sm font-medium text-gray-600">{category}</div>
@@ -117,14 +138,20 @@ function ImpactMetricCard({ category, value, benchmark }: ImpactMetricCardProps)
           <div className="text-2xl font-bold">{value}</div>
           <div className="text-sm text-gray-500">Current Impact</div>
         </div>
-        <div className={`text-sm ${performance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-          {performance >= 0 ? '↓' : '↑'} {Math.abs(performance).toFixed(1)}%
+        <div
+          className={`text-sm ${
+            performance >= 0 ? "text-green-600" : "text-red-600"
+          }`}
+        >
+          {performance >= 0 ? "↓" : "↑"} {Math.abs(performance).toFixed(1)}%
           <div className="text-gray-500">vs Benchmark</div>
         </div>
       </div>
       <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div 
-          className={`h-full ${performance >= 0 ? 'bg-green-600' : 'bg-red-600'}`}
+        <div
+          className={`h-full ${
+            performance >= 0 ? "bg-green-600" : "bg-red-600"
+          }`}
           style={{ width: `${Math.min(Math.abs(performance), 100)}%` }}
         />
       </div>

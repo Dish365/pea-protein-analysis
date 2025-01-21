@@ -1,13 +1,13 @@
 import React from "react";
-import { Inter } from 'next/font/google'
-import './globals.css'
+import { Inter } from "next/font/google";
+import "./globals.css";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
@@ -18,9 +18,7 @@ export default function RootLayout({
               {/* Navigation will go here */}
             </nav>
           </header>
-          <main className="flex-1 container mx-auto px-4 py-8">
-            {children}
-          </main>
+          <main className="flex-1 container mx-auto px-4 py-8">{children}</main>
           <footer className="border-t">
             <div className="container mx-auto px-4 py-4">
               {/* Footer content */}
@@ -29,5 +27,5 @@ export default function RootLayout({
         </div>
       </body>
     </html>
-  )
+  );
 }

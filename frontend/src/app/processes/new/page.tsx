@@ -4,9 +4,16 @@ import { useState } from "react";
 import { TechnicalInputForm } from "@/components/forms/ProcessInput/TechnicalInputForm";
 import { EconomicInputForm } from "@/components/forms/ProcessInput/EconomicInputForm";
 import { EnvironmentalInputForm } from "@/components/forms/ProcessInput/EnvironmentalInputForm";
+import Steps from "@/components/ui/Steps";
 
 export default function NewProcessPage() {
   const [activeStep, setActiveStep] = useState(1);
+
+  // Define the handleSubmit function
+  const handleSubmit = () => {
+    // Add your form submission logic here
+    console.log("Form submitted");
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-8">

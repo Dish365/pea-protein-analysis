@@ -1,11 +1,13 @@
 import React from "react";
 
+interface Column {
+  header: string;
+  accessor: string; // or whatever type your accessor is
+}
+
 interface DataTableProps {
-  data: any[];
-  columns: {
-    header: string;
-    accessor: string;
-  }[];
+  data: Array<{ [key: string]: any }>; // Replace `any` with specific field types if known
+  columns: Column[];
 }
 
 export const DataTable: React.FC<DataTableProps> = ({ data, columns }) => {

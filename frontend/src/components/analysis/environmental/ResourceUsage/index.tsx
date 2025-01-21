@@ -1,8 +1,18 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { apiClient } from '@/lib/api/client';
+import { useQuery } from "@tanstack/react-query";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from "recharts";
+import apiClient from "@/lib/api/client";
 
 interface ResourceData {
   summary: {
@@ -40,12 +50,16 @@ interface ResourceData {
 
 export function ResourceUsage() {
   const { data, isLoading, error } = useQuery<ResourceData>({
-    queryKey: ['resource-usage'],
-    queryFn: () => apiClient.get('/api/analysis/environmental/resources'),
+    queryKey: ["resource-usage"],
+    queryFn: () => apiClient.get("/api/analysis/environmental/resources"),
   });
 
-  if (isLoading) return <div className="h-[500px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error) return <div className="text-red-500">Error loading resource usage data</div>;
+  if (isLoading)
+    return <div className="h-[500px] animate-pulse bg-gray-100 rounded-lg" />;
+  if (error)
+    return (
+      <div className="text-red-500">Error loading resource usage data</div>
+    );
 
   return (
     <div className="space-y-6">
@@ -81,36 +95,38 @@ export function ResourceUsage() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data?.timeline}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
+              <XAxis
                 dataKey="timestamp"
                 tickFormatter={(value) => new Date(value).toLocaleDateString()}
               />
               <YAxis />
-              <Tooltip 
+              <Tooltip
                 labelFormatter={(value) => new Date(value).toLocaleString()}
                 formatter={(value: number, name: string) => [
-                  `${value} ${name === 'water' ? 'm³' : name === 'energy' ? 'kWh' : 'kg'}`,
-                  name.charAt(0).toUpperCase() + name.slice(1)
+                  `${value} ${
+                    name === "water" ? "m³" : name === "energy" ? "kWh" : "kg"
+                  }`,
+                  name.charAt(0).toUpperCase() + name.slice(1),
                 ]}
               />
-              <Line 
-                type="monotone" 
-                dataKey="water" 
-                stroke="#3B82F6" 
+              <Line
+                type="monotone"
+                dataKey="water"
+                stroke="#3B82F6"
                 strokeWidth={2}
                 dot={false}
               />
-              <Line 
-                type="monotone" 
-                dataKey="energy" 
-                stroke="#10B981" 
+              <Line
+                type="monotone"
+                dataKey="energy"
+                stroke="#10B981"
                 strokeWidth={2}
                 dot={false}
               />
-              <Line 
-                type="monotone" 
-                dataKey="waste" 
-                stroke="#EF4444" 
+              <Line
+                type="monotone"
+                dataKey="waste"
+                stroke="#EF4444"
                 strokeWidth={2}
                 dot={false}
               />
@@ -149,7 +165,13 @@ interface ResourceCardProps {
   trend?: number;
 }
 
-function ResourceCard({ title, current, target, unit, trend }: ResourceCardProps) {
+function ResourceCard({
+  title,
+  current,
+  target,
+  unit,
+  trend,
+}: ResourceCardProps) {
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm">
       <div className="text-sm text-gray-600">{title}</div>
@@ -162,17 +184,25 @@ function ResourceCard({ title, current, target, unit, trend }: ResourceCardProps
         </div>
       </div>
       {trend && (
-        <div className={`text-sm mt-2 ${trend < 0 ? 'text-green-600' : 'text-red-600'}`}>
-          {trend < 0 ? '↓' : '↑'} {Math.abs(trend)}% vs last period
+        <div
+          className={`text-sm mt-2 ${
+            trend < 0 ? "text-green-600" : "text-red-600"
+          }`}
+        >
+          {trend < 0 ? "↓" : "↑"} {Math.abs(trend)}% vs last period
         </div>
       )}
       <div className="mt-2 h-2 bg-gray-100 rounded-full">
-        <div 
+        <div
           className={`h-full rounded-full ${
-            current && target && current <= target ? 'bg-green-600' : 'bg-red-600'
+            current && target && current <= target
+              ? "bg-green-600"
+              : "bg-red-600"
           }`}
-          style={{ 
-            width: `${current && target ? (current / target * 100).toFixed(1) : 0}%` 
+          style={{
+            width: `${
+              current && target ? ((current / target) * 100).toFixed(1) : 0
+            }%`,
           }}
         />
       </div>

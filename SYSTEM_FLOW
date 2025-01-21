@@ -1,0 +1,169 @@
+## System Architecture and Data Flow
+
+```mermaid
+sequenceDiagram
+    participant Client as Next.js Client
+    participant Server as Next.js Server
+    participant Django as Django Backend
+    participant FastAPI as FastAPI Service
+    participant Technical as Technical Analysis
+    participant Economic as Economic Analysis
+    participant Environmental as Environmental Analysis
+    participant Efficiency as Eco-efficiency
+    participant Rust as Rust Modules
+    participant DB as Database
+
+    %% Initial Process Creation
+    Client->>Server: Submit Process Analysis
+    Server->>Django: POST /api/v1/process/
+    
+    %% Django Processing
+    Django->>Django: Validate Input Data
+    Django->>DB: Create Process Record
+    
+    %% Analysis Pipeline Start
+    Django->>FastAPI: Initialize Analysis
+    
+    %% Technical Analysis
+    FastAPI->>Technical: Analyze Technical Metrics
+    activate Technical
+    Technical->>Rust: Calculate Protein Recovery
+    Rust-->>Technical: Protein Results
+    Technical->>Rust: Process Simulation
+    Rust-->>Technical: Technical Results
+    Technical-->>FastAPI: Technical Analysis Complete
+    deactivate Technical
+    
+    %% Economic Analysis
+    FastAPI->>Economic: Calculate Economics
+    activate Economic
+    Economic->>Economic: Calculate CAPEX
+    Economic->>Economic: Calculate OPEX
+    Economic->>Rust: Monte Carlo Simulation
+    Rust-->>Economic: Profitability Metrics
+    Economic-->>FastAPI: Economic Analysis Complete
+    deactivate Economic
+    
+    %% Environmental Analysis
+    FastAPI->>Environmental: Analyze Environmental Impact
+    activate Environmental
+    Environmental->>Environmental: Calculate Direct Impacts
+    Environmental->>Rust: Impact Allocation
+    Rust-->>Environmental: Allocated Results
+    Environmental-->>FastAPI: Environmental Analysis Complete
+    deactivate Environmental
+    
+    %% Eco-efficiency Analysis
+    FastAPI->>Efficiency: Calculate Efficiency
+    activate Efficiency
+    Efficiency->>Efficiency: Normalize Metrics
+    Efficiency->>Efficiency: Calculate Indicators
+    Efficiency-->>FastAPI: Efficiency Analysis Complete
+    deactivate Efficiency
+    
+    %% Results Processing
+    FastAPI-->>Django: Complete Analysis Results
+    Django->>DB: Save Analysis Results
+    
+    %% Response to Client
+    Django-->>Server: Analysis Complete
+    Server-->>Client: Display Results
+    
+    %% Real-time Status Updates
+    loop Status Polling
+        Client->>Server: Check Analysis Status
+        Server->>Django: GET /api/v1/process/{id}/status
+        Django-->>Server: Current Status
+        Server-->>Client: Update Progress
+    end
+    
+    %% Results Retrieval
+    alt Get Detailed Results
+        Client->>Server: Request Results
+        Server->>Django: GET /api/v1/process/{id}/results
+        Django->>DB: Fetch Complete Results
+        DB-->>Django: Results Data
+        Django-->>Server: Format Results
+        Server-->>Client: Display Complete Analysis
+    end
+```
+
+## Component Interactions
+
+### 1. Frontend Layer (Next.js)
+- **Client Components**: Handle user interactions and real-time updates
+- **Server Components**: Manage data fetching and initial state
+- **API Integration**: Communicate with Django backend
+
+### 2. Backend Layer (Django)
+- **Process Views**: Handle HTTP requests and manage analysis flow
+- **Serializers**: Validate and transform data
+- **FastAPI Service**: Coordinate with FastAPI for analysis
+- **Database**: Store process data and results
+
+### 3. Analysis Layer (FastAPI)
+- **Technical Analysis**: Process simulation and protein recovery
+- **Economic Analysis**: CAPEX, OPEX, and profitability calculations
+- **Environmental Analysis**: Impact assessment and allocation
+- **Eco-efficiency Analysis**: Integrated performance indicators
+
+### 4. Computation Layer (Rust)
+- **Protein Module**: Protein recovery calculations
+- **Process Module**: Technical simulations
+- **Economic Module**: Monte Carlo simulations
+- **Environmental Module**: Impact allocation algorithms
+
+## Data Flow Stages
+
+### 1. Process Initialization
+```typescript
+// Next.js Server Action
+async function initializeProcess(data: ProcessInput) {
+  const response = await fetch('/api/v1/process/', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+  return startAnalysis(response.data.id);
+}
+```
+
+### 2. Analysis Pipeline
+```python
+# Django FastAPI Service
+async def analyze_process(process_id: int):
+    try:
+        # Initialize analysis pipeline
+        technical_results = await analyze_technical_metrics(process_id)
+        economic_results = await analyze_economics(technical_results)
+        environmental_results = await analyze_environmental(technical_results)
+        efficiency_results = await analyze_efficiency(
+            economic_results, 
+            environmental_results
+        )
+        
+        return compile_results(
+            technical_results,
+            economic_results,
+            environmental_results,
+            efficiency_results
+        )
+    except Exception as e:
+        handle_analysis_error(process_id, e)
+```
+
+### 3. Results Management
+```typescript
+// Next.js Client Component
+function ProcessResults({ processId }: { processId: string }) {
+  const results = use(fetchResults(processId));
+  
+  return (
+    <ResultsLayout>
+      <TechnicalMetrics data={results.technical} />
+      <EconomicMetrics data={results.economic} />
+      <EnvironmentalMetrics data={results.environmental} />
+      <EfficiencyMetrics data={results.efficiency} />
+    </ResultsLayout>
+  );
+}
+```

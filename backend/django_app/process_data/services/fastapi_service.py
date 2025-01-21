@@ -63,9 +63,6 @@ class FastAPIService:
                 if isinstance(result, Exception):
                     analysis_type = ['technical', 'economic', 'environmental'][i]
                     logger.error(f"Error in {analysis_type} analysis: {str(result)}")
-                    # Don't wrap the exception in RuntimeError if it's already a RuntimeError
-                    if isinstance(result, RuntimeError):
-                        raise result
                     raise RuntimeError(f"Error in {analysis_type} analysis: {str(result)}")
                     
             technical_results, economic_results, environmental_results = results
@@ -90,37 +87,40 @@ class FastAPIService:
             try:
                 # Get eco-efficiency analysis with its own retry mechanism
                 efficiency_results = await self._analyze_efficiency(efficiency_data)
-            except (httpx.ConnectError, httpx.TimeoutException) as e:
-                # Re-raise retryable errors to trigger retry at analyze_process level
-                raise
+            except Exception as e:
+                logger.error(f"Error in eco-efficiency analysis: {str(e)}")
+                raise RuntimeError(f"Error in eco-efficiency analysis: {str(e)}")
             
             # Compile final results
             final_results = {
-            'technical_results': technical_results.get('technical_results', {}),
-            'economic_analysis': economic_results,
-            'environmental_results': environmental_results.get('environmental_results', {}) if isinstance(environmental_results.get('environmental_results'), dict) else {
-                'impact_assessment': environmental_results.get('impact_assessment', {}),
-                'consumption_metrics': environmental_results.get('consumption_metrics', {
-                    'electricity': None,
-                    'cooling': None,
-                    'water': None
-                })
-            },
-            'efficiency_results': efficiency_results
-        }
+                'technical_results': technical_results.get('technical_results', {}),
+                'economic_analysis': economic_results,
+                'environmental_results': {
+                    'impact_assessment': environmental_results.get('impact_assessment', {
+                        'gwp': 0.0,
+                        'hct': 0.0,
+                        'frs': 0.0
+                    }),
+                    'consumption_metrics': {
+                        'electricity': data.get('electricity_consumption') if data.get('process_type') == 'rf' else None,
+                        'cooling': data.get('cooling_consumption') if data.get('process_type') == 'ir' else None,
+                        'water': None
+                    }
+                },
+                'efficiency_results': efficiency_results,
+                'process_type': data.get('process_type'),
+                'electricity_consumption': data.get('electricity_consumption'),
+                'cooling_consumption': data.get('cooling_consumption')
+            }
             
             logger.info("Process analysis completed successfully")
             return final_results
             
-        except (httpx.ConnectError, httpx.TimeoutException) as e:
-            # Log and re-raise retryable errors without wrapping
-            logger.warning(f"Retryable error in process analysis: {str(e)}")
-            raise
         except Exception as e:
             logger.error(f"Error in process analysis: {str(e)}", exc_info=True)
             # Don't wrap the exception in RuntimeError if it's already a RuntimeError
             if isinstance(e, RuntimeError):
-                raise e
+                raise
             raise RuntimeError(str(e))
     
     def _prepare_technical_data(self, data: Dict[str, Any]) -> Dict[str, Any]:

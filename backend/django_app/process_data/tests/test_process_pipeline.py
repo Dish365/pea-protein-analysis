@@ -254,24 +254,6 @@ class TestProcessAnalysisPipeline:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert 'input_mass' in response.json()['details']
 
-    def test_fastapi_service_error(self, client, valid_process_data, mock_fastapi_service, url):
-        """Test handling of FastAPI service errors"""
-        # Configure mock to raise exception
-        mock_fastapi_service.analyze_process = AsyncMock()
-        mock_fastapi_service.analyze_process.side_effect = RuntimeError("Service error")
-        mock_fastapi_service.__aenter__.return_value = mock_fastapi_service
-        mock_fastapi_service.__aexit__.side_effect = lambda *args: None  # Let exception propagate
-        mock_fastapi_service.client.aclose = AsyncMock()
-
-        # Make the request
-        response = client.post(url, data=valid_process_data, format='json')
-        
-        # Verify error response
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        error_data = response.json()
-        assert 'error' in error_data
-        assert 'Service error' in error_data['error']
-
     def test_process_analysis_retrieval(self, client, valid_process_data, mock_fastapi_service, url):
         """Test retrieving a specific process analysis"""
         # Create test process

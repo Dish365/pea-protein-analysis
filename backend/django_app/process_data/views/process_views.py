@@ -76,12 +76,17 @@ class ProcessAnalysisView(APIView):
                     'error': error_msg
                 }, timeout=3600)
                 
+                logger.error(f"Analysis failed: {error_msg}", exc_info=True)
                 return Response(
                     {'error': error_msg},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
             finally:
                 loop.close()
+                try:
+                    asyncio.set_event_loop(None)
+                except Exception:
+                    pass  # Ignore any errors when cleaning up the event loop
 
             # Prepare and store results
             try:

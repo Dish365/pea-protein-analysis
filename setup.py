@@ -9,5 +9,6 @@ setup(
         "numpy",
         "scipy",
         "pandas",
+        "django",
     ],
 )

@@ -1,5 +1,9 @@
 // Protein analysis module
 
-pub mod protein_calculator;
+mod protein_calculator;
 
-pub use protein_calculator::*;
+pub use protein_calculator::{
+    analyze_particle_distribution,
+    calculate_protein_recovery,
+    calculate_separation_efficiency,
+};

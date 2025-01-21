@@ -1,23 +1,46 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
-from rest_framework.routers import DefaultRouter
-from .views import EquipmentViewSet, ProcessStepViewSet, AnalysisViewSet
 
-router = DefaultRouter()
-router.register(r"equipment", EquipmentViewSet)
-router.register(r"process-steps", ProcessStepViewSet)
-router.register(r"analyses", AnalysisViewSet, basename="analysis")
-
-urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("api/users/", include("users.urls")),
-    path("api/", include(router.urls)),
+# API Version 1 URL Patterns
+api_v1_patterns = [
+    path("process/", include("process_data.urls", namespace="process_data")),
 ]
 
-if settings.DEBUG:
-    import debug_toolbar
+# Main URL Configuration
+urlpatterns = [
+    # Admin Interface
+    path("admin/", admin.site.urls),
+    
+    # API Versions
+    path("api/v1/", include((api_v1_patterns, "api_v1"), namespace="v1")),
+]
 
+# Development Tools
+if settings.DEBUG:
+    # Debug Toolbar
+    import debug_toolbar
     urlpatterns = [
         path("__debug__/", include(debug_toolbar.urls)),
     ] + urlpatterns
+
+# URL Pattern Documentation
+"""
+API URL Structure:
+
+1. API Version 1 (/api/v1/):
+   - Process Analysis API:
+     * Base Path: /api/v1/process/
+     * Endpoints:
+       - List/Create: /api/v1/process/
+       - Details: /api/v1/process/{id}/
+       - Status: /api/v1/process/{id}/status/
+       - Results: /api/v1/process/{id}/results/
+
+2. Admin Interface:
+   - Path: /admin/
+   - Django Admin interface for database management
+
+3. Development Tools (DEBUG mode only):
+   - Debug Toolbar: /__debug__/
+"""

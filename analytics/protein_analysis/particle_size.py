@@ -1,6 +1,7 @@
 import numpy as np
-from typing import Dict, List, Optional
-from scipy import stats
+from typing import Dict, List, Optional, Tuple, Any
+from backend.fastapi_app.models.protein_analysis import ProcessType
+from backend.fastapi_app.process_analysis.services.rust_handler import RustHandler
 
 
 class ParticleSizeAnalyzer:
@@ -13,6 +14,7 @@ class ParticleSizeAnalyzer:
     - Distribution statistics
     - Quality assessment
     - Surface area calculations
+    - Moisture content tracking and validation
 
     Mathematical Background:
     ----------------------
@@ -38,7 +40,147 @@ class ParticleSizeAnalyzer:
        where:
        - ρ is particle density
        - d is particle diameter
+
+    Moisture Content Requirements:
+    ---------------------------
+    1. Pre-treatment:
+       - RF treatment: Initial ≥ 13.6%
+       - IR treatment: Initial = 15.5%
+
+    2. Post-treatment:
+       - RF treated: ~10.2%
+       - IR treated: ~10.6%
+
+    3. Processing:
+       - Required range: 12-13% for optimal dehulling and fractionation
     """
+
+    def __init__(self):
+        self.rust_handler = RustHandler()
+        self.moisture_content = None  # Current moisture content
+        self.treatment_type = None    # Current treatment type
+
+    def check_moisture_requirements(
+        self, 
+        moisture_level: float, 
+        stage: str = "processing",
+        treatment: Optional[ProcessType] = None
+    ) -> Tuple[bool, str]:
+        """
+        Verify if moisture content meets requirements for different processing stages.
+
+        Args:
+            moisture_level: Current moisture content percentage
+            stage: Processing stage ('pre_treatment', 'post_treatment', 'processing')
+            treatment: Treatment type ('RF' or 'IR') if applicable
+
+        Returns:
+            Tuple of (bool, str) indicating if requirements are met and any message
+        """
+        if stage == "pre_treatment":
+            if treatment == ProcessType.RF:
+                if moisture_level >= 13.6:
+                    return True, "Sufficient moisture for RF treatment"
+                return False, f"Insufficient moisture for RF treatment (need ≥13.6%, got {moisture_level}%)"
+            elif treatment == ProcessType.IR:
+                if abs(moisture_level - 15.5) <= 0.5:
+                    return True, "Optimal moisture for IR treatment"
+                return False, f"Suboptimal moisture for IR treatment (need 15.5%, got {moisture_level}%)"
+        
+        elif stage == "post_treatment":
+            expected = 10.2 if treatment == ProcessType.RF else 10.6
+            if abs(moisture_level - expected) <= 0.5:
+                return True, f"Expected post-{treatment.value} moisture content"
+            return False, f"Unexpected post-{treatment.value} moisture content (expected ~{expected}%, got {moisture_level}%)"
+        
+        elif stage == "processing":
+            if 12.0 <= moisture_level <= 13.0:
+                return True, "Optimal moisture for processing"
+            return False, f"Suboptimal processing moisture (need 12-13%, got {moisture_level}%)"
+        
+        return False, "Invalid stage specified"
+
+    def process_sample(
+        self,
+        particle_data: Dict[str, Any],
+        treatment_type: Optional[ProcessType] = None
+    ) -> Dict:
+        """
+        Process sample with moisture content validation and particle analysis.
+        
+        Args:
+            particle_data: Dictionary containing particle size distribution and moisture data
+            treatment_type: Optional pre-treatment type ('RF' or 'IR')
+            
+        Returns:
+            Dict containing distribution analysis results, surface area, and moisture status
+        """
+        # Validate and process particle data
+        validated_data = self.validate_particle_data(particle_data)
+        
+        self.moisture_content = validated_data["initial_moisture"]
+        self.treatment_type = treatment_type
+        
+        moisture_status = {}
+        
+        if treatment_type:
+            # Check pre-treatment moisture
+            valid, msg = self.check_moisture_requirements(
+                validated_data["initial_moisture"],
+                "pre_treatment",
+                treatment_type
+            )
+            moisture_status["pre_treatment"] = {
+                "valid": valid,
+                "message": msg,
+                "moisture": validated_data["initial_moisture"]
+            }
+            
+            # Update to post-treatment moisture
+            self.moisture_content = validated_data["final_moisture"]
+            valid, msg = self.check_moisture_requirements(
+                self.moisture_content,
+                "post_treatment",
+                treatment_type
+            )
+            moisture_status["post_treatment"] = {
+                "valid": valid,
+                "message": msg,
+                "moisture": self.moisture_content
+            }
+            
+        # Check processing moisture requirements
+        valid, msg = self.check_moisture_requirements(
+            self.moisture_content,
+            "processing"
+        )
+        moisture_status["processing"] = {
+            "valid": valid,
+            "message": msg,
+            "moisture": self.moisture_content
+        }
+        
+        # Perform distribution analysis
+        distribution_results = self.analyze_distribution(
+            validated_data["sizes"],
+            validated_data["weights"]
+        )
+        
+        # Calculate surface area
+        surface_area_results = self.calculate_surface_area(
+            validated_data["sizes"],
+            validated_data["density"],
+            validated_data["weights"]
+        )
+        
+        # Combine results
+        return {
+            **distribution_results,
+            **surface_area_results,
+            "moisture_status": moisture_status,
+            "current_moisture": self.moisture_content,
+            "percentiles": validated_data["percentiles"]
+        }
 
     def analyze_distribution(
         self, particle_sizes: List[float], weights: Optional[List[float]] = None
@@ -66,6 +208,9 @@ class ParticleSizeAnalyzer:
 
         4. Weighted Variance:
            σ²w = Σw'ᵢ(xᵢ - μw)²
+           
+        Uses Rust for computationally intensive calculations (percentiles and weighted statistics).
+        Python handles data preparation and post-processing.
 
         Args:
             particle_sizes: List of particle sizes in μm
@@ -87,59 +232,26 @@ class ParticleSizeAnalyzer:
             # Normalize weights to sum to 1
             weights = np.array(weights) / np.sum(weights)
 
-        particle_sizes = np.array(particle_sizes)
+        # Use Rust for computationally intensive calculations
+        rust_results = self.rust_handler.analyze_particle_distribution(
+            particle_sizes=particle_sizes,
+            weights=weights
+        )
 
-        # Sort sizes and weights together
-        sort_idx = np.argsort(particle_sizes)
-        sorted_sizes = particle_sizes[sort_idx]
-        sorted_weights = weights[sort_idx]
-
-        # Calculate cumulative distribution
-        cumulative = np.cumsum(sorted_weights)
-
-        # Calculate percentiles using linear interpolation
-        def get_percentile(p):
-            """
-            Calculate weighted percentile using linear interpolation.
-
-            Mathematical Formula:
-            Dp = x₁ + (x₂ - x₁)(p - F₁)/(F₂ - F₁)
-            """
-            idx = np.searchsorted(cumulative, p)
-            if idx == 0:
-                return sorted_sizes[0]
-            if idx == len(cumulative):
-                return sorted_sizes[-1]
-            # Linear interpolation
-            x0, x1 = sorted_sizes[idx - 1], sorted_sizes[idx]
-            y0, y1 = cumulative[idx - 1], cumulative[idx]
-            return x0 + (x1 - x0) * (p - y0) / (y1 - y0)
-
-        # Calculate D10, D50, D90
-        d10 = get_percentile(0.1)
-        d50 = get_percentile(0.5)
-        d90 = get_percentile(0.9)
-
-        # Calculate weighted statistics
-        weighted_mean = np.sum(particle_sizes * weights)  # μw = Σ(xᵢw'ᵢ)
-        weighted_var = np.sum(weights * (particle_sizes - weighted_mean) ** 2)  # σ²w
-        weighted_std = np.sqrt(weighted_var)
-
-        # Calculate span: (D90 - D10)/D50
-        span = (d90 - d10) / d50 if d50 > 0 else float("inf")
+        # Calculate span using Rust results
+        span = (rust_results["D90"] - rust_results["D10"]) / rust_results["D50"] if rust_results["D50"] > 0 else float("inf")
+        
+        # Calculate CV using Rust results
+        cv = (rust_results["std_dev"] / rust_results["mean"] * 100) if rust_results["mean"] > 0 else float("inf")
 
         return {
-            "D10": d10,
-            "D50": d50,
-            "D90": d90,
+            "D10": rust_results["D10"],
+            "D50": rust_results["D50"],
+            "D90": rust_results["D90"],
             "span": span,
-            "mean": weighted_mean,
-            "std_dev": weighted_std,
-            "cv": (
-                (weighted_std / weighted_mean) * 100
-                if weighted_mean > 0
-                else float("inf")
-            ),
+            "mean": rust_results["mean"],
+            "std_dev": rust_results["std_dev"],
+            "cv": cv
         }
 
     def evaluate_size_quality(
@@ -247,4 +359,53 @@ class ParticleSizeAnalyzer:
             "specific_surface_area": specific_surface_area,
             "total_surface_area": total_surface_area,
             "mean_surface_area": np.average(surface_areas, weights=weights),
+        }
+
+    def validate_particle_data(self, particle_data: Dict) -> Dict[str, Any]:
+        """
+        Validate and process particle size data structure.
+        
+        Args:
+            particle_data: Dictionary containing:
+                - sizes: List of particle sizes (optional)
+                - weights: List of weights (optional)
+                - percentiles: Dict with d10, d50, d90
+                - density: Particle density
+                - initial_moisture: Initial moisture content
+                - final_moisture: Final moisture content
+                
+        Returns:
+            Dict with validated and processed data
+        """
+        # Validate percentiles
+        percentiles = particle_data.get("percentiles", {})
+        if not all(key in percentiles for key in ["d10", "d50", "d90"]):
+            raise ValueError("Missing required percentile values (d10, d50, d90)")
+            
+        # If no distribution data provided, create synthetic distribution
+        if not particle_data.get("sizes"):
+            # Create log-normal distribution based on percentiles
+            sizes = self.rust_handler.generate_distribution(
+                d10=percentiles["d10"],
+                d50=percentiles["d50"],
+                d90=percentiles["d90"],
+                num_points=100
+            )
+            weights = None  # Use uniform weights
+        else:
+            sizes = particle_data["sizes"]
+            weights = particle_data.get("weights")
+            
+        # Validate density
+        density = particle_data.get("density", 1.5)  # Default protein particle density
+        if density <= 0:
+            raise ValueError("Particle density must be positive")
+            
+        return {
+            "sizes": sizes,
+            "weights": weights,
+            "percentiles": percentiles,
+            "density": density,
+            "initial_moisture": particle_data["initial_moisture"],
+            "final_moisture": particle_data["final_moisture"]
         }

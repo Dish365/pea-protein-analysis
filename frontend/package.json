@@ -28,6 +28,7 @@
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
+    "reactflow": "^11.11.4",
     "recharts": "^2.15.0",
     "shadcn-ui": "^0.9.4",
     "tailwind-merge": "^2.6.0",

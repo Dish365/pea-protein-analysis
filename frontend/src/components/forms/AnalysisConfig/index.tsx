@@ -1,7 +1,16 @@
 import React from "react";
 
 interface AnalysisConfigProps {
-  // Add props interface
+  onSubmit: (config: AnalysisSettings) => void;
+  initialValues?: Partial<AnalysisSettings>;
+  isLoading?: boolean;
+}
+
+interface AnalysisSettings {
+  timeRange: number;
+  threshold: number;
+  includeHistorical: boolean;
+  compareWithBenchmark: boolean;
 }
 
 const AnalysisConfig: React.FC<AnalysisConfigProps> = () => {

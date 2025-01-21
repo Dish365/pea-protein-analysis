@@ -12,6 +12,11 @@ import {
   ZAxis,
 } from "recharts";
 import apiClient from "@/lib/api/client";
+import { TooltipProps } from "recharts";
+import {
+  NameType,
+  ValueType,
+} from "recharts/types/component/DefaultTooltipContent";
 
 interface EcoEfficiencyData {
   score: {
@@ -143,15 +148,7 @@ export function EcoEfficiencyDisplay() {
   );
 }
 
-interface TooltipProps {
-  active?: boolean;
-  payload?: Array<{
-    value: number;
-    name: string;
-  }>;
-}
-
-function CustomTooltip({ active, payload }: TooltipProps) {
+function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
   if (!active || !payload?.length) return null;
 
   return (

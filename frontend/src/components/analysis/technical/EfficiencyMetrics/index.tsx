@@ -1,8 +1,16 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts';
-import { apiClient } from '@/lib/api/client';
+import { useQuery } from "@tanstack/react-query";
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
+import apiClient from "@/lib/api/client";
 
 interface EfficiencyData {
   currentEfficiency: number;
@@ -20,12 +28,14 @@ interface EfficiencyData {
 
 export function EfficiencyMetrics() {
   const { data, isLoading, error } = useQuery<EfficiencyData>({
-    queryKey: ['efficiency-metrics'],
-    queryFn: () => apiClient.get('/api/analysis/technical/efficiency'),
+    queryKey: ["efficiency-metrics"],
+    queryFn: () => apiClient.get("/api/analysis/technical/efficiency"),
   });
 
-  if (isLoading) return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error) return <div className="text-red-500">Error loading efficiency metrics</div>;
+  if (isLoading)
+    return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
+  if (error)
+    return <div className="text-red-500">Error loading efficiency metrics</div>;
 
   return (
     <div className="space-y-6">
@@ -36,13 +46,20 @@ export function EfficiencyMetrics() {
           <div className="text-3xl font-bold text-indigo-600">
             {data?.currentEfficiency}%
           </div>
-          <div className={`text-sm ${
-            data?.currentEfficiency > data?.historicalEfficiency 
-              ? 'text-green-600' 
-              : 'text-red-600'
-          }`}>
-            {data?.currentEfficiency > data?.historicalEfficiency ? '↑' : '↓'}
-            {Math.abs(data?.currentEfficiency - data?.historicalEfficiency)}% vs historical
+          <div
+            className={`text-sm ${
+              (data?.currentEfficiency ?? 0) > (data?.historicalEfficiency ?? 0)
+                ? "text-green-600"
+                : "text-red-600"
+            }`}
+          >
+            {(data?.currentEfficiency ?? 0) > (data?.historicalEfficiency ?? 0)
+              ? "↑"
+              : "↓"}
+            {Math.abs(
+              (data?.currentEfficiency ?? 0) - (data?.historicalEfficiency ?? 0)
+            )}
+            % vs historical
           </div>
         </div>
 
@@ -50,7 +67,10 @@ export function EfficiencyMetrics() {
           <div className="text-sm text-gray-600">Key Metrics</div>
           <div className="mt-2 space-y-2">
             {data?.metrics.slice(0, 3).map((metric) => (
-              <div key={metric.name} className="flex justify-between items-center">
+              <div
+                key={metric.name}
+                className="flex justify-between items-center"
+              >
                 <span className="text-sm">{metric.name}</span>
                 <span className="text-sm font-semibold">{metric.current}%</span>
               </div>
@@ -111,7 +131,7 @@ interface MetricCardProps {
 
 function MetricCard({ name, current, baseline }: MetricCardProps) {
   const improvement = current - baseline;
-  
+
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm">
       <div className="text-sm font-medium text-gray-600">{name}</div>
@@ -120,13 +140,17 @@ function MetricCard({ name, current, baseline }: MetricCardProps) {
           <div className="text-2xl font-bold">{current}%</div>
           <div className="text-sm text-gray-500">Current</div>
         </div>
-        <div className={`text-sm ${improvement >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-          {improvement >= 0 ? '+' : ''}{improvement}%
-          <div className="text-gray-500">vs Baseline</div>
+        <div
+          className={`text-sm ${
+            improvement >= 0 ? "text-green-600" : "text-red-600"
+          }`}
+        >
+          {improvement >= 0 ? "+" : ""}
+          {improvement}%<div className="text-gray-500">vs Baseline</div>
         </div>
       </div>
       <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div 
+        <div
           className="h-full bg-indigo-600 rounded-full"
           style={{ width: `${current}%` }}
         />

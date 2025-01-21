@@ -29,7 +29,18 @@ interface BarChartProps {
       backgroundColor: string;
     }[];
   };
-  options?: any;
+  options?: {
+    responsive?: boolean;
+    plugins?: {
+      legend?: {
+        position?: "top" | "bottom" | "left" | "right";
+      };
+      title?: {
+        display?: boolean;
+        text?: string;
+      };
+    };
+  };
 }
 
 const BarChart: React.FC<BarChartProps> = ({ data, options = {} }) => {

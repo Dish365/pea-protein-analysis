@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { z } from 'zod'
+import { useState } from "react";
+import { z } from "zod";
 
 const processSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(['baseline', 'rf', 'ir']),
+  type: z.enum(["baseline", "rf", "ir"]),
   technicalParams: z.object({
     inputMass: z.number().positive(),
     proteinContent: z.number().min(0).max(100),
@@ -17,17 +17,41 @@ const processSchema = z.object({
     operatingCost: z.number().positive(),
     laborCost: z.number().positive(),
   }),
-})
+});
 
 export function ProcessForm() {
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(1);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = {
+      name: "", // get from form
+      type: "baseline" as const,
+      technicalParams: {
+        inputMass: 0,
+        proteinContent: 0,
+        moistureContent: 0,
+        particleSize: 0,
+      },
+      economicParams: {
+        equipmentCost: 0,
+        operatingCost: 0,
+        laborCost: 0,
+      },
+    };
+
+    const result = processSchema.safeParse(formData);
+    if (result.success) {
+      // handle valid data
+    }
+  };
 
   return (
-    <form className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {step === 1 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Basic Information</h2>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Process Name
@@ -54,7 +78,7 @@ export function ProcessForm() {
       {step === 2 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Technical Parameters</h2>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">
@@ -106,5 +130,5 @@ export function ProcessForm() {
         )}
       </div>
     </form>
-  )
+  );
 }

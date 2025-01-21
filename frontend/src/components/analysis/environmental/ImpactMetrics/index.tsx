@@ -57,11 +57,13 @@ export function ImpactMetrics() {
           </div>
           <div
             className={`text-sm ${
-              data?.totalScore.change >= 0 ? "text-red-600" : "text-green-600"
+              (data?.totalScore?.change ?? 0) >= 0
+                ? "text-red-600"
+                : "text-green-600"
             }`}
           >
-            {data?.totalScore.change >= 0 ? "↑" : "↓"}
-            {Math.abs(data?.totalScore.change)}% vs previous
+            {(data?.totalScore?.change ?? 0) >= 0 ? "↑" : "↓"}
+            {Math.abs(data?.totalScore?.change ?? 0)}% vs previous
           </div>
         </div>
 

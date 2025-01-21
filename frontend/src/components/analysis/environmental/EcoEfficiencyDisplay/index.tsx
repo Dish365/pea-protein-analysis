@@ -56,10 +56,11 @@ export function EcoEfficiencyDisplay() {
           </div>
           <div
             className={`text-sm ${
-              data?.score.change > 0 ? "text-green-600" : "text-red-600"
+              (data?.score?.change ?? 0) > 0 ? "text-green-600" : "text-red-600"
             }`}
           >
-            {data?.score.change > 0 ? "↑" : "↓"} {Math.abs(data?.score.change)}%
+            {(data?.score?.change ?? 0) > 0 ? "↑" : "↓"}{" "}
+            {Math.abs(data?.score?.change ?? 0)}%
           </div>
         </div>
 
@@ -120,20 +121,20 @@ export function EcoEfficiencyDisplay() {
         <div className="text-sm text-gray-600">
           <p>
             Current eco-efficiency score is
-            {data?.score.current > data?.benchmarks.industry
+            {(data?.score?.current ?? 0) > (data?.benchmarks?.industry ?? 0)
               ? " above "
               : " below "}
             industry average by{" "}
-            {Math.abs(data?.score.current - data?.benchmarks.industry).toFixed(
-              1
-            )}{" "}
+            {Math.abs(
+              (data?.score?.current ?? 0) - (data?.benchmarks?.industry ?? 0)
+            ).toFixed(1)}{" "}
             points.
           </p>
           <p className="mt-2">
-            {data?.score.current >= data?.benchmarks.target
+            {(data?.score?.current ?? 0) >= (data?.benchmarks?.target ?? 0)
               ? "Target achievement: Met or exceeded"
               : `Gap to target: ${(
-                  data?.benchmarks.target - data?.score.current
+                  (data?.benchmarks?.target ?? 0) - (data?.score?.current ?? 0)
                 ).toFixed(1)} points`}
           </p>
         </div>

@@ -10,6 +10,8 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Legend,
+  LineChart,
+  Line,
 } from "recharts";
 import apiClient from "@/lib/api/client";
 

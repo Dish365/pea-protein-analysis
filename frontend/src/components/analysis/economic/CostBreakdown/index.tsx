@@ -18,6 +18,13 @@ interface CostData {
   total: number;
 }
 
+interface CostResponse {
+  totalCapex: number;
+  annualOpex: number;
+  unitCost: number;
+  breakdown: CostData[];
+}
+
 export function CostBreakdown() {
   const { data, isLoading, error } = useProcess("cost-breakdown");
 
@@ -35,17 +42,17 @@ export function CostBreakdown() {
       <div className="grid grid-cols-3 gap-4">
         <CostMetricCard
           label="Total CAPEX"
-          value={data?.totalCapex}
+          value={data?.data?.totalCapex}
           currency="USD"
         />
         <CostMetricCard
           label="Annual OPEX"
-          value={data?.annualOpex}
+          value={data?.data?.annualOpex}
           currency="USD"
         />
         <CostMetricCard
           label="Unit Cost"
-          value={data?.unitCost}
+          value={data?.data?.unitCost}
           currency="USD/kg"
         />
       </div>

@@ -42,19 +42,21 @@ export function ProteinRecoveryChart() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <div className="text-2xl font-bold">{data?.currentRecovery}%</div>
+          <div className="text-2xl font-bold">
+            {data?.data?.currentRecovery}%
+          </div>
           <div className="text-sm text-gray-600">Current Recovery Rate</div>
         </div>
         <div className="text-right">
           <div className="text-lg font-semibold text-green-600">
-            +{data?.improvement}%
+            +{data?.data?.improvement}%
           </div>
           <div className="text-sm text-gray-600">vs Baseline</div>
         </div>
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data?.timeSeriesData}>
+        <LineChart data={data?.data?.timeSeriesData}>
           <XAxis
             dataKey="timestamp"
             tickFormatter={(value) => new Date(value).toLocaleTimeString()}
@@ -82,18 +84,18 @@ export function ProteinRecoveryChart() {
       <div className="grid grid-cols-3 gap-4 mt-4">
         <MetricCard
           label="Peak Recovery"
-          value={`${data?.peakRecovery}%`}
-          trend={data?.peakTrend}
+          value={`${data?.data?.peakRecovery}%`}
+          trend={data?.data?.peakTrend}
         />
         <MetricCard
           label="Average Rate"
-          value={`${data?.averageRate}%`}
-          trend={data?.avgTrend}
+          value={`${data?.data?.averageRate}%`}
+          trend={data?.data?.avgTrend}
         />
         <MetricCard
           label="Process Time"
-          value={`${data?.processTime}min`}
-          trend={data?.timeTrend}
+          value={`${data?.data?.processTime}min`}
+          trend={data?.data?.timeTrend}
         />
       </div>
     </div>

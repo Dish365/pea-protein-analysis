@@ -120,9 +120,26 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/day",
+        "user": "1000/day",
+    },
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+    ],
+    "EXCEPTION_HANDLER": "core.utils.custom_exception_handler",
 }
 
 # JWT Settings
@@ -140,6 +157,10 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
+CELERY_TASK_TIME_LIMIT = 60 * 5  # 5 minutes
+CELERY_TASK_SOFT_TIME_LIMIT = 60 * 3  # 3 minutes
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
 # Cache settings
 CACHES = {
@@ -148,7 +169,14 @@ CACHES = {
         "LOCATION": os.environ.get("REDIS_URL", "redis://localhost:6379/1"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "RETRY_ON_TIMEOUT": True,
+            "MAX_CONNECTIONS": 1000,
+            "CONNECTION_POOL_KWARGS": {"max_connections": 100},
         },
+        "KEY_PREFIX": "nrc",
+        "TIMEOUT": 300,  # 5 minutes default
     }
 }
 
@@ -192,10 +220,21 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "simple",
         },
+        "process_file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": str(BASE_DIR / "logs" / "process.log"),
+            "formatter": "verbose",
+        },
     },
     "loggers": {
         "django": {
             "handlers": ["file", "console"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "process_data": {
+            "handlers": ["process_file", "console"],
             "level": "INFO",
             "propagate": True,
         },
@@ -212,5 +251,15 @@ PROCESS_ANALYSIS = {
     'DEFAULT_TIMEOUT': 60,  # seconds
     'MAX_RETRIES': 3,
     'BACKOFF_FACTOR': 0.3,
-    'CONCURRENT_REQUESTS': 10
+    'CONCURRENT_REQUESTS': 10,
+    'EFFICIENCY_TIMEOUT': 45,  # seconds
+    'CACHE_TIMEOUT': 3600,  # 1 hour
+    'STAGES': {
+        'VALIDATION': {'weight': 5, 'timeout': 10},
+        'TECHNICAL': {'weight': 25, 'timeout': 30},
+        'ECONOMIC': {'weight': 25, 'timeout': 30},
+        'ENVIRONMENTAL': {'weight': 25, 'timeout': 30},
+        'EFFICIENCY': {'weight': 15, 'timeout': 20},
+        'SAVING': {'weight': 5, 'timeout': 10}
+    }
 }

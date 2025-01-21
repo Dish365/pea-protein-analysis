@@ -31,10 +31,18 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Email backend for development
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-# Cache settings for development
+# Cache settings for development (using Redis for consistency with production)
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://localhost:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "RETRY_ON_TIMEOUT": True,
+        },
+        "KEY_PREFIX": "nrc_dev",
     }
 }
 
@@ -57,21 +65,57 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
-# Logging
+# Development-specific Process Analysis settings
+PROCESS_ANALYSIS.update({
+    'DEFAULT_TIMEOUT': 120,  # Longer timeout for development
+    'MAX_RETRIES': 5,  # More retries for development
+    'CACHE_TIMEOUT': 1800,  # 30 minutes for development
+})
+
+# Development-specific FastAPI settings
+FASTAPI_BASE_URL = 'http://localhost:8001/api/v1'
+FASTAPI_TIMEOUT = 60  # Longer timeout for development
+
+# Logging for development
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         },
         'file': {
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs/debug.log',
+            'formatter': 'verbose',
+        },
+        'process_file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/process_dev.log',
+            'formatter': 'verbose',
         },
     },
-    'root': {
-        'handlers': ['console', 'file'],
-        'level': 'DEBUG',
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'process_data': {
+            'handlers': ['console', 'process_file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
+
+# Development Celery settings
+CELERY_TASK_ALWAYS_EAGER = True  # Run tasks synchronously in development
+CELERY_TASK_EAGER_PROPAGATES = True  # Propagate exceptions in development

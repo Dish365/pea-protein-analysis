@@ -427,4 +427,4 @@ class ProcessAnalysisView(APIView):
             # Eco-efficiency Results
             'eco_efficiency_index': efficiency.get('efficiency_metrics', {}).get('eco_efficiency_index', 0),
             'relative_performance': efficiency.get('performance_indicators', {}).get('relative_performance', 0)
-        } 
+        }

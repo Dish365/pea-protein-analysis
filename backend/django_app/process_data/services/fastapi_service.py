@@ -96,13 +96,18 @@ class FastAPIService:
             
             # Compile final results
             final_results = {
-                'technical_results': technical_results.get('technical_results', {}),
-                'economic_analysis': economic_results,
-                'environmental_results': {
-                    'environmental_results': environmental_results.get('environmental_results', {})
-                },
-                'efficiency_results': efficiency_results
-            }
+            'technical_results': technical_results.get('technical_results', {}),
+            'economic_analysis': economic_results,
+            'environmental_results': environmental_results.get('environmental_results', {}) if isinstance(environmental_results.get('environmental_results'), dict) else {
+                'impact_assessment': environmental_results.get('impact_assessment', {}),
+                'consumption_metrics': environmental_results.get('consumption_metrics', {
+                    'electricity': None,
+                    'cooling': None,
+                    'water': None
+                })
+            },
+            'efficiency_results': efficiency_results
+        }
             
             logger.info("Process analysis completed successfully")
             return final_results

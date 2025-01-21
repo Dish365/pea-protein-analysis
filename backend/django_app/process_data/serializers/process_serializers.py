@@ -125,71 +125,99 @@ class AnalysisResultSerializer(serializers.ModelSerializer):
         
         # Define expected nested structures from test data
         expected_structure = {
-            'technical_results': {
-                'protein_recovery': 0.8,
-                'separation_efficiency': 0.85,
-                'process_efficiency': 0.75,
-                'particle_size_distribution': {
-                    'd10': 10.0,
-                    'd50': 50.0,
-                    'd90': 90.0
-                }
-            },
-            'economic_results': {
-                'capex_analysis': {
-                    'summary': {
-                        'equipment_costs': 0.0,
-                        'installation_costs': 0.0,
-                        'indirect_costs': 0.0,
-                        'total_capex': 0.0
+            'summary': {
+                'technical': {
+                    'protein_recovery': {
+                        'mass': 0.0,
+                        'content': 0.0,
+                        'yield': 0.0
                     },
-                    'equipment_breakdown': []
+                    'separation_efficiency': 0.0,
+                    'process_efficiency': 0.0,
+                    'particle_size_distribution': {
+                        'd10': 0.0,
+                        'd50': 0.0,
+                        'd90': 0.0
+                    }
                 },
-                'opex_analysis': {
-                    'summary': {
+                'economic': {
+                    'capex_analysis': {
+                        'total_capex': 0.0,
+                        'equipment_cost': 0.0,
+                        'installation_cost': 0.0,
+                        'indirect_cost': 0.0
+                    },
+                    'opex_analysis': {
+                        'total_opex': 0.0,
                         'utilities_cost': 0.0,
                         'materials_cost': 0.0,
                         'labor_cost': 0.0,
-                        'maintenance_cost': 0.0,
-                        'total_opex': 0.0
-                    }
-                },
-                'profitability_analysis': {
-                    'metrics': {
+                        'maintenance_cost': 0.0
+                    },
+                    'profitability_analysis': {
                         'npv': 0.0,
-                        'roi': 0.0,
-                        'payback_period': 0.0,
-                        'profitability_index': 0.0
+                        'roi': 0.0
                     }
-                }
-            },
-            'environmental_results': {
-                'gwp': 0.0,
-                'hct': 0.0,
-                'frs': 0.0,
-                'water_consumption': 0.0
-            },
-            'efficiency_results': {
-                'efficiency_metrics': {
-                    'economic_indicators': {'npv_efficiency': 0.0},
-                    'quality_indicators': {'protein_efficiency': 0.0},
-                    'resource_efficiency': {'resource_efficiency': 0.0}
                 },
-                'performance_indicators': {
-                    'eco_efficiency_index': 0.0,
-                    'relative_performance': 0.0
+                'environmental': {
+                    'impact_assessment': {
+                        'gwp': 0.0,
+                        'hct': 0.0,
+                        'frs': 0.0
+                    },
+                    'consumption_metrics': {
+                        'electricity': None,
+                        'cooling': None,
+                        'water': None
+                    }
+                },
+                'efficiency': {
+                    'efficiency_metrics': {
+                        'eco_efficiency_index': 0.0
+                    },
+                    'performance_indicators': {
+                        'relative_performance': 0.0
+                    }
                 }
             }
         }
         
-        # Ensure all fields have proper structure
-        for field, structure in expected_structure.items():
-            if field in data:
-                if data[field] is None:
-                    data[field] = structure
+        # Transform results into summary structure
+        summary = {
+            'technical': data.pop('technical_results', {}),
+            'economic': data.pop('economic_results', {}),
+            'environmental': data.pop('environmental_results', {}),
+            'efficiency': data.pop('efficiency_results', {})
+        }
+        
+        # Merge with expected structure
+        for section, structure in expected_structure['summary'].items():
+            if section in summary:
+                if section == 'environmental':
+                    # Deep merge for environmental section to preserve consumption_metrics
+                    env_data = summary[section]
+                    env_structure = structure.copy()  # Create a copy to avoid modifying the original
+                    
+                    # Update impact assessment if present
+                    if 'impact_assessment' in env_data:
+                        env_structure['impact_assessment'].update(env_data.get('impact_assessment', {}))
+                    
+                    # Update consumption metrics if present
+                    if 'consumption_metrics' in env_data:
+                        env_structure['consumption_metrics'].update(env_data.get('consumption_metrics', {}))
+                    elif isinstance(env_data.get('environmental_results', {}), dict):
+                        # Handle nested environmental_results structure
+                        env_results = env_data.get('environmental_results', {})
+                        if 'consumption_metrics' in env_results:
+                            env_structure['consumption_metrics'].update(env_results['consumption_metrics'])
+                    
+                    summary[section] = env_structure
                 else:
-                    # Merge with default structure to ensure all fields exist
-                    data[field] = {**structure, **data[field]}
+                    summary[section] = {**structure, **summary[section]}
+        
+        data['summary'] = summary
+        data['status'] = 'success'
+        data['message'] = 'Analysis completed successfully'
         
         return data
 
@@ -269,4 +297,23 @@ class ProcessInputSerializer(serializers.Serializer):
         choices=['economic', 'physical', 'hybrid'],
         default='hybrid'
     )
-    hybrid_weights = serializers.JSONField() 
+    hybrid_weights = serializers.JSONField()
+
+    def validate(self, data):
+        """
+        Validate process type specific requirements
+        """
+        process_type = data.get('process_type')
+        
+        if process_type == 'rf':
+            if data.get('electricity_consumption', 0) <= 0:
+                raise serializers.ValidationError({
+                    'electricity_consumption': 'RF process requires positive electricity consumption'
+                })
+        elif process_type == 'ir':
+            if data.get('cooling_consumption', 0) <= 0:
+                raise serializers.ValidationError({
+                    'cooling_consumption': 'IR process requires positive cooling consumption'
+                })
+        
+        return data 

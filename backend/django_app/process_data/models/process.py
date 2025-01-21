@@ -151,17 +151,28 @@ class AnalysisResult(models.Model):
     )
     economic_results = models.JSONField(
         null=True,
-        help_text="Economic results including capex_analysis (summary, equipment_breakdown), opex_analysis (summary), profitability_analysis (metrics)",
+        help_text="Economic results including capex_analysis, opex_analysis, profitability_analysis",
         default=dict
     )
     environmental_results = models.JSONField(
         null=True,
-        help_text="Environmental results including gwp, hct, frs, water_consumption",
-        default=dict
+        help_text="Environmental results including impact assessment and consumption metrics",
+        default=lambda: {
+            'impact_assessment': {
+                'gwp': 0.0,
+                'hct': 0.0,
+                'frs': 0.0
+            },
+            'consumption_metrics': {
+                'electricity': None,
+                'cooling': None,
+                'water': None
+            }
+        }
     )
     efficiency_results = models.JSONField(
         null=True,
-        help_text="Efficiency results including efficiency_metrics (economic, quality, resource) and performance_indicators",
+        help_text="Efficiency results including efficiency_metrics and performance_indicators",
         default=dict
     )
     

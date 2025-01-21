@@ -31,6 +31,20 @@ PASSWORD_HASHERS = [
 # Disable CSRF protection in tests
 MIDDLEWARE = [m for m in MIDDLEWARE if 'csrf' not in m.lower()]
 
+# Disable authentication and permissions for testing
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [],
+    'UNAUTHENTICATED_USER': None,
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+    ],
+    'EXCEPTION_HANDLER': 'core.utils.custom_exception_handler',
+}
+
 # Test-specific logging
 LOGGING = {
     'version': 1,

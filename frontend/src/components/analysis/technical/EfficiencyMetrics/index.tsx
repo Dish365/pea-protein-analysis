@@ -1,160 +1,159 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
-import apiClient from "@/lib/api/client";
+import React from 'react';
+import { Card, Statistic, Row, Col, Progress, Tooltip } from 'antd';
+import { ProcessType } from '../../../../types/process';
+import { 
+  ThunderboltOutlined, 
+  DeploymentUnitOutlined, 
+  DashboardOutlined,
+  AimOutlined 
+} from '@ant-design/icons';
 
-interface EfficiencyData {
-  currentEfficiency: number;
-  historicalEfficiency: number;
-  metrics: {
-    name: string;
-    current: number;
-    baseline: number;
-  }[];
-  trends: {
-    timestamp: string;
-    efficiency: number;
-  }[];
+interface EfficiencyMetricsProps {
+  processType: ProcessType;
+  inputMass: number;
+  outputMass: number;
+  airFlow: number;
+  classifierSpeed: number;
 }
 
-export function EfficiencyMetrics() {
-  const { data, isLoading, error } = useQuery<EfficiencyData>({
-    queryKey: ["efficiency-metrics"],
-    queryFn: () => apiClient.get("/api/analysis/technical/efficiency"),
-  });
-
-  if (isLoading)
-    return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error)
-    return <div className="text-red-500">Error loading efficiency metrics</div>;
+const EfficiencyMetrics: React.FC<EfficiencyMetricsProps> = ({
+  processType,
+  inputMass,
+  outputMass,
+  airFlow,
+  classifierSpeed,
+}) => {
+  // Calculate efficiency metrics
+  const massEfficiency = (outputMass / inputMass) * 100;
+  const processEfficiency = calculateProcessEfficiency(processType, airFlow, classifierSpeed);
+  const throughputRate = calculateThroughput(inputMass, airFlow);
+  const classifierEfficiency = calculateClassifierEfficiency(classifierSpeed);
 
   return (
-    <div className="space-y-6">
-      {/* Efficiency Score Card */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="text-sm text-gray-600">Current Efficiency</div>
-          <div className="text-3xl font-bold text-indigo-600">
-            {data?.currentEfficiency}%
-          </div>
-          <div
-            className={`text-sm ${
-              (data?.currentEfficiency ?? 0) > (data?.historicalEfficiency ?? 0)
-                ? "text-green-600"
-                : "text-red-600"
-            }`}
-          >
-            {(data?.currentEfficiency ?? 0) > (data?.historicalEfficiency ?? 0)
-              ? "↑"
-              : "↓"}
-            {Math.abs(
-              (data?.currentEfficiency ?? 0) - (data?.historicalEfficiency ?? 0)
-            )}
-            % vs historical
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="text-sm text-gray-600">Key Metrics</div>
-          <div className="mt-2 space-y-2">
-            {data?.metrics.slice(0, 3).map((metric) => (
-              <div
-                key={metric.name}
-                className="flex justify-between items-center"
-              >
-                <span className="text-sm">{metric.name}</span>
-                <span className="text-sm font-semibold">{metric.current}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Radar Chart for Multiple Metrics */}
-      <div className="bg-white rounded-lg p-4 shadow-sm">
-        <h3 className="text-lg font-semibold mb-4">Efficiency Breakdown</h3>
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={data?.metrics}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="name" />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} />
-              <Radar
-                name="Current"
-                dataKey="current"
-                stroke="#4F46E5"
-                fill="#4F46E5"
-                fillOpacity={0.3}
+    <Card title="Process Efficiency Metrics" className="efficiency-metrics-card">
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Ratio of output mass to input mass">
+            <Card className="metric-card">
+              <Statistic
+                title="Mass Efficiency"
+                value={massEfficiency}
+                precision={1}
+                suffix="%"
+                prefix={<DeploymentUnitOutlined />}
               />
-              <Radar
-                name="Baseline"
-                dataKey="baseline"
-                stroke="#94A3B8"
-                fill="#94A3B8"
-                fillOpacity={0.3}
+              <Progress
+                percent={massEfficiency}
+                status={massEfficiency >= 85 ? 'success' : 'normal'}
+                strokeColor={massEfficiency >= 85 ? '#52c41a' : '#1890ff'}
               />
-              <Tooltip />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Efficiency Metrics Details */}
-      <div className="grid grid-cols-2 gap-4">
-        {data?.metrics.map((metric) => (
-          <MetricCard
-            key={metric.name}
-            name={metric.name}
-            current={metric.current}
-            baseline={metric.baseline}
-          />
-        ))}
-      </div>
-    </div>
+            </Card>
+          </Tooltip>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Overall process efficiency based on type and parameters">
+            <Card className="metric-card">
+              <Statistic
+                title="Process Efficiency"
+                value={processEfficiency}
+                precision={1}
+                suffix="%"
+                prefix={<ThunderboltOutlined />}
+              />
+              <Progress
+                percent={processEfficiency}
+                status={processEfficiency >= 90 ? 'success' : 'normal'}
+                strokeColor={processEfficiency >= 90 ? '#52c41a' : '#1890ff'}
+              />
+            </Card>
+          </Tooltip>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Material processing rate">
+            <Card className="metric-card">
+              <Statistic
+                title="Throughput Rate"
+                value={throughputRate}
+                precision={2}
+                suffix="kg/h"
+                prefix={<DashboardOutlined />}
+              />
+              <Progress
+                percent={(throughputRate / 100) * 100}
+                status={throughputRate >= 80 ? 'success' : 'normal'}
+                strokeColor={throughputRate >= 80 ? '#52c41a' : '#1890ff'}
+              />
+            </Card>
+          </Tooltip>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Classifier performance efficiency">
+            <Card className="metric-card">
+              <Statistic
+                title="Classifier Efficiency"
+                value={classifierEfficiency}
+                precision={1}
+                suffix="%"
+                prefix={<AimOutlined />}
+              />
+              <Progress
+                percent={classifierEfficiency}
+                status={classifierEfficiency >= 95 ? 'success' : 'normal'}
+                strokeColor={classifierEfficiency >= 95 ? '#52c41a' : '#1890ff'}
+              />
+            </Card>
+          </Tooltip>
+        </Col>
+      </Row>
+    </Card>
   );
+};
+
+// Helper functions for efficiency calculations
+function calculateProcessEfficiency(type: ProcessType, airFlow: number, classifierSpeed: number): number {
+  const baseEfficiency = 85; // Base efficiency percentage
+  let efficiency = baseEfficiency;
+
+  switch (type) {
+    case ProcessType.RF:
+      efficiency += 5; // RF process typically has higher efficiency
+      break;
+    case ProcessType.IR:
+      efficiency += 3; // IR process has moderate efficiency boost
+      break;
+    default:
+      break;
+  }
+
+  // Adjust for air flow (optimal range: 400-600 m³/h)
+  if (airFlow >= 400 && airFlow <= 600) {
+    efficiency += 5;
+  } else {
+    efficiency -= Math.min(5, Math.abs(airFlow - 500) / 100);
+  }
+
+  // Adjust for classifier speed (optimal range: 1200-1800 rpm)
+  if (classifierSpeed >= 1200 && classifierSpeed <= 1800) {
+    efficiency += 5;
+  } else {
+    efficiency -= Math.min(5, Math.abs(classifierSpeed - 1500) / 300);
+  }
+
+  return Math.min(100, Math.max(0, efficiency));
 }
 
-interface MetricCardProps {
-  name: string;
-  current: number;
-  baseline: number;
+function calculateThroughput(inputMass: number, airFlow: number): number {
+  // Simplified throughput calculation
+  return (inputMass * airFlow) / 1000;
 }
 
-function MetricCard({ name, current, baseline }: MetricCardProps) {
-  const improvement = current - baseline;
-
-  return (
-    <div className="bg-white rounded-lg p-4 shadow-sm">
-      <div className="text-sm font-medium text-gray-600">{name}</div>
-      <div className="mt-2 flex justify-between items-end">
-        <div>
-          <div className="text-2xl font-bold">{current}%</div>
-          <div className="text-sm text-gray-500">Current</div>
-        </div>
-        <div
-          className={`text-sm ${
-            improvement >= 0 ? "text-green-600" : "text-red-600"
-          }`}
-        >
-          {improvement >= 0 ? "+" : ""}
-          {improvement}%<div className="text-gray-500">vs Baseline</div>
-        </div>
-      </div>
-      <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-indigo-600 rounded-full"
-          style={{ width: `${current}%` }}
-        />
-      </div>
-    </div>
-  );
+function calculateClassifierEfficiency(speed: number): number {
+  // Optimal speed range: 1200-1800 rpm
+  const optimalSpeed = 1500;
+  const efficiency = 95 - Math.abs(speed - optimalSpeed) / 100;
+  return Math.min(100, Math.max(0, efficiency));
 }
+
+export default EfficiencyMetrics;

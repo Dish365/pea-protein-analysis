@@ -3,10 +3,15 @@ from django.test import Client
 from rest_framework.test import APIClient
 from django.core.cache import cache
 from django.conf import settings
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 import asyncio
 import json
+import logging
+from process_data.services.fastapi_service import FastAPIService
 
+logger = logging.getLogger(__name__)
+
+# Cache Configuration
 @pytest.fixture(autouse=True)
 def use_test_cache():
     """Configure cache for testing"""
@@ -24,6 +29,7 @@ def clear_cache():
     yield
     cache.clear()
 
+# Client Fixtures
 @pytest.fixture
 def client():
     """Test client for API requests"""
@@ -42,38 +48,72 @@ def api_client():
 def django_client():
     return Client()
 
+# Mock Response Fixtures
 @pytest.fixture
 def mock_fastapi_response():
     return {
-        "technical": {
-            "protein_recovery": 85.0,
-            "moisture_content": 12.0,
-            "particle_size": {"d50": 250}
+        "technical_results": {
+            "protein_recovery": {
+                "mass": 36.0,
+                "content": 45.0,
+                "yield": 0.8
+            },
+            "separation_efficiency": 0.85,
+            "process_efficiency": 0.75,
+            "particle_size_distribution": {
+                "d10": 10.0,
+                "d50": 50.0,
+                "d90": 90.0
+            }
         },
-        "economic": {
-            "capex": {"total_investment": 1000000},
-            "opex": {"total_annual_cost": 500000},
-            "profitability": {
-                "npv": 2000000,
+        "economic_analysis": {
+            "capex_analysis": {
+                "total_capex": 75000.0,
+                "equipment_cost": 50000.0,
+                "installation_cost": 15000.0,
+                "indirect_cost": 10000.0
+            },
+            "opex_analysis": {
+                "total_opex": 15000.0,
+                "utilities_cost": 5000.0,
+                "materials_cost": 5000.0,
+                "labor_cost": 3000.0,
+                "maintenance_cost": 2000.0
+            },
+            "profitability_analysis": {
+                "npv": 250000.0,
+                "roi": 0.25,
                 "irr": 15.5,
                 "payback_period": 3.5
             }
         },
-        "environmental": {
-            "direct_impacts": {
-                "gwp": 1000,
-                "water": 500
+        "environmental_results": {
+            "impact_assessment": {
+                "gwp": 125.0,
+                "hct": 0.5,
+                "frs": 2.5
+            },
+            "consumption_metrics": {
+                "electricity": None,
+                "cooling": None,
+                "water": None
             },
             "allocated_impacts": {
                 "product": {"gwp": 800, "water": 400},
                 "byproduct": {"gwp": 200, "water": 100}
             }
         },
-        "efficiency": {
-            "technical_score": 0.85,
-            "economic_score": 0.75,
-            "environmental_score": 0.90,
-            "overall_efficiency": 0.83
+        "efficiency_results": {
+            "efficiency_metrics": {
+                "eco_efficiency_index": 0.85,
+                "technical_score": 0.85,
+                "economic_score": 0.75,
+                "environmental_score": 0.90
+            },
+            "performance_indicators": {
+                "relative_performance": 1.2,
+                "overall_efficiency": 0.83
+            }
         }
     }
 
@@ -103,20 +143,6 @@ def mock_process_input():
     }
 
 @pytest.fixture
-def mock_fastapi_service():
-    with patch('process_data.services.fastapi_service.FastAPIService') as mock:
-        service = mock.return_value
-        service.analyze_process = AsyncMock(return_value=mock_fastapi_response())
-        service.get_status = AsyncMock(return_value={"status": "completed", "progress": 100})
-        yield service
-
-@pytest.fixture
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-    loop.close()
-
-@pytest.fixture
 def mock_rust_response():
     return {
         "protein_calculations": {
@@ -132,4 +158,38 @@ def mock_rust_response():
             "mass_based": {"product": 0.8, "byproduct": 0.2},
             "economic_based": {"product": 0.85, "byproduct": 0.15}
         }
-    } 
+    }
+
+# Service Mocks
+@pytest.fixture
+def mock_fastapi_service():
+    """Mock FastAPI service"""
+    with patch('process_data.services.fastapi_service.FastAPIService', autospec=True) as mock_service:
+        service_instance = mock_service.return_value
+        service_instance.__aenter__ = AsyncMock(return_value=service_instance)
+        service_instance.__aexit__ = AsyncMock(return_value=None)
+        service_instance.analyze_process = AsyncMock()
+        service_instance.analyze_process.return_value = mock_fastapi_response()
+        service_instance.get_status = AsyncMock(return_value={"status": "completed", "progress": 100})
+        service_instance.client = AsyncMock()
+        service_instance.client.post = AsyncMock()
+        service_instance.client.post.return_value.status_code = 200
+        service_instance.client.post.return_value.json = AsyncMock(
+            return_value=service_instance.analyze_process.return_value
+        )
+        service_instance.client.aclose = AsyncMock()
+        yield service_instance
+
+@pytest.fixture
+async def real_fastapi_service():
+    """Create a real FastAPI service instance"""
+    async with FastAPIService() as service:
+        yield service
+
+# Event Loop
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an event loop for async tests"""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()

@@ -1,187 +1,175 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import apiClient from "@/lib/api/client";
+import React from 'react';
+import { Card, Statistic, Row, Col, Progress, Tooltip } from 'antd';
+import { 
+  DollarOutlined, 
+  FieldTimeOutlined, 
+  RiseOutlined,
+  PercentageOutlined 
+} from '@ant-design/icons';
 
-interface ProfitabilityData {
-  metrics: {
-    roi: number;
-    paybackPeriod: number;
-    npv: number;
-    irr: number;
-    profitMargin: number;
-  };
-  trends: {
-    timestamp: string;
-    revenue: number;
-    costs: number;
-    profit: number;
-  }[];
-  comparison: {
-    current: number;
-    previous: number;
-    change: number;
-  };
+interface ProfitabilityMetricsProps {
+  totalCost: number;
+  productionVolume: number;
+  projectDuration: number;
+  discountRate: number;
+  equipmentCost: number;
+  installationFactor: number;
 }
 
-export function ProfitabilityMetrics() {
-  const { data, isLoading, error } = useQuery<ProfitabilityData>({
-    queryKey: ["profitability-metrics"],
-    queryFn: () => apiClient.get("/api/analysis/economic/profitability"),
-  });
-
-  if (isLoading)
-    return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error)
-    return <div className="text-red-500">Error loading profitability data</div>;
+export const ProfitabilityMetrics: React.FC<ProfitabilityMetricsProps> = ({
+  totalCost,
+  productionVolume,
+  projectDuration,
+  discountRate,
+  equipmentCost,
+  installationFactor,
+}) => {
+  // Calculate profitability metrics
+  const totalInvestment = equipmentCost * (1 + installationFactor);
+  const annualRevenue = calculateAnnualRevenue(productionVolume);
+  const annualProfit = annualRevenue - totalCost;
+  const roi = (annualProfit / totalInvestment) * 100;
+  const paybackPeriod = totalInvestment / annualProfit;
+  const npv = calculateNPV(annualProfit, discountRate, projectDuration, totalInvestment);
+  const irr = calculateIRR(annualProfit, totalInvestment, projectDuration);
 
   return (
-    <div className="space-y-6">
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        <MetricCard
-          label="ROI"
-          value={data?.metrics.roi}
-          format="percentage"
-          trend={data?.comparison}
-        />
-        <MetricCard
-          label="Payback Period"
-          value={data?.metrics.paybackPeriod}
-          format="years"
-          trend={data?.comparison}
-        />
-        <MetricCard
-          label="NPV"
-          value={data?.metrics.npv}
-          format="currency"
-          trend={data?.comparison}
-        />
-        <MetricCard
-          label="IRR"
-          value={data?.metrics.irr}
-          format="percentage"
-          trend={data?.comparison}
-        />
-      </div>
+    <Card title="Profitability Analysis" className="profitability-metrics-card">
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Annual revenue based on production volume">
+            <Card className="metric-card">
+              <Statistic
+                title="Annual Revenue"
+                value={annualRevenue}
+                precision={2}
+                prefix={<DollarOutlined />}
+                suffix="USD"
+                valueStyle={{ color: '#3f8600' }}
+              />
+            </Card>
+          </Tooltip>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Annual profit (Revenue - Total Cost)">
+            <Card className="metric-card">
+              <Statistic
+                title="Annual Profit"
+                value={annualProfit}
+                precision={2}
+                prefix={<DollarOutlined />}
+                suffix="USD"
+                valueStyle={{ color: annualProfit >= 0 ? '#3f8600' : '#cf1322' }}
+              />
+            </Card>
+          </Tooltip>
+        </Col>
+      </Row>
 
-      {/* Profit Margin Indicator */}
-      <div className="bg-white rounded-lg p-4 shadow-sm">
-        <div className="flex justify-between items-center mb-2">
-          <div className="text-sm text-gray-600">Profit Margin</div>
-          <div className="text-lg font-bold">
-            {data?.metrics.profitMargin.toFixed(1)}%
-          </div>
-        </div>
-        <div className="h-2 bg-gray-100 rounded-full">
-          <div
-            className="h-full bg-green-600 rounded-full"
-            style={{
-              width: `${Math.max(
-                0,
-                Math.min(100, data?.metrics.profitMargin || 0)
-              )}%`,
-            }}
-          />
-        </div>
-      </div>
+      <Row gutter={[16, 16]} style={{ marginTop: '16px' }}>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Return on Investment">
+            <Card className="metric-card">
+              <Statistic
+                title="ROI"
+                value={roi}
+                precision={1}
+                prefix={<RiseOutlined />}
+                suffix="%"
+                valueStyle={{ color: roi >= 15 ? '#3f8600' : '#cf1322' }}
+              />
+              <Progress
+                percent={Math.min(100, roi)}
+                status={roi >= 15 ? 'success' : 'normal'}
+                strokeColor={roi >= 15 ? '#52c41a' : '#1890ff'}
+              />
+            </Card>
+          </Tooltip>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Time required to recover the investment">
+            <Card className="metric-card">
+              <Statistic
+                title="Payback Period"
+                value={paybackPeriod}
+                precision={1}
+                prefix={<FieldTimeOutlined />}
+                suffix="years"
+                valueStyle={{ color: paybackPeriod <= 5 ? '#3f8600' : '#cf1322' }}
+              />
+              <Progress
+                percent={Math.min(100, (5 / paybackPeriod) * 100)}
+                status={paybackPeriod <= 5 ? 'success' : 'normal'}
+                strokeColor={paybackPeriod <= 5 ? '#52c41a' : '#1890ff'}
+              />
+            </Card>
+          </Tooltip>
+        </Col>
+      </Row>
 
-      {/* Revenue vs Costs Trend */}
-      <div className="bg-white rounded-lg p-4 shadow-sm">
-        <h3 className="text-lg font-semibold mb-4">
-          Financial Performance Trend
-        </h3>
-        <div className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data?.trends}>
-              <XAxis
-                dataKey="timestamp"
-                tickFormatter={(value) => new Date(value).toLocaleDateString()}
+      <Row gutter={[16, 16]} style={{ marginTop: '16px' }}>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Net Present Value">
+            <Card className="metric-card">
+              <Statistic
+                title="NPV"
+                value={npv}
+                precision={2}
+                prefix={<DollarOutlined />}
+                suffix="USD"
+                valueStyle={{ color: npv >= 0 ? '#3f8600' : '#cf1322' }}
               />
-              <YAxis />
-              <Tooltip
-                formatter={(value: number) => [
-                  `$${value.toLocaleString()}`,
-                  "",
-                ]}
-                labelFormatter={(label) => new Date(label).toLocaleDateString()}
+            </Card>
+          </Tooltip>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Internal Rate of Return">
+            <Card className="metric-card">
+              <Statistic
+                title="IRR"
+                value={irr}
+                precision={1}
+                prefix={<PercentageOutlined />}
+                suffix="%"
+                valueStyle={{ color: irr >= discountRate ? '#3f8600' : '#cf1322' }}
               />
-              <Line
-                type="monotone"
-                dataKey="revenue"
-                stroke="#10B981"
-                name="Revenue"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="costs"
-                stroke="#EF4444"
-                name="Costs"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="profit"
-                stroke="#6366F1"
-                name="Profit"
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
+            </Card>
+          </Tooltip>
+        </Col>
+      </Row>
+    </Card>
   );
+};
+
+// Helper functions for financial calculations
+function calculateAnnualRevenue(productionVolume: number): number {
+  const averageSellingPrice = 5.0; // USD/kg - This should be configurable
+  return productionVolume * averageSellingPrice;
 }
 
-interface MetricCardProps {
-  label: string;
-  value?: number;
-  format: "percentage" | "currency" | "years";
-  trend?: {
-    current: number;
-    previous: number;
-    change: number;
-  };
+function calculateNPV(
+  annualCashFlow: number,
+  discountRate: number,
+  years: number,
+  initialInvestment: number
+): number {
+  let npv = -initialInvestment;
+  for (let t = 1; t <= years; t++) {
+    npv += annualCashFlow / Math.pow(1 + discountRate, t);
+  }
+  return npv;
 }
 
-function MetricCard({ label, value, format, trend }: MetricCardProps) {
-  const formatValue = (val?: number) => {
-    if (val === undefined) return "-";
-    switch (format) {
-      case "percentage":
-        return `${val.toFixed(1)}%`;
-      case "currency":
-        return `$${val.toLocaleString()}`;
-      case "years":
-        return `${val.toFixed(1)} years`;
-      default:
-        return val.toString();
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-lg p-4 shadow-sm">
-      <div className="text-sm text-gray-600">{label}</div>
-      <div className="text-2xl font-bold mt-1">{formatValue(value)}</div>
-      {trend && (
-        <div
-          className={`text-sm mt-1 ${
-            trend.change >= 0 ? "text-green-600" : "text-red-600"
-          }`}
-        >
-          {trend.change >= 0 ? "↑" : "↓"} {Math.abs(trend.change)}%
-        </div>
-      )}
-    </div>
-  );
+function calculateIRR(
+  annualCashFlow: number,
+  initialInvestment: number,
+  years: number
+): number {
+  // Simple IRR approximation
+  const averageAnnualReturn = (annualCashFlow * years - initialInvestment) / initialInvestment;
+  return (averageAnnualReturn / years) * 100;
 }
+
+export default ProfitabilityMetrics;

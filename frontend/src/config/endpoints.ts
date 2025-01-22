@@ -1,25 +1,22 @@
 // Define base API URL
-export const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:8000";
+export const API_BASE_URL = "http://localhost:8000/api/v1";
 
 // Define API endpoints
 export const ENDPOINTS = {
-  // Auth endpoints
-  AUTH: {
-    LOGIN: `${API_BASE_URL}/auth/login`,
-    REGISTER: `${API_BASE_URL}/auth/register`,
-    LOGOUT: `${API_BASE_URL}/auth/logout`,
+  PROCESS: {
+    LIST: '/process/',
+    CREATE: '/process/',
+    DETAIL: (id: number) => `/process/${id}/`,
+    STATUS: (id: number) => `/process/${id}/status/`,
+    RESULTS: (id: number) => `/process/${id}/results/`,
   },
+};
 
-  // User endpoints
-  USER: {
-    PROFILE: `${API_BASE_URL}/user/profile`,
-    UPDATE: `${API_BASE_URL}/user/update`,
-  },
-
-  // API endpoints
-  API: {
-    BASE: API_BASE_URL,
+// Axios config can be imported from here
+export const axiosConfig = {
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
   },
 };
 

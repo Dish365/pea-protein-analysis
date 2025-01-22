@@ -1,51 +1,78 @@
-import { Suspense } from 'react';
-import { CostBreakdown } from '@/components/analysis/economic/CostBreakdown';
-import { ProfitabilityMetrics } from '@/components/analysis/economic/ProfitabilityMetrics';
-import { SensitivityAnalysis } from '@/components/analysis/economic/SensitivityAnalysis';
+"use client";
 
-export default function EconomicAnalysisPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Economic Analysis Dashboard</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Cost Analysis</h2>
-          <Suspense fallback={<ChartSkeleton />}>
-            <CostBreakdown />
-          </Suspense>
-        </div>
+import React from 'react';
+import { Row, Col, Spin } from 'antd';
+import CostBreakdown from './CostBreakdown';
+import ProfitabilityMetrics from './ProfitabilityMetrics';
+import SensitivityAnalysis from './SensitivityAnalysis';
+import { ProcessAnalysis } from '../../../types/process';
 
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Key Metrics</h2>
-            <Suspense fallback={<MetricsSkeleton />}>
-              <ProfitabilityMetrics />
-            </Suspense>
-          </div>
-        </div>
+interface EconomicAnalysisProps {
+  data?: ProcessAnalysis;
+  loading?: boolean;
+}
 
-        <div className="lg:col-span-3 bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Sensitivity Analysis</h2>
-          <Suspense fallback={<ChartSkeleton />}>
-            <SensitivityAnalysis />
-          </Suspense>
-        </div>
+const EconomicAnalysis: React.FC<EconomicAnalysisProps> = ({ data, loading = false }) => {
+  if (loading || !data) {
+    return (
+      <div className="loading-container">
+        <Spin size="large" tip="Loading economic analysis..." />
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-function ChartSkeleton() {
-  return <div className="h-[300px] bg-gray-100 animate-pulse rounded-lg" />;
-}
+  // Calculate annual costs
+  const annualCosts = {
+    equipment: data.equipment_cost * (1 + data.installation_factor) / data.project_duration,
+    maintenance: data.maintenance_cost,
+    rawMaterial: data.raw_material_cost * data.production_volume,
+    utilities: data.utility_cost * data.production_volume,
+    labor: data.labor_cost * data.production_volume,
+    indirect: data.equipment_cost * data.indirect_costs_factor,
+  };
 
-function MetricsSkeleton() {
+  // Calculate total costs
+  const totalAnnualCost = Object.values(annualCosts).reduce((a, b) => a + b, 0);
+  const unitCost = totalAnnualCost / data.production_volume;
+
   return (
-    <div className="space-y-4">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="h-8 bg-gray-100 animate-pulse rounded" />
-      ))}
+    <div className="economic-analysis">
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <CostBreakdown
+            costs={annualCosts}
+            totalCost={totalAnnualCost}
+            productionVolume={data.production_volume}
+            unitCost={unitCost}
+          />
+        </Col>
+        <Col xs={24} lg={12}>
+          <ProfitabilityMetrics
+            totalCost={totalAnnualCost}
+            productionVolume={data.production_volume}
+            projectDuration={data.project_duration}
+            discountRate={data.discount_rate}
+            equipmentCost={data.equipment_cost}
+            installationFactor={data.installation_factor}
+          />
+        </Col>
+        <Col xs={24}>
+          <SensitivityAnalysis
+            baseValues={{
+              equipmentCost: data.equipment_cost,
+              maintenanceCost: data.maintenance_cost,
+              rawMaterialCost: data.raw_material_cost,
+              utilityCost: data.utility_cost,
+              laborCost: data.labor_cost,
+              productionVolume: data.production_volume,
+            }}
+            sensitivityRange={data.sensitivity_range || 0.2}
+            steps={data.steps || 10}
+          />
+        </Col>
+      </Row>
     </div>
   );
-}
+};
+
+export default EconomicAnalysis;

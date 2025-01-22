@@ -1,130 +1,96 @@
 "use client";
 
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import { useProcess } from "@/lib/hooks/useProcess";
+import React from 'react';
+import { Card, Statistic, Row, Col, Progress, Tooltip } from 'antd';
+import { ExperimentOutlined, PercentageOutlined } from '@ant-design/icons';
 
-interface TimeSeriesData {
-  timestamp: string;
-  recovery: number;
-  target: number;
+interface ProteinRecoveryCardProps {
+  initialProtein: number;
+  finalProtein: number;
+  inputMass: number;
+  outputMass: number;
 }
 
-export interface ProcessData {
-  currentRecovery: number;
-  improvement: number;
-  timeSeriesData: TimeSeriesData[];
-  peakRecovery: number;
-  peakTrend: { value: number; direction: "up" | "down" };
-  averageRate: number;
-  avgTrend: { value: number; direction: "up" | "down" };
-  processTime: number;
-  timeTrend: { value: number; direction: "up" | "down" };
-}
-
-export function ProteinRecoveryChart() {
-  const { data, isLoading, error } = useProcess("protein-recovery");
-
-  if (isLoading)
-    return <div className="h-[300px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error)
-    return (
-      <div className="text-red-500">Error loading protein recovery data</div>
-    );
+const ProteinRecoveryCard: React.FC<ProteinRecoveryCardProps> = ({
+  initialProtein,
+  finalProtein,
+  inputMass,
+  outputMass,
+}) => {
+  // Calculate protein recovery metrics
+  const initialProteinMass = (initialProtein / 100) * inputMass;
+  const finalProteinMass = (finalProtein / 100) * outputMass;
+  const proteinRecoveryRate = (finalProteinMass / initialProteinMass) * 100;
+  const proteinConcentrationIncrease = ((finalProtein - initialProtein) / initialProtein) * 100;
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="text-2xl font-bold">
-            {data?.data?.currentRecovery}%
-          </div>
-          <div className="text-sm text-gray-600">Current Recovery Rate</div>
-        </div>
-        <div className="text-right">
-          <div className="text-lg font-semibold text-green-600">
-            +{data?.data?.improvement}%
-          </div>
-          <div className="text-sm text-gray-600">vs Baseline</div>
-        </div>
+    <Card title="Protein Recovery Analysis" className="protein-recovery-card">
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Total protein mass before processing">
+            <Statistic
+              title="Initial Protein Mass"
+              value={initialProteinMass.toFixed(2)}
+              suffix="kg"
+              prefix={<ExperimentOutlined />}
+            />
+          </Tooltip>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Total protein mass after processing">
+            <Statistic
+              title="Final Protein Mass"
+              value={finalProteinMass.toFixed(2)}
+              suffix="kg"
+              prefix={<ExperimentOutlined />}
+            />
+          </Tooltip>
+        </Col>
+      </Row>
+
+      <div className="recovery-metrics" style={{ marginTop: '24px' }}>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12}>
+            <Tooltip title="Percentage of initial protein recovered in final product">
+              <Card className="metric-card">
+                <Statistic
+                  title="Protein Recovery Rate"
+                  value={proteinRecoveryRate}
+                  precision={1}
+                  suffix="%"
+                  prefix={<ExperimentOutlined />}
+                />
+                <Progress
+                  percent={proteinRecoveryRate}
+                  status={proteinRecoveryRate >= 90 ? 'success' : 'normal'}
+                  strokeColor={proteinRecoveryRate >= 90 ? '#52c41a' : '#1890ff'}
+                />
+              </Card>
+            </Tooltip>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Tooltip title="Percentage increase in protein concentration">
+              <Card className="metric-card">
+                <Statistic
+                  title="Concentration Increase"
+                  value={proteinConcentrationIncrease}
+                  precision={1}
+                  suffix="%"
+                  prefix={<PercentageOutlined />}
+                  valueStyle={{ color: proteinConcentrationIncrease > 0 ? '#3f8600' : '#cf1322' }}
+                />
+                <Progress
+                  percent={Math.min(100, Math.max(0, proteinConcentrationIncrease))}
+                  status={proteinConcentrationIncrease > 10 ? 'success' : 'normal'}
+                  strokeColor={proteinConcentrationIncrease > 10 ? '#52c41a' : '#1890ff'}
+                />
+              </Card>
+            </Tooltip>
+          </Col>
+        </Row>
       </div>
-
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data?.data?.timeSeriesData}>
-          <XAxis
-            dataKey="timestamp"
-            tickFormatter={(value) => new Date(value).toLocaleTimeString()}
-          />
-          <YAxis domain={[0, 100]} />
-          <Tooltip
-            formatter={(value: number) => [`${value}%`, "Recovery Rate"]}
-            labelFormatter={(label) => new Date(label).toLocaleString()}
-          />
-          <Line
-            type="monotone"
-            dataKey="recovery"
-            stroke="#4F46E5"
-            strokeWidth={2}
-          />
-          <Line
-            type="monotone"
-            dataKey="target"
-            stroke="#E5E7EB"
-            strokeDasharray="5 5"
-          />
-        </LineChart>
-      </ResponsiveContainer>
-
-      <div className="grid grid-cols-3 gap-4 mt-4">
-        <MetricCard
-          label="Peak Recovery"
-          value={`${data?.data?.peakRecovery}%`}
-          trend={data?.data?.peakTrend}
-        />
-        <MetricCard
-          label="Average Rate"
-          value={`${data?.data?.averageRate}%`}
-          trend={data?.data?.avgTrend}
-        />
-        <MetricCard
-          label="Process Time"
-          value={`${data?.data?.processTime}min`}
-          trend={data?.data?.timeTrend}
-        />
-      </div>
-    </div>
+    </Card>
   );
-}
+};
 
-interface MetricCardProps {
-  label: string;
-  value: string;
-  trend?: {
-    value: number;
-    direction: "up" | "down";
-  };
-}
-
-function MetricCard({ label, value, trend }: MetricCardProps) {
-  return (
-    <div className="bg-gray-50 rounded-lg p-3">
-      <div className="text-sm text-gray-600">{label}</div>
-      <div className="text-lg font-semibold">{value}</div>
-      {trend && (
-        <div
-          className={`text-sm ${
-            trend.direction === "up" ? "text-green-600" : "text-red-600"
-          }`}
-        >
-          {trend.direction === "up" ? "↑" : "↓"} {trend.value}%
-        </div>
-      )}
-    </div>
-  );
-}
+export default ProteinRecoveryCard;

@@ -1,188 +1,185 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  LineChart,
-  Line,
-} from "recharts";
-import apiClient from "@/lib/api/client";
+import React, { useMemo } from 'react';
+import { Card, Table, Tooltip, Tag } from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
 
-interface SensitivityData {
-  variables: {
-    name: string;
-    impact: number;
-    scenarios: {
-      change: number;
-      value: number;
-    }[];
-  }[];
-  baselineNPV: number;
-  criticalPoints: {
-    variable: string;
-    value: number;
-    impact: number;
-  }[];
+interface BaseValues {
+  equipmentCost: number;
+  maintenanceCost: number;
+  rawMaterialCost: number;
+  utilityCost: number;
+  laborCost: number;
+  productionVolume: number;
 }
 
-export function SensitivityAnalysis() {
-  const { data, isLoading, error } = useQuery<SensitivityData>({
-    queryKey: ["sensitivity-analysis"],
-    queryFn: () => apiClient.get("/api/analysis/economic/sensitivity"),
+interface SensitivityAnalysisProps {
+  baseValues: BaseValues;
+  sensitivityRange: number;
+  steps: number;
+}
+
+export const SensitivityAnalysis: React.FC<SensitivityAnalysisProps> = ({
+  baseValues,
+  sensitivityRange,
+  steps,
+}) => {
+  const sensitivityData = useMemo(() => {
+    return calculateSensitivityData(baseValues, sensitivityRange, steps);
+  }, [baseValues, sensitivityRange, steps]);
+
+  const columns = [
+    {
+      title: 'Parameter',
+      dataIndex: 'parameter',
+      key: 'parameter',
+      render: (text: string) => (
+        <span>
+          {text}
+          <Tooltip title={getParameterDescription(text)}>
+            <InfoCircleOutlined style={{ marginLeft: 8 }} />
+          </Tooltip>
+        </span>
+      ),
+    },
+    {
+      title: 'Base Value',
+      dataIndex: 'baseValue',
+      key: 'baseValue',
+      render: (value: number) => formatValue(value),
+    },
+    {
+      title: 'Impact on Profitability',
+      dataIndex: 'impact',
+      key: 'impact',
+      render: (impact: number) => (
+        <Tag color={getImpactColor(impact)}>
+          {impact >= 0 ? '+' : ''}{impact.toFixed(1)}%
+        </Tag>
+      ),
+    },
+    {
+      title: 'Sensitivity',
+      dataIndex: 'sensitivity',
+      key: 'sensitivity',
+      render: (sensitivity: string) => (
+        <Tag color={getSensitivityColor(sensitivity)}>
+          {sensitivity}
+        </Tag>
+      ),
+    },
+  ];
+
+  return (
+    <Card 
+      title="Sensitivity Analysis" 
+      className="sensitivity-analysis-card"
+      extra={
+        <Tooltip title="Analysis of how changes in parameters affect profitability">
+          <InfoCircleOutlined />
+        </Tooltip>
+      }
+    >
+      <Table 
+        columns={columns}
+        dataSource={sensitivityData}
+        pagination={false}
+        className="sensitivity-table"
+      />
+    </Card>
+  );
+};
+
+// Helper functions
+function calculateSensitivityData(
+  baseValues: BaseValues,
+  sensitivityRange: number,
+  steps: number
+) {
+  const parameters = Object.entries(baseValues);
+  return parameters.map(([key, value]) => {
+    const impact = calculateParameterImpact(key as keyof BaseValues, value, baseValues);
+    return {
+      key,
+      parameter: formatParameterName(key),
+      baseValue: value,
+      impact,
+      sensitivity: categorizeSensitivity(impact),
+    };
   });
-
-  if (isLoading)
-    return <div className="h-[500px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error)
-    return (
-      <div className="text-red-500">
-        Error loading sensitivity analysis data
-      </div>
-    );
-
-  // Sort variables by absolute impact
-  const sortedVariables = [...(data?.variables || [])].sort(
-    (a, b) => Math.abs(b.impact) - Math.abs(a.impact)
-  );
-
-  const processedData = sortedVariables.map((entry) => ({
-    ...entry,
-    fill: entry.impact >= 0 ? "#10B981" : "#EF4444",
-  }));
-
-  return (
-    <div className="space-y-6">
-      {/* Tornado Chart */}
-      <div className="bg-white rounded-lg p-6 shadow-sm">
-        <h3 className="text-lg font-semibold mb-4">
-          Impact Analysis (Tornado Chart)
-        </h3>
-        <div className="h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={processedData}
-              layout="vertical"
-              margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
-            >
-              <XAxis type="number" domain={["dataMin", "dataMax"]} />
-              <YAxis dataKey="name" type="category" />
-              <Tooltip
-                formatter={(value: number) => [
-                  `${value.toFixed(2)}%`,
-                  "Impact on NPV",
-                ]}
-              />
-              <ReferenceLine x={0} stroke="#666" />
-              {processedData.map((entry, index) => (
-                <Bar key={index} dataKey="impact" fill={entry.fill} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Critical Points */}
-      <div className="grid grid-cols-2 gap-4">
-        {data?.criticalPoints.map((point) => (
-          <div
-            key={point.variable}
-            className="bg-white rounded-lg p-4 shadow-sm"
-          >
-            <div className="text-sm text-gray-600">{point.variable}</div>
-            <div className="text-xl font-bold mt-1">
-              {point.value.toFixed(2)}
-            </div>
-            <div className="text-sm text-gray-500">
-              Impact: {point.impact.toFixed(2)}% on NPV
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Scenario Analysis */}
-      <div className="bg-white rounded-lg p-6 shadow-sm">
-        <h3 className="text-lg font-semibold mb-4">Scenario Analysis</h3>
-        <div className="space-y-6">
-          {sortedVariables.map((variable) => (
-            <ScenarioChart
-              key={variable.name}
-              variable={variable}
-              baselineNPV={data?.baselineNPV || 0}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Analysis Summary */}
-      <div className="bg-white rounded-lg p-4 shadow-sm">
-        <h3 className="text-lg font-semibold mb-2">Key Insights</h3>
-        <div className="text-sm text-gray-600 space-y-2">
-          <p>
-            Most sensitive variable: {sortedVariables[0]?.name} with
-            {Math.abs(sortedVariables[0]?.impact)}% impact on NPV
-          </p>
-          <p>Baseline NPV: ${data?.baselineNPV.toLocaleString()}</p>
-          <p>
-            Critical threshold: {data?.criticalPoints[0]?.variable} at
-            {data?.criticalPoints[0]?.value.toFixed(2)}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
 }
 
-interface ScenarioChartProps {
-  variable: {
-    name: string;
-    scenarios: {
-      change: number;
-      value: number;
-    }[];
+function calculateParameterImpact(
+  parameter: keyof BaseValues,
+  value: number,
+  baseValues: BaseValues
+): number {
+  // Simplified impact calculation
+  const variation = value * 0.1; // 10% change
+  const baseProfit = calculateProfit(baseValues);
+  const modifiedValues = { ...baseValues, [parameter]: value + variation };
+  const modifiedProfit = calculateProfit(modifiedValues);
+  
+  return ((modifiedProfit - baseProfit) / baseProfit) * 100;
+}
+
+function calculateProfit(values: BaseValues): number {
+  const revenue = values.productionVolume * 5.0; // Assuming $5/kg selling price
+  const costs = values.equipmentCost / 10 + // Assuming 10-year depreciation
+                values.maintenanceCost +
+                values.rawMaterialCost * values.productionVolume +
+                values.utilityCost * values.productionVolume +
+                values.laborCost * values.productionVolume;
+  return revenue - costs;
+}
+
+function formatParameterName(key: string): string {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, str => str.toUpperCase());
+}
+
+function getParameterDescription(parameter: string): string {
+  const descriptions: Record<string, string> = {
+    'Equipment Cost': 'Initial investment in processing equipment',
+    'Maintenance Cost': 'Annual cost of equipment maintenance',
+    'Raw Material Cost': 'Cost per kg of input material',
+    'Utility Cost': 'Cost of utilities per kg of production',
+    'Labor Cost': 'Labor cost per kg of production',
+    'Production Volume': 'Annual production volume in kg',
   };
-  baselineNPV: number;
+  return descriptions[parameter] || parameter;
 }
 
-function ScenarioChart({ variable, baselineNPV }: ScenarioChartProps) {
-  return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium">{variable.name}</div>
-      <div className="h-[100px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={variable.scenarios}>
-            <XAxis dataKey="change" tickFormatter={(value) => `${value}%`} />
-            <YAxis
-              domain={["auto", "auto"]}
-              tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
-            />
-            <Tooltip
-              formatter={(value: number) => [
-                `$${(value / 1000000).toFixed(2)}M`,
-                "NPV",
-              ]}
-              labelFormatter={(value) => `${value}% Change`}
-            />
-            <ReferenceLine
-              y={baselineNPV}
-              stroke="#666"
-              strokeDasharray="3 3"
-            />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="#6366F1"
-              dot={false}
-              strokeWidth={2}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
+function formatValue(value: number): string {
+  if (value >= 1000000) {
+    return `$${(value / 1000000).toFixed(2)}M`;
+  } else if (value >= 1000) {
+    return `$${(value / 1000).toFixed(2)}K`;
+  }
+  return `$${value.toFixed(2)}`;
 }
+
+function getImpactColor(impact: number): string {
+  if (Math.abs(impact) < 5) return 'blue';
+  if (impact >= 5) return 'green';
+  return 'red';
+}
+
+function categorizeSensitivity(impact: number): string {
+  const absImpact = Math.abs(impact);
+  if (absImpact < 5) return 'Low';
+  if (absImpact < 15) return 'Medium';
+  return 'High';
+}
+
+function getSensitivityColor(sensitivity: string): string {
+  const colors: Record<string, string> = {
+    'Low': 'green',
+    'Medium': 'gold',
+    'High': 'red',
+  };
+  return colors[sensitivity] || 'default';
+}
+
+export default SensitivityAnalysis;

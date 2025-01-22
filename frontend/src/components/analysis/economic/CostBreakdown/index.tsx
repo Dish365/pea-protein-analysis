@@ -1,97 +1,130 @@
 "use client";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import { useProcess } from "@/lib/hooks/useProcess";
+import React from 'react';
+import { Card, Statistic, Row, Col, Progress, Tooltip } from 'antd';
+import { DollarOutlined, BarChartOutlined } from '@ant-design/icons';
 
-interface CostData {
-  category: string;
-  capex: number;
-  opex: number;
-  total: number;
-}
-
-interface CostResponse {
-  totalCapex: number;
-  annualOpex: number;
+interface CostBreakdownProps {
+  costs: {
+    equipment: number;
+    maintenance: number;
+    rawMaterial: number;
+    utilities: number;
+    labor: number;
+    indirect: number;
+  };
+  totalCost: number;
+  productionVolume: number;
   unitCost: number;
-  breakdown: CostData[];
 }
 
-export function CostBreakdown() {
-  const { data, isLoading, error } = useProcess("cost-breakdown");
-
-  const costData: CostData[] = [
-    { category: "Category 1", capex: 1000, opex: 500, total: 1500 },
-    // Add more data as needed
+export const CostBreakdown: React.FC<CostBreakdownProps> = ({
+  costs,
+  totalCost,
+  productionVolume,
+  unitCost,
+}) => {
+  const costItems = [
+    { 
+      title: 'Equipment',
+      value: costs.equipment,
+      color: '#1890ff',
+      tooltip: 'Annual equipment cost including installation',
+    },
+    { 
+      title: 'Maintenance',
+      value: costs.maintenance,
+      color: '#52c41a',
+      tooltip: 'Annual maintenance cost',
+    },
+    { 
+      title: 'Raw Material',
+      value: costs.rawMaterial,
+      color: '#faad14',
+      tooltip: 'Annual raw material cost based on production volume',
+    },
+    { 
+      title: 'Utilities',
+      value: costs.utilities,
+      color: '#722ed1',
+      tooltip: 'Annual utility costs based on production volume',
+    },
+    { 
+      title: 'Labor',
+      value: costs.labor,
+      color: '#eb2f96',
+      tooltip: 'Annual labor costs based on production volume',
+    },
+    { 
+      title: 'Indirect',
+      value: costs.indirect,
+      color: '#f5222d',
+      tooltip: 'Annual indirect costs based on equipment value',
+    },
   ];
 
-  if (isLoading)
-    return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error) return <div className="text-red-500">Error loading cost data</div>;
-
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        <CostMetricCard
-          label="Total CAPEX"
-          value={data?.data?.totalCapex}
-          currency="USD"
-        />
-        <CostMetricCard
-          label="Annual OPEX"
-          value={data?.data?.annualOpex}
-          currency="USD"
-        />
-        <CostMetricCard
-          label="Unit Cost"
-          value={data?.data?.unitCost}
-          currency="USD/kg"
-        />
+    <Card title="Cost Analysis" className="cost-breakdown-card">
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Total annual cost of operation">
+            <Statistic
+              title="Total Annual Cost"
+              value={totalCost}
+              precision={2}
+              prefix={<DollarOutlined />}
+              suffix="USD"
+            />
+          </Tooltip>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Tooltip title="Cost per unit of production">
+            <Statistic
+              title="Unit Cost"
+              value={unitCost}
+              precision={2}
+              prefix={<DollarOutlined />}
+              suffix="USD/kg"
+            />
+          </Tooltip>
+        </Col>
+      </Row>
+
+      <div className="cost-breakdown" style={{ marginTop: '24px' }}>
+        {costItems.map((item, index) => (
+          <Tooltip key={index} title={item.tooltip}>
+            <div className="cost-item" style={{ marginBottom: '16px' }}>
+              <div className="cost-header" style={{ marginBottom: '8px' }}>
+                <span>{item.title}</span>
+                <span>
+                  <DollarOutlined /> {item.value.toFixed(2)} ({((item.value / totalCost) * 100).toFixed(1)}%)
+                </span>
+              </div>
+              <Progress
+                percent={(item.value / totalCost) * 100}
+                strokeColor={item.color}
+                showInfo={false}
+              />
+            </div>
+          </Tooltip>
+        ))}
       </div>
 
-      <ResponsiveContainer width="100%" height={400}>
-        <BarChart data={costData}>
-          <XAxis dataKey="category" />
-          <YAxis />
-          <Tooltip
-            formatter={(value: number) => [
-              `$${value.toLocaleString()}`,
-              "Cost",
-            ]}
-          />
-          <Legend />
-          <Bar dataKey="capex" name="CAPEX" fill="#4F46E5" />
-          <Bar dataKey="opex" name="OPEX" fill="#10B981" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+      <div className="production-info" style={{ marginTop: '24px' }}>
+        <Tooltip title="Annual production volume">
+          <Card className="metric-card">
+            <Statistic
+              title="Production Volume"
+              value={productionVolume}
+              precision={0}
+              prefix={<BarChartOutlined />}
+              suffix="kg/year"
+            />
+          </Card>
+        </Tooltip>
+      </div>
+    </Card>
   );
-}
+};
 
-interface CostMetricCardProps {
-  label: string;
-  value: number;
-  currency: string;
-}
-
-function CostMetricCard({ label, value, currency }: CostMetricCardProps) {
-  const formattedValue =
-    currency === "USD"
-      ? `$${value.toLocaleString()}`
-      : `${value.toLocaleString()} ${currency}`;
-
-  return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="text-sm text-gray-600">{label}</div>
-      <div className="text-xl font-semibold mt-1">{formattedValue}</div>
-    </div>
-  );
-}
+export default CostBreakdown;

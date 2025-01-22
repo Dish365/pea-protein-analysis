@@ -1,162 +1,263 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  Radar,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
-import apiClient from "@/lib/api/client";
+import React from 'react';
+import { Card, Table, Tooltip, Tag, Row, Col, Statistic } from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
+import { ProcessType } from '../../../../types/process';
 
-interface ImpactData {
-  metrics: {
-    category: string;
-    value: number;
-    benchmark: number;
-  }[];
-  totalScore: {
-    current: number;
-    previous: number;
-    change: number;
-  };
-  carbonFootprint: {
-    value: number;
-    unit: string;
-    reduction: number;
-  };
+interface ResourceMetrics {
+  electricity: { consumption: number; perKg: number };
+  cooling: { consumption: number; perKg: number };
+  water: { consumption: number; perKg: number };
+  transport: { consumption: number; perKg: number };
 }
 
-export function ImpactMetrics() {
-  const { data, isLoading, error } = useQuery<ImpactData>({
-    queryKey: ["environmental-impact"],
-    queryFn: () => apiClient.get("/api/analysis/environmental/impact"),
-  });
+interface ImpactMetricsProps {
+  resourceMetrics: ResourceMetrics;
+  equipmentMass: number;
+  processType: ProcessType;
+  allocationMethod: string;
+  productionVolume: number;
+}
 
-  if (isLoading)
-    return <div className="h-[400px] animate-pulse bg-gray-100 rounded-lg" />;
-  if (error)
-    return (
-      <div className="text-red-500">
-        Error loading environmental impact data
-      </div>
-    );
+export const ImpactMetrics: React.FC<ImpactMetricsProps> = ({
+  resourceMetrics,
+  equipmentMass,
+  processType,
+  allocationMethod,
+  productionVolume,
+}) => {
+  // Calculate environmental impact metrics
+  const impacts = calculateEnvironmentalImpacts(
+    resourceMetrics,
+    equipmentMass,
+    processType,
+    productionVolume
+  );
+
+  const columns = [
+    {
+      title: 'Impact Category',
+      dataIndex: 'category',
+      key: 'category',
+      render: (text: string) => (
+        <span>
+          {text}
+          <Tooltip title={getImpactDescription(text)}>
+            <InfoCircleOutlined style={{ marginLeft: 8 }} />
+          </Tooltip>
+        </span>
+      ),
+    },
+    {
+      title: 'Total Impact',
+      dataIndex: 'totalImpact',
+      key: 'totalImpact',
+      render: (value: number, record: any) => (
+        <span>{formatImpactValue(value, record.unit)}</span>
+      ),
+    },
+    {
+      title: 'Per kg Product',
+      dataIndex: 'perKg',
+      key: 'perKg',
+      render: (value: number, record: any) => (
+        <span>{formatImpactValue(value, record.unit)}/kg</span>
+      ),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: any) => (
+        <Tag color={getStatusColor(status.performance)}>
+          {status.performance}
+        </Tag>
+      ),
+    },
+  ];
+
+  const data = [
+    {
+      key: '1',
+      category: 'Global Warming Potential',
+      totalImpact: impacts.gwp.total,
+      perKg: impacts.gwp.perKg,
+      unit: 'kg CO2 eq',
+      status: { performance: getPerformanceLevel(impacts.gwp.perKg, 2.5) },
+    },
+    {
+      key: '2',
+      category: 'Energy Consumption',
+      totalImpact: impacts.energy.total,
+      perKg: impacts.energy.perKg,
+      unit: 'MJ',
+      status: { performance: getPerformanceLevel(impacts.energy.perKg, 25) },
+    },
+    {
+      key: '3',
+      category: 'Water Footprint',
+      totalImpact: impacts.water.total,
+      perKg: impacts.water.perKg,
+      unit: 'm³',
+      status: { performance: getPerformanceLevel(impacts.water.perKg, 0.1) },
+    },
+    {
+      key: '4',
+      category: 'Resource Depletion',
+      totalImpact: impacts.resources.total,
+      perKg: impacts.resources.perKg,
+      unit: 'kg Sb eq',
+      status: { performance: getPerformanceLevel(impacts.resources.perKg, 0.001) },
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Impact Score Overview */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="text-sm text-gray-600">
-            Environmental Impact Score
-          </div>
-          <div className="text-3xl font-bold text-green-600">
-            {data?.totalScore.current}
-          </div>
-          <div
-            className={`text-sm ${
-              (data?.totalScore?.change ?? 0) >= 0
-                ? "text-red-600"
-                : "text-green-600"
-            }`}
-          >
-            {(data?.totalScore?.change ?? 0) >= 0 ? "↑" : "↓"}
-            {Math.abs(data?.totalScore?.change ?? 0)}% vs previous
-          </div>
-        </div>
+    <Card 
+      title="Environmental Impact Assessment" 
+      className="impact-metrics-card"
+      extra={
+        <Tooltip title="Impact allocation method">
+          <Tag color="blue">{allocationMethod}</Tag>
+        </Tooltip>
+      }
+    >
+      <Table 
+        columns={columns}
+        dataSource={data}
+        pagination={false}
+        className="impact-table"
+      />
 
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="text-sm text-gray-600">Carbon Footprint</div>
-          <div className="text-3xl font-bold text-gray-800">
-            {data?.carbonFootprint.value}
-            <span className="text-sm ml-1">{data?.carbonFootprint.unit}</span>
-          </div>
-          <div className="text-sm text-green-600">
-            ↓ {data?.carbonFootprint.reduction}% reduction
-          </div>
-        </div>
-      </div>
-
-      {/* Impact Categories Radar Chart */}
-      <div className="h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={data?.metrics}>
-            <PolarGrid />
-            <PolarAngleAxis dataKey="category" />
-            <Tooltip />
-            <Radar
-              name="Current Impact"
-              dataKey="value"
-              stroke="#10B981"
-              fill="#10B981"
-              fillOpacity={0.3}
+      <Row gutter={[16, 16]} style={{ marginTop: '24px' }}>
+        <Col xs={24} sm={8}>
+          <Card size="small">
+            <Statistic
+              title="Equipment Mass"
+              value={equipmentMass}
+              suffix="kg"
+              precision={0}
             />
-            <Radar
-              name="Industry Benchmark"
-              dataKey="benchmark"
-              stroke="#94A3B8"
-              fill="#94A3B8"
-              fillOpacity={0.3}
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card size="small">
+            <Statistic
+              title="Process Type"
+              value={processType}
+              valueStyle={{ fontSize: '14px' }}
             />
-          </RadarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Detailed Metrics */}
-      <div className="grid grid-cols-2 gap-4">
-        {data?.metrics.map((metric) => (
-          <ImpactMetricCard
-            key={metric.category}
-            category={metric.category}
-            value={metric.value}
-            benchmark={metric.benchmark}
-          />
-        ))}
-      </div>
-    </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card size="small">
+            <Statistic
+              title="Production Volume"
+              value={productionVolume}
+              suffix="kg/year"
+              precision={0}
+            />
+          </Card>
+        </Col>
+      </Row>
+    </Card>
   );
+};
+
+// Helper functions
+function calculateEnvironmentalImpacts(
+  metrics: ResourceMetrics,
+  equipmentMass: number,
+  processType: ProcessType,
+  productionVolume: number
+) {
+  // GWP factors (kg CO2 eq per unit)
+  const gwpFactors = {
+    electricity: 0.5, // per kWh
+    cooling: 0.3, // per kWh
+    water: 0.001, // per kg
+    transport: 0.07, // per MJ
+    equipment: 2.5, // per kg equipment
+  };
+
+  // Energy factors (MJ per unit)
+  const energyFactors = {
+    electricity: 3.6, // per kWh
+    cooling: 2.5, // per kWh
+    transport: 1.0, // per MJ
+    equipment: 25, // per kg equipment
+  };
+
+  // Calculate impacts
+  const gwp = {
+    total: (
+      metrics.electricity.consumption * gwpFactors.electricity +
+      metrics.cooling.consumption * gwpFactors.cooling +
+      metrics.water.consumption * gwpFactors.water +
+      metrics.transport.consumption * gwpFactors.transport +
+      equipmentMass * gwpFactors.equipment / 10 // Assuming 10-year lifespan
+    ),
+    get perKg() { return this.total / productionVolume; }
+  };
+
+  const energy = {
+    total: (
+      metrics.electricity.consumption * energyFactors.electricity +
+      metrics.cooling.consumption * energyFactors.cooling +
+      metrics.transport.consumption * energyFactors.transport +
+      equipmentMass * energyFactors.equipment / 10
+    ),
+    get perKg() { return this.total / productionVolume; }
+  };
+
+  const water = {
+    total: metrics.water.consumption,
+    get perKg() { return this.total / productionVolume; }
+  };
+
+  const resources = {
+    total: equipmentMass * 0.001, // Simplified resource depletion calculation
+    get perKg() { return this.total / productionVolume; }
+  };
+
+  return { gwp, energy, water, resources };
 }
 
-interface ImpactMetricCardProps {
-  category: string;
-  value: number;
-  benchmark: number;
+function getImpactDescription(category: string): string {
+  const descriptions: Record<string, string> = {
+    'Global Warming Potential': 'Carbon dioxide equivalent emissions from process operations',
+    'Energy Consumption': 'Total energy consumption including electricity, cooling, and transport',
+    'Water Footprint': 'Total water consumption in the process',
+    'Resource Depletion': 'Impact on non-renewable resource depletion',
+  };
+  return descriptions[category] || category;
 }
 
-function ImpactMetricCard({
-  category,
-  value,
-  benchmark,
-}: ImpactMetricCardProps) {
-  const performance = ((benchmark - value) / benchmark) * 100;
-
-  return (
-    <div className="bg-white rounded-lg p-4 shadow-sm">
-      <div className="text-sm font-medium text-gray-600">{category}</div>
-      <div className="mt-2 flex justify-between items-end">
-        <div>
-          <div className="text-2xl font-bold">{value}</div>
-          <div className="text-sm text-gray-500">Current Impact</div>
-        </div>
-        <div
-          className={`text-sm ${
-            performance >= 0 ? "text-green-600" : "text-red-600"
-          }`}
-        >
-          {performance >= 0 ? "↓" : "↑"} {Math.abs(performance).toFixed(1)}%
-          <div className="text-gray-500">vs Benchmark</div>
-        </div>
-      </div>
-      <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full ${
-            performance >= 0 ? "bg-green-600" : "bg-red-600"
-          }`}
-          style={{ width: `${Math.min(Math.abs(performance), 100)}%` }}
-        />
-      </div>
-    </div>
-  );
+function formatImpactValue(value: number, unit: string): string {
+  if (value < 0.01) {
+    return `${(value * 1000).toFixed(2)} m${unit}`;
+  }
+  if (value > 1000) {
+    return `${(value / 1000).toFixed(2)} k${unit}`;
+  }
+  return `${value.toFixed(2)} ${unit}`;
 }
+
+function getPerformanceLevel(value: number, threshold: number): string {
+  if (value <= threshold * 0.8) return 'Excellent';
+  if (value <= threshold) return 'Good';
+  if (value <= threshold * 1.2) return 'Fair';
+  return 'Poor';
+}
+
+function getStatusColor(performance: string): string {
+  const colors: Record<string, string> = {
+    'Excellent': 'green',
+    'Good': 'blue',
+    'Fair': 'orange',
+    'Poor': 'red',
+  };
+  return colors[performance] || 'default';
+}
+
+export default ImpactMetrics;

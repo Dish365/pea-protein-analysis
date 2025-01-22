@@ -1,39 +1,56 @@
-import { Suspense } from 'react';
-import { ProteinRecoveryChart } from '@/components/analysis/technical/ProteinRecoveryCard';
-import { EfficiencyMetrics } from '@/components/analysis/technical/EfficiencyMetrics';
-import { ParticleSizeDisplay } from '@/components/analysis/technical/ParticleSizeDisplay';
+"use client";
 
-export default function TechnicalAnalysisPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Technical Analysis Dashboard</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Protein Recovery Analysis</h2>
-          <Suspense fallback={<ChartSkeleton />}>
-            <ProteinRecoveryChart />
-          </Suspense>
-        </div>
+import React from 'react';
+import { Row, Col, Spin } from 'antd';
+import ProteinRecoveryCard from './ProteinRecoveryCard';
+import EfficiencyMetrics from './EfficiencyMetrics';
+import ParticleSizeDisplay from './ParticleSizeDisplay';
+import { ProcessAnalysis } from '../../../types/process';
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Process Efficiency</h2>
-          <Suspense fallback={<ChartSkeleton />}>
-            <EfficiencyMetrics />
-          </Suspense>
-        </div>
+interface TechnicalAnalysisProps {
+  data?: ProcessAnalysis;
+  loading?: boolean;
+}
 
-        <div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
-          <h2 className="text-lg font-semibold mb-4">Particle Size Distribution</h2>
-          <Suspense fallback={<ChartSkeleton />}>
-            <ParticleSizeDisplay />
-          </Suspense>
-        </div>
+const TechnicalAnalysis: React.FC<TechnicalAnalysisProps> = ({ data, loading = false }) => {
+  if (loading || !data) {
+    return (
+      <div className="loading-container">
+        <Spin size="large" tip="Loading technical analysis..." />
       </div>
+    );
+  }
+
+  return (
+    <div className="technical-analysis">
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <ProteinRecoveryCard
+            initialProtein={data.initial_protein_content}
+            finalProtein={data.final_protein_content}
+            inputMass={data.input_mass}
+            outputMass={data.output_mass}
+          />
+        </Col>
+        <Col xs={24} lg={12}>
+          <EfficiencyMetrics
+            processType={data.process_type}
+            inputMass={data.input_mass}
+            outputMass={data.output_mass}
+            airFlow={data.air_flow}
+            classifierSpeed={data.classifier_speed}
+          />
+        </Col>
+        <Col xs={24}>
+          <ParticleSizeDisplay
+            d10={data.d10_particle_size}
+            d50={data.d50_particle_size}
+            d90={data.d90_particle_size}
+          />
+        </Col>
+      </Row>
     </div>
   );
-}
+};
 
-function ChartSkeleton() {
-  return <div className="h-[300px] bg-gray-100 animate-pulse rounded-lg" />;
-}
+export default TechnicalAnalysis;

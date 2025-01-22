@@ -1,39 +1,90 @@
-import { Suspense } from 'react';
-import { ImpactMetrics } from '@/components/analysis/environmental/ImpactMetrics';
-import { EcoEfficiencyDisplay } from '@/components/analysis/environmental/EcoEfficiencyDisplay';
-import { ResourceUsage } from '@/components/analysis/environmental/ResourceUsage';
+"use client";
 
-export default function EnvironmentalAnalysisPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Environmental Impact Analysis</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Environmental Impact</h2>
-          <Suspense fallback={<ChartSkeleton />}>
-            <ImpactMetrics />
-          </Suspense>
-        </div>
+import React from 'react';
+import { Row, Col, Spin } from 'antd';
+import ResourceUsage from './ResourceUsage';
+import EcoEfficiencyDisplay from './EcoEfficiencyDisplay';
+import ImpactMetrics from './ImpactMetrics';
+import { ProcessAnalysis } from '../../../types/process';
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Eco-efficiency Analysis</h2>
-          <Suspense fallback={<ChartSkeleton />}>
-            <EcoEfficiencyDisplay />
-          </Suspense>
-        </div>
+interface EnvironmentalAnalysisProps {
+  data?: ProcessAnalysis;
+  loading?: boolean;
+}
 
-        <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Resource Utilization</h2>
-          <Suspense fallback={<ChartSkeleton />}>
-            <ResourceUsage />
-          </Suspense>
-        </div>
+const EnvironmentalAnalysis: React.FC<EnvironmentalAnalysisProps> = ({ data, loading = false }) => {
+  if (loading || !data) {
+    return (
+      <div className="loading-container">
+        <Spin size="large" tip="Loading environmental analysis..." />
       </div>
+    );
+  }
+
+  // Calculate resource efficiency metrics
+  const resourceMetrics = {
+    electricity: {
+      consumption: data.electricity_consumption,
+      perKg: data.electricity_consumption / data.production_volume,
+    },
+    cooling: {
+      consumption: data.cooling_consumption,
+      perKg: data.cooling_consumption / data.production_volume,
+    },
+    water: {
+      consumption: data.water_consumption,
+      perKg: data.water_consumption / data.production_volume,
+    },
+    transport: {
+      consumption: data.transport_consumption,
+      perKg: data.transport_consumption / data.production_volume,
+    },
+  };
+
+  // Calculate eco-efficiency indicators
+  const ecoEfficiency = {
+    energyEfficiency: calculateEnergyEfficiency(data),
+    waterEfficiency: data.production_volume / data.water_consumption,
+    materialEfficiency: data.output_mass / data.input_mass,
+    transportEfficiency: data.production_volume / data.transport_consumption,
+  };
+
+  return (
+    <div className="environmental-analysis">
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <ResourceUsage
+            resourceMetrics={resourceMetrics}
+            productionVolume={data.production_volume}
+            processType={data.process_type}
+          />
+        </Col>
+        <Col xs={24} lg={12}>
+          <EcoEfficiencyDisplay
+            ecoEfficiency={ecoEfficiency}
+            processType={data.process_type}
+            productionVolume={data.production_volume}
+          />
+        </Col>
+        <Col xs={24}>
+          <ImpactMetrics
+            resourceMetrics={resourceMetrics}
+            equipmentMass={data.equipment_mass}
+            processType={data.process_type}
+            allocationMethod={data.allocation_method}
+            productionVolume={data.production_volume}
+          />
+        </Col>
+      </Row>
     </div>
   );
+};
+
+// Helper function for energy efficiency calculation
+function calculateEnergyEfficiency(data: ProcessAnalysis): number {
+  const totalEnergy = data.electricity_consumption + data.cooling_consumption;
+  const theoreticalEnergy = data.input_mass * data.thermal_ratio; // Simplified theoretical energy requirement
+  return (theoreticalEnergy / totalEnergy) * 100;
 }
 
-function ChartSkeleton() {
-  return <div className="h-[300px] bg-gray-100 animate-pulse rounded-lg" />;
-}
+export default EnvironmentalAnalysis;

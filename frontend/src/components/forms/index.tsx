@@ -30,7 +30,6 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
   initialValues = DEFAULT_PROCESS_ANALYSIS,
   loading: externalLoading = false,
 }) => {
-  const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialValues);

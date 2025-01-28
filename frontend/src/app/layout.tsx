@@ -4,6 +4,7 @@ import RootLayout from '@/components/layout/RootLayout';
 import '@/styles/globals.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import { App as AntApp } from 'antd';
 
 export default function Layout({
   children,
@@ -16,7 +17,9 @@ export default function Layout({
     <html lang="en">
       <body>
         <QueryClientProvider client={queryClient}>
-          <RootLayout>{children}</RootLayout>
+          <AntApp>
+            <RootLayout>{children}</RootLayout>
+          </AntApp>
         </QueryClientProvider>
       </body>
     </html>

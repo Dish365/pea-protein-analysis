@@ -1,19 +1,50 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Query } from '@tanstack/react-query';
 import axios from 'axios';
-import { PROCESS_ENDPOINTS, API_CONFIG } from '@/config/endpoints';
-import { ProcessListResponse } from '@/types/api';
+import { PROCESS_ENDPOINTS } from '@/config/endpoints';
+import { ProcessType, ProcessStatus } from '@/types/process';
 
-export function useRecentAnalyses() {
-  return useQuery({
-    queryKey: ['recentAnalyses'],
+export interface Analysis {
+  id: string;
+  type: ProcessType;
+  status: ProcessStatus;
+  startedAt: string;
+  completedAt?: string;
+  results?: {
+    technical?: any;
+    economic?: any;
+    environmental?: any;
+  };
+  error?: string;
+}
+
+export interface ProcessListResponse {
+  data: Analysis[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export const useRecentAnalyses = (limit: number = 5) => {
+  return useQuery<ProcessListResponse>({
+    queryKey: ['recentAnalyses', limit],
     queryFn: async () => {
-      const response = await axios.get(
-        PROCESS_ENDPOINTS.LIST,
-        API_CONFIG
+      const { data } = await axios.get<ProcessListResponse>(
+        `${PROCESS_ENDPOINTS.LIST}?limit=${limit}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
-      return response.data as ProcessListResponse;
+      return data;
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
-    staleTime: 10000, // Consider data stale after 10 seconds
+    staleTime: 30000, // 30 seconds
+    refetchInterval: (query: Query<ProcessListResponse, Error, ProcessListResponse, readonly unknown[]>) => {
+      const hasInProgress = query.state.data?.data.some(
+        (analysis: Analysis) => analysis.status === ProcessStatus.PROCESSING 
+      );
+      return hasInProgress ? 5000 : false;
+    },
   });
-} 
+}; 

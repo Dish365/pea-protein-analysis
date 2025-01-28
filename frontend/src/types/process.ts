@@ -1,12 +1,17 @@
 import { TechnicalParameters } from './technical';
 
+export enum ProcessStatus {
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed'
+}
+
 export enum ProcessType {
   BASELINE = 'baseline',
   RF = 'rf',
   IR = 'ir'
 }
-
-export type ProcessStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface Equipment {
   name: string;

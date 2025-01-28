@@ -5,12 +5,25 @@ import clsx from 'clsx';
 
 interface CardProps extends AntCardProps {
   className?: string;
+  elevated?: boolean;
+  noPadding?: boolean;
 }
 
-export const Card: React.FC<CardProps> = ({ className, children, ...props }) => {
+const Card: React.FC<CardProps> = ({ 
+  className, 
+  children, 
+  elevated = false,
+  noPadding = false,
+  ...props 
+}) => {
   return (
     <AntCard
-      className={clsx('card-shadow', className)}
+      className={clsx(
+        elevated && 'shadow-md hover:shadow-lg transition-shadow duration-200',
+        !elevated && 'shadow-sm',
+        noPadding && '!p-0',
+        className
+      )}
       {...props}
     >
       {children}

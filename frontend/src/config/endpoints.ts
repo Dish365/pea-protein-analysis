@@ -1,23 +1,25 @@
-// Define base API URL
-export const API_BASE_URL = "http://localhost:8000/api/v1";
+import { ProcessType } from '../types/process';
 
-// Define API endpoints
-export const ENDPOINTS = {
-  PROCESS: {
-    LIST: '/process/',
-    CREATE: '/process/',
-    DETAIL: (id: number) => `/process/${id}/`,
-    STATUS: (id: number) => `/process/${id}/status/`,
-    RESULTS: (id: number) => `/process/${id}/results/`,
-  },
-};
+// Base URLs
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8000";
+export const API_V1_URL = `${API_BASE_URL}/api/v1`;
 
-// Axios config can be imported from here
-export const axiosConfig = {
-  baseURL: API_BASE_URL,
+// Process Analysis Endpoints
+export const PROCESS_ENDPOINTS = {
+  BASE: `${API_V1_URL}/process`,
+  LIST: `${API_V1_URL}/process/`,
+  CREATE: `${API_V1_URL}/process/`,
+  DETAIL: (id: number) => `${API_V1_URL}/process/${id}/`,
+  STATUS: (id: number) => `${API_V1_URL}/process/${id}/status/`,
+  RESULTS: (id: number) => `${API_V1_URL}/process/${id}/results/`,
+} as const;
+
+// Request configs
+export const API_CONFIG = {
   headers: {
     'Content-Type': 'application/json',
   },
-};
+  timeout: 30000, // 30 seconds
+} as const;
 
-export default ENDPOINTS;
+export type ProcessEndpoint = typeof PROCESS_ENDPOINTS;

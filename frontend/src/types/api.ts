@@ -1,5 +1,9 @@
 import { ProcessAnalysis } from './process';
-import { AnalysisResult, AnalysisSummary } from './analysis';
+import { AnalysisSummary } from './analysis';
+import { TechnicalResults } from './technical';
+import { EconomicAnalysisResult } from './economic';
+import { EnvironmentalAnalysisResult } from './environmental';
+import { EfficiencyResults } from './analysis';
 
 // API Response Types
 export interface ApiResponse<T> {
@@ -54,4 +58,15 @@ export interface ProcessDetailResponse extends ProcessAnalysis {
 export interface ErrorResponse {
   error: string;
   details?: Record<string, string[]>;
+}
+
+export interface AnalysisResult {
+  id: number;
+  process: number;
+  timestamp: string;
+  process_status: ProcessAnalysis['status'];
+  technical_results: TechnicalResults;
+  economic_results: EconomicAnalysisResult;
+  environmental_results: EnvironmentalAnalysisResult;
+  efficiency_results: EfficiencyResults;
 }

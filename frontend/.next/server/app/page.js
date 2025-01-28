@@ -89,6 +89,138 @@ module.exports = require("next/dist/compiled/next-server/app-page.runtime.dev.js
 
 /***/ }),
 
+/***/ "assert":
+/*!*************************!*\
+  !*** external "assert" ***!
+  \*************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("assert");
+
+/***/ }),
+
+/***/ "events":
+/*!*************************!*\
+  !*** external "events" ***!
+  \*************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("events");
+
+/***/ }),
+
+/***/ "fs":
+/*!*********************!*\
+  !*** external "fs" ***!
+  \*********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("fs");
+
+/***/ }),
+
+/***/ "http":
+/*!***********************!*\
+  !*** external "http" ***!
+  \***********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("http");
+
+/***/ }),
+
+/***/ "https":
+/*!************************!*\
+  !*** external "https" ***!
+  \************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("https");
+
+/***/ }),
+
+/***/ "os":
+/*!*********************!*\
+  !*** external "os" ***!
+  \*********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("os");
+
+/***/ }),
+
+/***/ "path":
+/*!***********************!*\
+  !*** external "path" ***!
+  \***********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("path");
+
+/***/ }),
+
+/***/ "stream":
+/*!*************************!*\
+  !*** external "stream" ***!
+  \*************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("stream");
+
+/***/ }),
+
+/***/ "tty":
+/*!**********************!*\
+  !*** external "tty" ***!
+  \**********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("tty");
+
+/***/ }),
+
+/***/ "url":
+/*!**********************!*\
+  !*** external "url" ***!
+  \**********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("url");
+
+/***/ }),
+
+/***/ "util":
+/*!***********************!*\
+  !*** external "util" ***!
+  \***********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("util");
+
+/***/ }),
+
+/***/ "zlib":
+/*!***********************!*\
+  !*** external "zlib" ***!
+  \***********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("zlib");
+
+/***/ }),
+
 /***/ "(rsc)/../node_modules/.pnpm/next@14.1.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fpage&page=%2Fpage&appPaths=%2Fpage&pagePath=private-next-app-dir%2Fpage.tsx&appDir=C%3A%5CUsers%5CUSER%5CDesktop%5CDev_Projects%5Cnrc%5Cfrontend%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=C%3A%5CUsers%5CUSER%5CDesktop%5CDev_Projects%5Cnrc%5Cfrontend&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D!":
 /*!******************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** ../node_modules/.pnpm/next@14.1.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fpage&page=%2Fpage&appPaths=%2Fpage&pagePath=private-next-app-dir%2Fpage.tsx&appDir=C%3A%5CUsers%5CUSER%5CDesktop%5CDev_Projects%5Cnrc%5Cfrontend%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=C%3A%5CUsers%5CUSER%5CDesktop%5CDev_Projects%5Cnrc%5Cfrontend&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D! ***!
@@ -196,6 +328,17 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
 
 /***/ }),
 
+/***/ "(ssr)/./src/config/endpoints.ts":
+/*!*********************************!*\
+  !*** ./src/config/endpoints.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   API_BASE_URL: () => (/* binding */ API_BASE_URL),\n/* harmony export */   API_CONFIG: () => (/* binding */ API_CONFIG),\n/* harmony export */   API_V1_URL: () => (/* binding */ API_V1_URL),\n/* harmony export */   PROCESS_ENDPOINTS: () => (/* binding */ PROCESS_ENDPOINTS)\n/* harmony export */ });\n// Base URLs\nconst API_BASE_URL = process.env.REACT_APP_API_BASE_URL || \"http://localhost:8000\";\nconst API_V1_URL = `${API_BASE_URL}/api/v1`;\n// Process Analysis Endpoints\nconst PROCESS_ENDPOINTS = {\n    BASE: `${API_V1_URL}/process`,\n    LIST: `${API_V1_URL}/process/`,\n    CREATE: `${API_V1_URL}/process/`,\n    DETAIL: (id)=>`${API_V1_URL}/process/${id}/`,\n    STATUS: (id)=>`${API_V1_URL}/process/${id}/status/`,\n    RESULTS: (id)=>`${API_V1_URL}/process/${id}/results/`\n};\n// Request configs\nconst API_CONFIG = {\n    headers: {\n        \"Content-Type\": \"application/json\"\n    },\n    timeout: 30000\n};\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9zcmMvY29uZmlnL2VuZHBvaW50cy50cyIsIm1hcHBpbmdzIjoiOzs7Ozs7O0FBRUEsWUFBWTtBQUNMLE1BQU1BLGVBQWVDLFFBQVFDLEdBQUcsQ0FBQ0Msc0JBQXNCLElBQUksd0JBQXdCO0FBQ25GLE1BQU1DLGFBQWEsQ0FBQyxFQUFFSixhQUFhLE9BQU8sQ0FBQyxDQUFDO0FBRW5ELDZCQUE2QjtBQUN0QixNQUFNSyxvQkFBb0I7SUFDL0JDLE1BQU0sQ0FBQyxFQUFFRixXQUFXLFFBQVEsQ0FBQztJQUM3QkcsTUFBTSxDQUFDLEVBQUVILFdBQVcsU0FBUyxDQUFDO0lBQzlCSSxRQUFRLENBQUMsRUFBRUosV0FBVyxTQUFTLENBQUM7SUFDaENLLFFBQVEsQ0FBQ0MsS0FBZSxDQUFDLEVBQUVOLFdBQVcsU0FBUyxFQUFFTSxHQUFHLENBQUMsQ0FBQztJQUN0REMsUUFBUSxDQUFDRCxLQUFlLENBQUMsRUFBRU4sV0FBVyxTQUFTLEVBQUVNLEdBQUcsUUFBUSxDQUFDO0lBQzdERSxTQUFTLENBQUNGLEtBQWUsQ0FBQyxFQUFFTixXQUFXLFNBQVMsRUFBRU0sR0FBRyxTQUFTLENBQUM7QUFDakUsRUFBVztBQUVYLGtCQUFrQjtBQUNYLE1BQU1HLGFBQWE7SUFDeEJDLFNBQVM7UUFDUCxnQkFBZ0I7SUFDbEI7SUFDQUMsU0FBUztBQUNYLEVBQVciLCJzb3VyY2VzIjpbIndlYnBhY2s6Ly9wcm9jZXNzLWFuYWx5c2lzLWZyb250ZW5kLy4vc3JjL2NvbmZpZy9lbmRwb2ludHMudHM/N2E4MyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBQcm9jZXNzVHlwZSB9IGZyb20gJy4uL3R5cGVzL3Byb2Nlc3MnO1xyXG5cclxuLy8gQmFzZSBVUkxzXHJcbmV4cG9ydCBjb25zdCBBUElfQkFTRV9VUkwgPSBwcm9jZXNzLmVudi5SRUFDVF9BUFBfQVBJX0JBU0VfVVJMIHx8IFwiaHR0cDovL2xvY2FsaG9zdDo4MDAwXCI7XHJcbmV4cG9ydCBjb25zdCBBUElfVjFfVVJMID0gYCR7QVBJX0JBU0VfVVJMfS9hcGkvdjFgO1xyXG5cclxuLy8gUHJvY2VzcyBBbmFseXNpcyBFbmRwb2ludHNcclxuZXhwb3J0IGNvbnN0IFBST0NFU1NfRU5EUE9JTlRTID0ge1xyXG4gIEJBU0U6IGAke0FQSV9WMV9VUkx9L3Byb2Nlc3NgLFxyXG4gIExJU1Q6IGAke0FQSV9WMV9VUkx9L3Byb2Nlc3MvYCxcclxuICBDUkVBVEU6IGAke0FQSV9WMV9VUkx9L3Byb2Nlc3MvYCxcclxuICBERVRBSUw6IChpZDogbnVtYmVyKSA9PiBgJHtBUElfVjFfVVJMfS9wcm9jZXNzLyR7aWR9L2AsXHJcbiAgU1RBVFVTOiAoaWQ6IG51bWJlcikgPT4gYCR7QVBJX1YxX1VSTH0vcHJvY2Vzcy8ke2lkfS9zdGF0dXMvYCxcclxuICBSRVNVTFRTOiAoaWQ6IG51bWJlcikgPT4gYCR7QVBJX1YxX1VSTH0vcHJvY2Vzcy8ke2lkfS9yZXN1bHRzL2AsXHJcbn0gYXMgY29uc3Q7XHJcblxyXG4vLyBSZXF1ZXN0IGNvbmZpZ3NcclxuZXhwb3J0IGNvbnN0IEFQSV9DT05GSUcgPSB7XHJcbiAgaGVhZGVyczoge1xyXG4gICAgJ0NvbnRlbnQtVHlwZSc6ICdhcHBsaWNhdGlvbi9qc29uJyxcclxuICB9LFxyXG4gIHRpbWVvdXQ6IDMwMDAwLCAvLyAzMCBzZWNvbmRzXHJcbn0gYXMgY29uc3Q7XHJcblxyXG5leHBvcnQgdHlwZSBQcm9jZXNzRW5kcG9pbnQgPSB0eXBlb2YgUFJPQ0VTU19FTkRQT0lOVFM7XHJcbiJdLCJuYW1lcyI6WyJBUElfQkFTRV9VUkwiLCJwcm9jZXNzIiwiZW52IiwiUkVBQ1RfQVBQX0FQSV9CQVNFX1VSTCIsIkFQSV9WMV9VUkwiLCJQUk9DRVNTX0VORFBPSU5UUyIsIkJBU0UiLCJMSVNUIiwiQ1JFQVRFIiwiREVUQUlMIiwiaWQiLCJTVEFUVVMiLCJSRVNVTFRTIiwiQVBJX0NPTkZJRyIsImhlYWRlcnMiLCJ0aW1lb3V0Il0sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(ssr)/./src/config/endpoints.ts\n");
+
+/***/ }),
+
 /***/ "(ssr)/./src/hooks/useRecentAnalyses.ts":
 /*!****************************************!*\
   !*** ./src/hooks/useRecentAnalyses.ts ***!
@@ -203,7 +346,7 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   useRecentAnalyses: () => (/* binding */ useRecentAnalyses)\n/* harmony export */ });\n/* harmony import */ var _tanstack_react_query__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tanstack/react-query */ \"(ssr)/../node_modules/.pnpm/@tanstack+react-query@5.65.0_react@18.3.1/node_modules/@tanstack/react-query/build/modern/useQuery.js\");\n\nasync function fetchRecentAnalyses() {\n    const response = await fetch(\"/api/analyses/recent\");\n    if (!response.ok) {\n        throw new Error(\"Failed to fetch recent analyses\");\n    }\n    return response.json();\n}\nfunction useRecentAnalyses() {\n    return (0,_tanstack_react_query__WEBPACK_IMPORTED_MODULE_0__.useQuery)({\n        queryKey: [\n            \"recentAnalyses\"\n        ],\n        queryFn: fetchRecentAnalyses,\n        refetchInterval: 30000,\n        staleTime: 10000\n    });\n}\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9zcmMvaG9va3MvdXNlUmVjZW50QW5hbHlzZXMudHMiLCJtYXBwaW5ncyI6Ijs7Ozs7QUFBaUQ7QUFXakQsZUFBZUM7SUFDYixNQUFNQyxXQUFXLE1BQU1DLE1BQU07SUFDN0IsSUFBSSxDQUFDRCxTQUFTRSxFQUFFLEVBQUU7UUFDaEIsTUFBTSxJQUFJQyxNQUFNO0lBQ2xCO0lBQ0EsT0FBT0gsU0FBU0ksSUFBSTtBQUN0QjtBQUVPLFNBQVNDO0lBQ2QsT0FBT1AsK0RBQVFBLENBQUM7UUFDZFEsVUFBVTtZQUFDO1NBQWlCO1FBQzVCQyxTQUFTUjtRQUNUUyxpQkFBaUI7UUFDakJDLFdBQVc7SUFDYjtBQUNGIiwic291cmNlcyI6WyJ3ZWJwYWNrOi8vcHJvY2Vzcy1hbmFseXNpcy1mcm9udGVuZC8uL3NyYy9ob29rcy91c2VSZWNlbnRBbmFseXNlcy50cz82ZDU2Il0sInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IHVzZVF1ZXJ5IH0gZnJvbSAnQHRhbnN0YWNrL3JlYWN0LXF1ZXJ5JztcclxuaW1wb3J0IHsgUHJvY2Vzc1R5cGUsIFByb2Nlc3NTdGF0dXMgfSBmcm9tICdAL3R5cGVzL3Byb2Nlc3MnO1xyXG5cclxuZXhwb3J0IGludGVyZmFjZSBBbmFseXNpcyB7XHJcbiAgaWQ6IHN0cmluZztcclxuICB0eXBlOiBQcm9jZXNzVHlwZTtcclxuICBzdGF0dXM6IFByb2Nlc3NTdGF0dXM7XHJcbiAgc3RhcnRlZEF0OiBzdHJpbmc7XHJcbiAgY29tcGxldGVkQXQ/OiBzdHJpbmc7XHJcbn1cclxuXHJcbmFzeW5jIGZ1bmN0aW9uIGZldGNoUmVjZW50QW5hbHlzZXMoKTogUHJvbWlzZTxBbmFseXNpc1tdPiB7XHJcbiAgY29uc3QgcmVzcG9uc2UgPSBhd2FpdCBmZXRjaCgnL2FwaS9hbmFseXNlcy9yZWNlbnQnKTtcclxuICBpZiAoIXJlc3BvbnNlLm9rKSB7XHJcbiAgICB0aHJvdyBuZXcgRXJyb3IoJ0ZhaWxlZCB0byBmZXRjaCByZWNlbnQgYW5hbHlzZXMnKTtcclxuICB9XHJcbiAgcmV0dXJuIHJlc3BvbnNlLmpzb24oKTtcclxufVxyXG5cclxuZXhwb3J0IGZ1bmN0aW9uIHVzZVJlY2VudEFuYWx5c2VzKCkge1xyXG4gIHJldHVybiB1c2VRdWVyeSh7XHJcbiAgICBxdWVyeUtleTogWydyZWNlbnRBbmFseXNlcyddLFxyXG4gICAgcXVlcnlGbjogZmV0Y2hSZWNlbnRBbmFseXNlcyxcclxuICAgIHJlZmV0Y2hJbnRlcnZhbDogMzAwMDAsIC8vIFJlZmV0Y2ggZXZlcnkgMzAgc2Vjb25kc1xyXG4gICAgc3RhbGVUaW1lOiAxMDAwMCwgLy8gQ29uc2lkZXIgZGF0YSBzdGFsZSBhZnRlciAxMCBzZWNvbmRzXHJcbiAgfSk7XHJcbn0gIl0sIm5hbWVzIjpbInVzZVF1ZXJ5IiwiZmV0Y2hSZWNlbnRBbmFseXNlcyIsInJlc3BvbnNlIiwiZmV0Y2giLCJvayIsIkVycm9yIiwianNvbiIsInVzZVJlY2VudEFuYWx5c2VzIiwicXVlcnlLZXkiLCJxdWVyeUZuIiwicmVmZXRjaEludGVydmFsIiwic3RhbGVUaW1lIl0sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(ssr)/./src/hooks/useRecentAnalyses.ts\n");
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   useRecentAnalyses: () => (/* binding */ useRecentAnalyses)\n/* harmony export */ });\n/* harmony import */ var _tanstack_react_query__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @tanstack/react-query */ \"(ssr)/../node_modules/.pnpm/@tanstack+react-query@5.65.0_react@18.3.1/node_modules/@tanstack/react-query/build/modern/useQuery.js\");\n/* harmony import */ var axios__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! axios */ \"(ssr)/../node_modules/.pnpm/axios@1.7.9/node_modules/axios/lib/axios.js\");\n/* harmony import */ var _config_endpoints__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/config/endpoints */ \"(ssr)/./src/config/endpoints.ts\");\n\n\n\nfunction useRecentAnalyses() {\n    return (0,_tanstack_react_query__WEBPACK_IMPORTED_MODULE_1__.useQuery)({\n        queryKey: [\n            \"recentAnalyses\"\n        ],\n        queryFn: async ()=>{\n            const response = await axios__WEBPACK_IMPORTED_MODULE_2__[\"default\"].get(_config_endpoints__WEBPACK_IMPORTED_MODULE_0__.PROCESS_ENDPOINTS.LIST, _config_endpoints__WEBPACK_IMPORTED_MODULE_0__.API_CONFIG);\n            return response.data;\n        },\n        refetchInterval: 30000,\n        staleTime: 10000\n    });\n}\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9zcmMvaG9va3MvdXNlUmVjZW50QW5hbHlzZXMudHMiLCJtYXBwaW5ncyI6Ijs7Ozs7OztBQUFpRDtBQUN2QjtBQUN5QztBQUc1RCxTQUFTSTtJQUNkLE9BQU9KLCtEQUFRQSxDQUFDO1FBQ2RLLFVBQVU7WUFBQztTQUFpQjtRQUM1QkMsU0FBUztZQUNQLE1BQU1DLFdBQVcsTUFBTU4sNkNBQUtBLENBQUNPLEdBQUcsQ0FDOUJOLGdFQUFpQkEsQ0FBQ08sSUFBSSxFQUN0Qk4seURBQVVBO1lBRVosT0FBT0ksU0FBU0csSUFBSTtRQUN0QjtRQUNBQyxpQkFBaUI7UUFDakJDLFdBQVc7SUFDYjtBQUNGIiwic291cmNlcyI6WyJ3ZWJwYWNrOi8vcHJvY2Vzcy1hbmFseXNpcy1mcm9udGVuZC8uL3NyYy9ob29rcy91c2VSZWNlbnRBbmFseXNlcy50cz82ZDU2Il0sInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IHVzZVF1ZXJ5IH0gZnJvbSAnQHRhbnN0YWNrL3JlYWN0LXF1ZXJ5JztcclxuaW1wb3J0IGF4aW9zIGZyb20gJ2F4aW9zJztcclxuaW1wb3J0IHsgUFJPQ0VTU19FTkRQT0lOVFMsIEFQSV9DT05GSUcgfSBmcm9tICdAL2NvbmZpZy9lbmRwb2ludHMnO1xyXG5pbXBvcnQgeyBQcm9jZXNzTGlzdFJlc3BvbnNlIH0gZnJvbSAnQC90eXBlcy9hcGknO1xyXG5cclxuZXhwb3J0IGZ1bmN0aW9uIHVzZVJlY2VudEFuYWx5c2VzKCkge1xyXG4gIHJldHVybiB1c2VRdWVyeSh7XHJcbiAgICBxdWVyeUtleTogWydyZWNlbnRBbmFseXNlcyddLFxyXG4gICAgcXVlcnlGbjogYXN5bmMgKCkgPT4ge1xyXG4gICAgICBjb25zdCByZXNwb25zZSA9IGF3YWl0IGF4aW9zLmdldChcclxuICAgICAgICBQUk9DRVNTX0VORFBPSU5UUy5MSVNULFxyXG4gICAgICAgIEFQSV9DT05GSUdcclxuICAgICAgKTtcclxuICAgICAgcmV0dXJuIHJlc3BvbnNlLmRhdGEgYXMgUHJvY2Vzc0xpc3RSZXNwb25zZTtcclxuICAgIH0sXHJcbiAgICByZWZldGNoSW50ZXJ2YWw6IDMwMDAwLCAvLyBSZWZldGNoIGV2ZXJ5IDMwIHNlY29uZHNcclxuICAgIHN0YWxlVGltZTogMTAwMDAsIC8vIENvbnNpZGVyIGRhdGEgc3RhbGUgYWZ0ZXIgMTAgc2Vjb25kc1xyXG4gIH0pO1xyXG59ICJdLCJuYW1lcyI6WyJ1c2VRdWVyeSIsImF4aW9zIiwiUFJPQ0VTU19FTkRQT0lOVFMiLCJBUElfQ09ORklHIiwidXNlUmVjZW50QW5hbHlzZXMiLCJxdWVyeUtleSIsInF1ZXJ5Rm4iLCJyZXNwb25zZSIsImdldCIsIkxJU1QiLCJkYXRhIiwicmVmZXRjaEludGVydmFsIiwic3RhbGVUaW1lIl0sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(ssr)/./src/hooks/useRecentAnalyses.ts\n");
 
 /***/ }),
 
@@ -214,7 +357,7 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   ProcessType: () => (/* binding */ ProcessType)\n/* harmony export */ });\nvar ProcessType;\n(function(ProcessType) {\n    ProcessType[\"RF\"] = \"RF\";\n    ProcessType[\"IR\"] = \"IR\";\n    ProcessType[\"BASELINE\"] = \"BASELINE\";\n})(ProcessType || (ProcessType = {}));\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9zcmMvdHlwZXMvcHJvY2Vzcy50cyIsIm1hcHBpbmdzIjoiOzs7OztVQUFZQTs7OztHQUFBQSxnQkFBQUEiLCJzb3VyY2VzIjpbIndlYnBhY2s6Ly9wcm9jZXNzLWFuYWx5c2lzLWZyb250ZW5kLy4vc3JjL3R5cGVzL3Byb2Nlc3MudHM/NGE3MiJdLCJzb3VyY2VzQ29udGVudCI6WyJleHBvcnQgZW51bSBQcm9jZXNzVHlwZSB7XHJcbiAgUkYgPSAnUkYnLFxyXG4gIElSID0gJ0lSJyxcclxuICBCQVNFTElORSA9ICdCQVNFTElORSdcclxufVxyXG5cclxuZXhwb3J0IHR5cGUgUHJvY2Vzc1N0YXR1cyA9ICdwZW5kaW5nJyB8ICdwcm9jZXNzaW5nJyB8ICdjb21wbGV0ZWQnIHwgJ2ZhaWxlZCc7XHJcblxyXG5leHBvcnQgaW50ZXJmYWNlIEVxdWlwbWVudCB7XHJcbiAgbmFtZTogc3RyaW5nO1xyXG4gIGNvc3Q6IG51bWJlcjtcclxuICBjYXBhY2l0eTogbnVtYmVyO1xyXG4gIGxpZmV0aW1lOiBudW1iZXI7XHJcbiAgbWFpbnRlbmFuY2VfZmFjdG9yOiBudW1iZXI7XHJcbiAgcG93ZXJfY29uc3VtcHRpb246IG51bWJlcjtcclxufVxyXG5cclxuZXhwb3J0IGludGVyZmFjZSBVdGlsaXR5IHtcclxuICBuYW1lOiBzdHJpbmc7XHJcbiAgY29uc3VtcHRpb246IG51bWJlcjtcclxuICB1bml0X3ByaWNlOiBudW1iZXI7XHJcbiAgdW5pdDogc3RyaW5nO1xyXG59XHJcblxyXG5leHBvcnQgaW50ZXJmYWNlIFJhd01hdGVyaWFsIHtcclxuICBuYW1lOiBzdHJpbmc7XHJcbiAgcXVhbnRpdHk6IG51bWJlcjtcclxuICB1bml0X3ByaWNlOiBudW1iZXI7XHJcbiAgdW5pdDogc3RyaW5nO1xyXG59XHJcblxyXG5leHBvcnQgaW50ZXJmYWNlIExhYm9yQ29uZmlnIHtcclxuICBob3VybHlfd2FnZTogbnVtYmVyO1xyXG4gIGhvdXJzX3Blcl93ZWVrOiBudW1iZXI7XHJcbiAgd2Vla3NfcGVyX3llYXI6IG51bWJlcjtcclxuICBudW1fd29ya2VyczogbnVtYmVyO1xyXG59XHJcblxyXG5leHBvcnQgaW50ZXJmYWNlIEluZGlyZWN0RmFjdG9yIHtcclxuICBuYW1lOiBzdHJpbmc7XHJcbiAgY29zdDogbnVtYmVyO1xyXG4gIHBlcmNlbnRhZ2U6IG51bWJlcjtcclxufVxyXG5cclxuZXhwb3J0IGludGVyZmFjZSBQcm9jZXNzQW5hbHlzaXMge1xyXG4gIGlkOiBzdHJpbmc7XHJcbiAgc3RhdHVzOiAncGVuZGluZycgfCAncHJvY2Vzc2luZycgfCAnY29tcGxldGVkJyB8ICdmYWlsZWQnO1xyXG4gIHByb2Nlc3NfdHlwZTogUHJvY2Vzc1R5cGU7XHJcbiAgXHJcbiAgLy8gVGVjaG5pY2FsIHBhcmFtZXRlcnNcclxuICBhaXJfZmxvdzogbnVtYmVyO1xyXG4gIGNsYXNzaWZpZXJfc3BlZWQ6IG51bWJlcjtcclxuICBpbnB1dF9tYXNzOiBudW1iZXI7XHJcbiAgb3V0cHV0X21hc3M6IG51bWJlcjtcclxuICBpbml0aWFsX3Byb3RlaW5fY29udGVudDogbnVtYmVyO1xyXG4gIGZpbmFsX3Byb3RlaW5fY29udGVudDogbnVtYmVyO1xyXG4gIGluaXRpYWxfbW9pc3R1cmVfY29udGVudDogbnVtYmVyO1xyXG4gIGZpbmFsX21vaXN0dXJlX2NvbnRlbnQ6IG51bWJlcjtcclxuICBkMTBfcGFydGljbGVfc2l6ZTogbnVtYmVyO1xyXG4gIGQ1MF9wYXJ0aWNsZV9zaXplOiBudW1iZXI7XHJcbiAgZDkwX3BhcnRpY2xlX3NpemU6IG51bWJlcjtcclxuICB0aGVybWFsX3JhdGlvOiBudW1iZXI7XHJcblxyXG4gIC8vIEVjb25vbWljIHBhcmFtZXRlcnNcclxuICBlcXVpcG1lbnRfY29zdDogbnVtYmVyO1xyXG4gIG1haW50ZW5hbmNlX2Nvc3Q6IG51bWJlcjtcclxuICByYXdfbWF0ZXJpYWxfY29zdDogbnVtYmVyO1xyXG4gIHV0aWxpdHlfY29zdDogbnVtYmVyO1xyXG4gIGxhYm9yX2Nvc3Q6IG51bWJlcjtcclxuICBpbmRpcmVjdF9jb3N0czogbnVtYmVyO1xyXG4gIHByb2R1Y3Rpb25fdm9sdW1lOiBudW1iZXI7XHJcbiAgc2VsbGluZ19wcmljZTogbnVtYmVyO1xyXG4gIHByb2plY3RfZHVyYXRpb246IG51bWJlcjtcclxuICBkaXNjb3VudF9yYXRlOiBudW1iZXI7XHJcblxyXG4gIC8vIEVudmlyb25tZW50YWwgcGFyYW1ldGVyc1xyXG4gIGVsZWN0cmljaXR5X2NvbnN1bXB0aW9uOiBudW1iZXI7XHJcbiAgdGhlcm1hbF9lbmVyZ3k6IG51bWJlcjtcclxuICB3YXRlcl9jb25zdW1wdGlvbjogbnVtYmVyO1xyXG4gIHdhc3Rld2F0ZXJfZ2VuZXJhdGlvbjogbnVtYmVyO1xyXG4gIHNvbGlkX3dhc3RlOiBudW1iZXI7XHJcbiAgcmVjeWNsYWJsZV93YXN0ZTogbnVtYmVyO1xyXG4gIHRyYW5zcG9ydF9kaXN0YW5jZTogbnVtYmVyO1xyXG4gIHRyYW5zcG9ydF9sb2FkOiBudW1iZXI7XHJcblxyXG4gIC8vIFJlc3VsdHNcclxuICByZXN1bHRzPzoge1xyXG4gICAgdGVjaG5pY2FsOiBUZWNobmljYWxBbmFseXNpc1Jlc3VsdDtcclxuICAgIGVjb25vbWljOiBFY29ub21pY0FuYWx5c2lzUmVzdWx0O1xyXG4gICAgZW52aXJvbm1lbnRhbDogRW52aXJvbm1lbnRhbEFuYWx5c2lzUmVzdWx0O1xyXG4gIH07XHJcbn1cclxuXHJcbmV4cG9ydCBpbnRlcmZhY2UgVGVjaG5pY2FsQW5hbHlzaXNSZXN1bHQge1xyXG4gIGVmZmljaWVuY3k6IHtcclxuICAgIG1hc3M6IG51bWJlcjtcclxuICAgIHByb2Nlc3M6IG51bWJlcjtcclxuICAgIHRocm91Z2hwdXQ6IG51bWJlcjtcclxuICAgIGNsYXNzaWZpZXI6IG51bWJlcjtcclxuICB9O1xyXG4gIHByb3RlaW5fcmVjb3Zlcnk6IHtcclxuICAgIGluaXRpYWxfbWFzczogbnVtYmVyO1xyXG4gICAgZmluYWxfbWFzczogbnVtYmVyO1xyXG4gICAgcmVjb3ZlcnlfcmF0ZTogbnVtYmVyO1xyXG4gICAgY29uY2VudHJhdGlvbl9pbmNyZWFzZTogbnVtYmVyO1xyXG4gIH07XHJcbiAgcGFydGljbGVfc2l6ZToge1xyXG4gICAgZDEwOiBudW1iZXI7XHJcbiAgICBkNTA6IG51bWJlcjtcclxuICAgIGQ5MDogbnVtYmVyO1xyXG4gICAgc3BhbjogbnVtYmVyO1xyXG4gIH07XHJcbn1cclxuXHJcbi8vIFdlJ2xsIGFkZCBFY29ub21pYyBhbmQgRW52aXJvbm1lbnRhbCBpbnRlcmZhY2VzIGxhdGVyXHJcbmV4cG9ydCBpbnRlcmZhY2UgRWNvbm9taWNBbmFseXNpc1Jlc3VsdCB7XHJcbiAgLy8gcGxhY2Vob2xkZXJcclxufVxyXG5cclxuZXhwb3J0IGludGVyZmFjZSBFbnZpcm9ubWVudGFsQW5hbHlzaXNSZXN1bHQge1xyXG4gIC8vIHBsYWNlaG9sZGVyXHJcbn1cclxuIl0sIm5hbWVzIjpbIlByb2Nlc3NUeXBlIl0sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(ssr)/./src/types/process.ts\n");
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   ProcessType: () => (/* binding */ ProcessType)\n/* harmony export */ });\nvar ProcessType;\n(function(ProcessType) {\n    ProcessType[\"BASELINE\"] = \"baseline\";\n    ProcessType[\"RF\"] = \"rf\";\n    ProcessType[\"IR\"] = \"ir\";\n})(ProcessType || (ProcessType = {}));\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9zcmMvdHlwZXMvcHJvY2Vzcy50cyIsIm1hcHBpbmdzIjoiOzs7OztVQUVZQTs7OztHQUFBQSxnQkFBQUEiLCJzb3VyY2VzIjpbIndlYnBhY2s6Ly9wcm9jZXNzLWFuYWx5c2lzLWZyb250ZW5kLy4vc3JjL3R5cGVzL3Byb2Nlc3MudHM/NGE3MiJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBUZWNobmljYWxQYXJhbWV0ZXJzIH0gZnJvbSAnLi90ZWNobmljYWwnO1xyXG5cclxuZXhwb3J0IGVudW0gUHJvY2Vzc1R5cGUge1xyXG4gIEJBU0VMSU5FID0gJ2Jhc2VsaW5lJyxcclxuICBSRiA9ICdyZicsXHJcbiAgSVIgPSAnaXInXHJcbn1cclxuXHJcbmV4cG9ydCB0eXBlIFByb2Nlc3NTdGF0dXMgPSAncGVuZGluZycgfCAncHJvY2Vzc2luZycgfCAnY29tcGxldGVkJyB8ICdmYWlsZWQnO1xyXG5cclxuZXhwb3J0IGludGVyZmFjZSBFcXVpcG1lbnQge1xyXG4gIG5hbWU6IHN0cmluZztcclxuICBjb3N0OiBudW1iZXI7XHJcbiAgZWZmaWNpZW5jeTogbnVtYmVyO1xyXG4gIG1haW50ZW5hbmNlX2Nvc3Q6IG51bWJlcjtcclxuICBlbmVyZ3lfY29uc3VtcHRpb246IG51bWJlcjtcclxuICBwcm9jZXNzaW5nX2NhcGFjaXR5OiBudW1iZXI7XHJcbn1cclxuXHJcbmV4cG9ydCBpbnRlcmZhY2UgVXRpbGl0eSB7XHJcbiAgbmFtZTogc3RyaW5nO1xyXG4gIGNvbnN1bXB0aW9uOiBudW1iZXI7XHJcbiAgdW5pdF9wcmljZTogbnVtYmVyO1xyXG4gIHVuaXQ6IHN0cmluZztcclxufVxyXG5cclxuZXhwb3J0IGludGVyZmFjZSBSYXdNYXRlcmlhbCB7XHJcbiAgbmFtZTogc3RyaW5nO1xyXG4gIHF1YW50aXR5OiBudW1iZXI7XHJcbiAgdW5pdF9wcmljZTogbnVtYmVyO1xyXG4gIHVuaXQ6IHN0cmluZztcclxufVxyXG5cclxuZXhwb3J0IGludGVyZmFjZSBMYWJvckNvbmZpZyB7XHJcbiAgaG91cmx5X3dhZ2U6IG51bWJlcjtcclxuICBob3Vyc19wZXJfd2VlazogbnVtYmVyO1xyXG4gIHdlZWtzX3Blcl95ZWFyOiBudW1iZXI7XHJcbiAgbnVtX3dvcmtlcnM6IG51bWJlcjtcclxufVxyXG5cclxuZXhwb3J0IGludGVyZmFjZSBJbmRpcmVjdEZhY3RvciB7XHJcbiAgbmFtZTogc3RyaW5nO1xyXG4gIGNvc3Q6IG51bWJlcjtcclxuICBwZXJjZW50YWdlOiBudW1iZXI7XHJcbn1cclxuXHJcbmV4cG9ydCBpbnRlcmZhY2UgUmVzb3VyY2VDb25maWd1cmF0aW9uIHtcclxuICBlcXVpcG1lbnQ6IEVxdWlwbWVudFtdO1xyXG4gIHV0aWxpdGllczogVXRpbGl0eVtdO1xyXG4gIHJhd19tYXRlcmlhbHM6IFJhd01hdGVyaWFsW107XHJcbiAgbGFib3JfY29uZmlnOiBMYWJvckNvbmZpZztcclxuICBpbmRpcmVjdF9mYWN0b3JzOiBJbmRpcmVjdEZhY3RvcltdO1xyXG59XHJcblxyXG5leHBvcnQgaW50ZXJmYWNlIEFsbG9jYXRpb25Db25maWd1cmF0aW9uIHtcclxuICBhbGxvY2F0aW9uX21ldGhvZDogJ2Vjb25vbWljJyB8ICdwaHlzaWNhbCcgfCAnaHlicmlkJztcclxuICBoeWJyaWRfd2VpZ2h0czogUmVjb3JkPHN0cmluZywgbnVtYmVyPjtcclxufVxyXG5cclxuZXhwb3J0IGludGVyZmFjZSBSaXNrQ29uZmlndXJhdGlvbiB7XHJcbiAgc2Vuc2l0aXZpdHlfcmFuZ2U6IG51bWJlcjtcclxuICBzdGVwczogbnVtYmVyO1xyXG59XHJcblxyXG5leHBvcnQgaW50ZXJmYWNlIFByb2Nlc3NBbmFseXNpcyBleHRlbmRzIFxyXG4gIFRlY2huaWNhbFBhcmFtZXRlcnMsXHJcbiAgUmVzb3VyY2VDb25maWd1cmF0aW9uLFxyXG4gIEFsbG9jYXRpb25Db25maWd1cmF0aW9uLFxyXG4gIFJpc2tDb25maWd1cmF0aW9uIHtcclxuICBcclxuICAvLyBCYXNpYyBJbmZvXHJcbiAgaWQ6IG51bWJlcjtcclxuICBwcm9jZXNzX3R5cGU6IFByb2Nlc3NUeXBlO1xyXG4gIHRpbWVzdGFtcDogc3RyaW5nO1xyXG4gIHN0YXR1czogUHJvY2Vzc1N0YXR1cztcclxuICBwcm9ncmVzczogbnVtYmVyO1xyXG5cclxuICAvLyBFcXVpcG1lbnQgYW5kIENvc3RzXHJcbiAgZXF1aXBtZW50X2Nvc3Q6IG51bWJlcjtcclxuICBtYWludGVuYW5jZV9jb3N0OiBudW1iZXI7XHJcbiAgaW5zdGFsbGF0aW9uX2ZhY3RvcjogbnVtYmVyO1xyXG4gIGluZGlyZWN0X2Nvc3RzX2ZhY3RvcjogbnVtYmVyO1xyXG4gIG1haW50ZW5hbmNlX2ZhY3RvcjogbnVtYmVyO1xyXG5cclxuICAvLyBPcGVyYXRpbmcgQ29zdHNcclxuICByYXdfbWF0ZXJpYWxfY29zdDogbnVtYmVyO1xyXG4gIHV0aWxpdHlfY29zdDogbnVtYmVyO1xyXG4gIGxhYm9yX2Nvc3Q6IG51bWJlcjtcclxuXHJcbiAgLy8gRmluYW5jaWFsIFBhcmFtZXRlcnNcclxuICBwcm9qZWN0X2R1cmF0aW9uOiBudW1iZXI7XHJcbiAgZGlzY291bnRfcmF0ZTogbnVtYmVyO1xyXG4gIHByb2R1Y3Rpb25fdm9sdW1lOiBudW1iZXI7XHJcbiAgcmV2ZW51ZV9wZXJfeWVhcjogbnVtYmVyO1xyXG4gIGNhc2hfZmxvd3M6IG51bWJlcltdO1xyXG5cclxuICAvLyBFbnZpcm9ubWVudGFsIEFuYWx5c2lzXHJcbiAgZWxlY3RyaWNpdHlfY29uc3VtcHRpb246IG51bWJlcjtcclxuICBjb29saW5nX2NvbnN1bXB0aW9uOiBudW1iZXI7XHJcbiAgd2F0ZXJfY29uc3VtcHRpb246IG51bWJlcjtcclxuICB0cmFuc3BvcnRfY29uc3VtcHRpb246IG51bWJlcjtcclxuICBlcXVpcG1lbnRfbWFzczogbnVtYmVyO1xyXG4gIHRoZXJtYWxfcmF0aW86IG51bWJlcjtcclxuXHJcbiAgLy8gUHJvZHVjdGlvbiBEYXRhXHJcbiAgZW5lcmd5X2NvbnN1bXB0aW9uOiBSZWNvcmQ8c3RyaW5nLCBudW1iZXI+O1xyXG4gIHByb2R1Y3Rpb25fZGF0YTogUmVjb3JkPHN0cmluZywgYW55PjtcclxuICBwcm9kdWN0X3ZhbHVlczogUmVjb3JkPHN0cmluZywgbnVtYmVyPjtcclxufVxyXG5cclxuIl0sIm5hbWVzIjpbIlByb2Nlc3NUeXBlIl0sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(ssr)/./src/types/process.ts\n");
 
 /***/ }),
 
@@ -294,7 +437,7 @@ const __default__ = proxy.default;
 var __webpack_require__ = require("../webpack-runtime.js");
 __webpack_require__.C(exports);
 var __webpack_exec__ = (moduleId) => (__webpack_require__(__webpack_require__.s = moduleId))
-var __webpack_exports__ = __webpack_require__.X(0, ["vendor-chunks/next@14.1.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@swc+helpers@0.5.2","vendor-chunks/antd@5.23.2_date-fns@4.1.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-field-form@2.7.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@ant-design+cssinjs@1.23.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@tanstack+query-core@5.65.0","vendor-chunks/rc-menu@9.16.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@rc-component+trigger@2.2.6_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@ant-design+icons@5.6.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-util@5.44.3_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@rc-component+async-validator@5.0.4","vendor-chunks/@ant-design+icons-svg@4.4.2","vendor-chunks/rc-motion@2.9.5_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/resize-observer-polyfill@1.5.1","vendor-chunks/@ant-design+cssinjs-utils@1.1.3_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-pagination@5.0.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@babel+runtime@7.26.7","vendor-chunks/rc-overflow@1.4.1_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/stylis@4.3.5","vendor-chunks/@ant-design+fast-color@2.0.6","vendor-chunks/@tanstack+react-query@5.65.0_react@18.3.1","vendor-chunks/rc-resize-observer@1.4.3_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@ant-design+colors@7.2.0","vendor-chunks/react-is@18.3.1","vendor-chunks/@rc-component+portal@1.1.2_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-tooltip@6.3.2_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/classnames@2.5.1","vendor-chunks/@emotion+hash@0.8.0","vendor-chunks/rc-picker@4.9.2_date-fns@4.1.0_dayjs@1.11.13_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@emotion+unitless@0.7.5","vendor-chunks/rc-table@7.50.2_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-select@14.16.6_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-tree@5.13.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-tabs@15.5.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-virtual-list@3.18.1_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@rc-component+color-picker@2.0.1_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-textarea@1.9.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-input@1.7.2_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-progress@4.0.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-collapse@3.9.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-dropdown@4.2.1_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/throttle-debounce@5.0.2","vendor-chunks/@rc-component+context@1.4.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-checkbox@3.5.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/date-fns@4.1.0"], () => (__webpack_exec__("(rsc)/../node_modules/.pnpm/next@14.1.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fpage&page=%2Fpage&appPaths=%2Fpage&pagePath=private-next-app-dir%2Fpage.tsx&appDir=C%3A%5CUsers%5CUSER%5CDesktop%5CDev_Projects%5Cnrc%5Cfrontend%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=C%3A%5CUsers%5CUSER%5CDesktop%5CDev_Projects%5Cnrc%5Cfrontend&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D!")));
+var __webpack_exports__ = __webpack_require__.X(0, ["vendor-chunks/antd@5.23.2_date-fns@4.1.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/next@14.1.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/mime-db@1.52.0","vendor-chunks/axios@1.7.9","vendor-chunks/rc-table@7.50.2_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-select@14.16.6_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-tree@5.13.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-field-form@2.7.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@ant-design+cssinjs@1.23.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@tanstack+query-core@5.65.0","vendor-chunks/rc-menu@9.16.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@rc-component+trigger@2.2.6_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@ant-design+icons@5.6.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-tabs@15.5.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-virtual-list@3.18.1_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-util@5.44.3_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@rc-component+async-validator@5.0.4","vendor-chunks/@ant-design+icons-svg@4.4.2","vendor-chunks/rc-motion@2.9.5_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/resize-observer-polyfill@1.5.1","vendor-chunks/@ant-design+cssinjs-utils@1.1.3_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-pagination@5.0.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@babel+runtime@7.26.7","vendor-chunks/@rc-component+color-picker@2.0.1_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-textarea@1.9.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/rc-input@1.7.2_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/follow-redirects@1.15.9","vendor-chunks/debug@4.4.0","vendor-chunks/rc-overflow@1.4.1_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/stylis@4.3.5","vendor-chunks/rc-progress@4.0.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@ant-design+fast-color@2.0.6","vendor-chunks/rc-collapse@3.9.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/form-data@4.0.1","vendor-chunks/rc-dropdown@4.2.1_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@tanstack+react-query@5.65.0_react@18.3.1","vendor-chunks/rc-resize-observer@1.4.3_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@ant-design+colors@7.2.0","vendor-chunks/react-is@18.3.1","vendor-chunks/@rc-component+portal@1.1.2_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/asynckit@0.4.0","vendor-chunks/rc-tooltip@6.3.2_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/throttle-debounce@5.0.2","vendor-chunks/@rc-component+context@1.4.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/combined-stream@1.0.8","vendor-chunks/mime-types@2.1.35","vendor-chunks/rc-checkbox@3.5.0_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/proxy-from-env@1.1.0","vendor-chunks/ms@2.1.3","vendor-chunks/supports-color@7.2.0","vendor-chunks/delayed-stream@1.0.0","vendor-chunks/@swc+helpers@0.5.2","vendor-chunks/classnames@2.5.1","vendor-chunks/@emotion+hash@0.8.0","vendor-chunks/rc-picker@4.9.2_date-fns@4.1.0_dayjs@1.11.13_react-dom@18.3.1_react@18.3.1__react@18.3.1","vendor-chunks/@emotion+unitless@0.7.5","vendor-chunks/has-flag@4.0.0","vendor-chunks/date-fns@4.1.0"], () => (__webpack_exec__("(rsc)/../node_modules/.pnpm/next@14.1.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fpage&page=%2Fpage&appPaths=%2Fpage&pagePath=private-next-app-dir%2Fpage.tsx&appDir=C%3A%5CUsers%5CUSER%5CDesktop%5CDev_Projects%5Cnrc%5Cfrontend%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=C%3A%5CUsers%5CUSER%5CDesktop%5CDev_Projects%5Cnrc%5Cfrontend&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D!")));
 module.exports = __webpack_exports__;
 
 })();

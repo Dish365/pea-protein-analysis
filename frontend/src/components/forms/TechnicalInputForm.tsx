@@ -1,23 +1,36 @@
 "use client";
 
 import React from 'react';
-import { Form, Input, Select, InputNumber, Row, Col, Card, Divider, Button } from 'antd';
-import { FormInstance } from 'antd/lib/form';
+import { Form, Select, InputNumber, Row, Col, Card, Button, Tooltip, Space } from 'antd';
 import { PROCESS_TYPES, DEFAULT_PROCESS_ANALYSIS } from '../../config/constants';
-import { ProcessType } from '@/types/process';
+import { TechnicalParameters } from '@/types/technical';
+import { formatNumber } from '@/lib/formatters';
+import { InfoCircleOutlined } from '@ant-design/icons';
 
 interface TechnicalInputFormProps {
-  onSubmit: (values: any) => Promise<void>;
+  onSubmit: (values: TechnicalParameters) => Promise<void>;
   isSubmitting?: boolean;
+  initialValues?: Partial<TechnicalParameters>;
 }
 
 const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({
   onSubmit,
   isSubmitting = false,
+  initialValues = DEFAULT_PROCESS_ANALYSIS,
 }) => {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<TechnicalParameters>();
 
-  const handleSubmit = async (values: any) => {
+  // Helper function for form item tooltip
+  const FormLabel = ({ label, tooltip }: { label: string; tooltip: string }) => (
+    <Space>
+      {label}
+      <Tooltip title={tooltip}>
+        <InfoCircleOutlined style={{ color: '#1890ff' }} />
+      </Tooltip>
+    </Space>
+  );
+
+  const handleSubmit = async (values: TechnicalParameters) => {
     await onSubmit(values);
   };
 
@@ -26,116 +39,151 @@ const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({
       form={form}
       layout="vertical"
       onFinish={handleSubmit}
+      initialValues={initialValues}
       className="max-w-4xl mx-auto"
     >
-      <Card title="Process Configuration" className="mb-6">
+      <Card title="Process Configuration" className="mb-6 shadow-sm">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="process_type"
-              label="Process Type"
-              rules={[{ required: true, message: 'Please select process type' }]}
+              label={
+                <FormLabel 
+                  label="Process Type" 
+                  tooltip="Select the type of process to analyze"
+                />
+              }
+              rules={[{ required: true }]}
             >
               <Select>
-                {Object.values(ProcessType).map((type) => (
-                  <Select.Option key={type} value={type}>
-                    {type}
+                {PROCESS_TYPES.map(({ value, label }) => (
+                  <Select.Option key={value} value={value}>
+                    {label}
                   </Select.Option>
                 ))}
               </Select>
             </Form.Item>
           </Col>
-        </Row>
-        <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="air_flow"
-              label="Air Flow (m³/h)"
-              rules={[{ required: true, message: 'Please enter air flow rate' }]}
+              label={
+                <FormLabel 
+                  label="Air Flow Rate (m³/h)" 
+                  tooltip="Volume of air flowing through the system per hour"
+                />
+              }
+              rules={[{ required: true, type: 'number', min: 0 }]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="classifier_speed"
-              label="Classifier Speed (rpm)"
-              rules={[{ required: true, message: 'Please enter classifier speed' }]}
-            >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={10}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
         </Row>
       </Card>
 
-      <Card title="Mass Balance" className="mb-6">
+      <Card title="Mass & Content Analysis" className="mb-6 shadow-sm">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="input_mass"
-              label="Input Mass (kg)"
-              rules={[
-                { required: true, message: 'Please enter input mass' },
-                { type: 'number', min: 0, message: 'Input mass must be positive' }
-              ]}
-              initialValue={DEFAULT_PROCESS_ANALYSIS.input_mass}
+              label={
+                <FormLabel 
+                  label="Input Mass (kg)" 
+                  tooltip="Total mass of material entering the process"
+                />
+              }
+              rules={[{ required: true, type: 'number', min: 0 }]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="output_mass"
-              label="Output Mass (kg)"
+              label={
+                <FormLabel 
+                  label="Output Mass (kg)" 
+                  tooltip="Expected mass of material after processing"
+                />
+              }
               rules={[
-                { required: true, message: 'Please enter output mass' },
-                { type: 'number', min: 0, message: 'Output mass must be positive' },
+                { required: true, type: 'number', min: 0 },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     if (!value || getFieldValue('input_mass') >= value) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('Output mass cannot exceed input mass'));
+                    return Promise.reject('Output mass cannot exceed input mass');
                   },
                 }),
               ]}
-              initialValue={DEFAULT_PROCESS_ANALYSIS.output_mass}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16} className="mt-4">
+          <Col span={12}>
+            <Form.Item
+              name="initial_protein_content"
+              label={
+                <FormLabel 
+                  label="Initial Protein Content (%)" 
+                  tooltip="Protein percentage in input material"
+                />
+              }
+              rules={[{ required: true, type: 'number', min: 0, max: 100 }]}
+            >
+              <InputNumber
+                min={0}
+                max={100}
+                formatter={(value) => `${value}%`}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^0-9.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="final_protein_content"
+              label={
+                <FormLabel 
+                  label="Target Protein Content (%)" 
+                  tooltip="Expected protein percentage after processing"
+                />
+              }
+              rules={[{ required: true, type: 'number', min: 0, max: 100 }]}
+            >
+              <InputNumber
+                min={0}
+                max={100}
+                formatter={(value) => `${value}%`}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^0-9.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
         </Row>
       </Card>
 
       <Card title="Content Analysis" className="mb-6">
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="initial_protein_content"
-              label="Initial Protein Content (%)"
-              rules={[
-                { required: true, message: 'Please enter initial protein content' },
-                { type: 'number', min: 0, max: 100, message: 'Protein content must be between 0 and 100%' }
-              ]}
-              initialValue={DEFAULT_PROCESS_ANALYSIS.initial_protein_content}
-            >
-              <InputNumber min={0} max={100} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="final_protein_content"
-              label="Final Protein Content (%)"
-              rules={[
-                { required: true, message: 'Please enter final protein content' },
-                { type: 'number', min: 0, max: 100, message: 'Protein content must be between 0 and 100%' }
-              ]}
-              initialValue={DEFAULT_PROCESS_ANALYSIS.final_protein_content}
-            >
-              <InputNumber min={0} max={100} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-        </Row>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -174,91 +222,208 @@ const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({
         </Row>
       </Card>
 
-      <Card title="Particle Size Distribution" className="mb-6">
+      <Card title="Particle Size Distribution" className="mb-6 shadow-sm">
         <Row gutter={16}>
           <Col span={8}>
             <Form.Item
               name="d10_particle_size"
-              label="D10 Particle Size (μm)"
+              label={
+                <FormLabel 
+                  label="D10 Particle Size (μm)" 
+                  tooltip="Particle size below which 10% of the sample lies"
+                />
+              }
               rules={[
-                { required: true, message: 'Please enter D10 particle size' },
-                { type: 'number', min: 0, message: 'Particle size must be positive' }
+                { required: true, type: 'number', min: 0 },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    const d50 = getFieldValue('d50_particle_size');
+                    if (!value || !d50 || value <= d50) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject('D10 must be smaller than D50');
+                  },
+                }),
               ]}
-              initialValue={DEFAULT_PROCESS_ANALYSIS.d10_particle_size}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={1}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item
               name="d50_particle_size"
-              label="D50 Particle Size (μm)"
+              label={
+                <FormLabel 
+                  label="D50 Particle Size (μm)" 
+                  tooltip="Median particle size (50th percentile)"
+                />
+              }
               rules={[
-                { required: true, message: 'Please enter D50 particle size' },
-                { type: 'number', min: 0, message: 'Particle size must be positive' },
+                { required: true, type: 'number', min: 0 },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
-                    if (!value || value >= getFieldValue('d10_particle_size')) {
+                    const d10 = getFieldValue('d10_particle_size');
+                    const d90 = getFieldValue('d90_particle_size');
+                    if ((!d10 || value >= d10) && (!d90 || value <= d90)) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('D50 must be larger than D10'));
+                    return Promise.reject('D50 must be between D10 and D90');
                   },
                 }),
               ]}
-              initialValue={DEFAULT_PROCESS_ANALYSIS.d50_particle_size}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={1}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item
               name="d90_particle_size"
-              label="D90 Particle Size (μm)"
+              label={
+                <FormLabel 
+                  label="D90 Particle Size (μm)" 
+                  tooltip="Particle size below which 90% of the sample lies"
+                />
+              }
               rules={[
-                { required: true, message: 'Please enter D90 particle size' },
-                { type: 'number', min: 0, message: 'Particle size must be positive' },
+                { required: true, type: 'number', min: 0 },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
-                    if (!value || value >= getFieldValue('d50_particle_size')) {
+                    const d50 = getFieldValue('d50_particle_size');
+                    if (!value || !d50 || value >= d50) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('D90 must be larger than D50'));
+                    return Promise.reject('D90 must be larger than D50');
                   },
                 }),
               ]}
-              initialValue={DEFAULT_PROCESS_ANALYSIS.d90_particle_size}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={1}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
         </Row>
       </Card>
 
-      <Card title="Energy Parameters" className="mb-6">
+      <Card title="Energy Parameters" className="mb-6 shadow-sm">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="thermal_ratio"
-              label="Thermal Energy Ratio"
-              rules={[
-                { required: true, message: 'Please enter thermal ratio' },
-                { type: 'number', min: 0, max: 1, message: 'Ratio must be between 0 and 1' }
-              ]}
+              label={
+                <FormLabel 
+                  label="Thermal Energy Ratio" 
+                  tooltip="Ratio of thermal to total energy consumption (0-1)"
+                />
+              }
+              rules={[{ required: true, type: 'number', min: 0, max: 1 }]}
             >
-              <InputNumber min={0} max={1} step={0.01} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                max={1}
+                step={0.05}
+                formatter={(value) => `${(value as number * 100).toFixed(1)}%`}
+                parser={(value: string | undefined): number => parseFloat(value!.replace('%', '')) / 100}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="classifier_speed"
+              label={
+                <FormLabel 
+                  label="Classifier Speed (rpm)" 
+                  tooltip="Rotational speed of the classifier wheel"
+                />
+              }
+              rules={[{ required: true, type: 'number', min: 0 }]}
+            >
+              <InputNumber
+                min={0}
+                step={100}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16} className="mt-4">
+          <Col span={12}>
+            <Form.Item
+              name="electricity_consumption"
+              label={
+                <FormLabel 
+                  label="Electricity Consumption (kWh)" 
+                  tooltip="Expected electrical energy consumption per batch"
+                />
+              }
+              rules={[{ required: true, type: 'number', min: 0 }]}
+            >
+              <InputNumber
+                min={0}
+                step={10}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="cooling_consumption"
+              label={
+                <FormLabel 
+                  label="Cooling Energy (kWh)" 
+                  tooltip="Expected cooling energy requirement per batch"
+                />
+              }
+              rules={[{ required: true, type: 'number', min: 0 }]}
+            >
+              <InputNumber
+                min={0}
+                step={10}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
         </Row>
       </Card>
 
-      <div className="flex justify-end mt-6">
+      <div className="flex justify-end gap-4 mt-6">
+        <Button 
+          onClick={() => form.resetFields()} 
+          disabled={isSubmitting}
+        >
+          Reset
+        </Button>
         <Button
           type="primary"
           htmlType="submit"
           loading={isSubmitting}
           size="large"
         >
-          Start Analysis
+          Continue to Economic Parameters
         </Button>
       </div>
     </Form>

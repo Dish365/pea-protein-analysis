@@ -5,6 +5,26 @@ export interface EmissionFactors {
   waste: number; // kg CO2e/kg
 }
 
+export interface EnvironmentalParameters {
+  // Energy Consumption
+  electricity_consumption: number;
+  thermal_energy: number;
+  cooling_consumption: number;
+  
+  // Water Usage
+  water_consumption: number;
+  wastewater_generation: number;
+  
+  // Waste Management
+  solid_waste: number;
+  recyclable_waste: number;
+  
+  // Transportation
+  transport_distance: number;
+  transport_load: number;
+  equipment_mass: number;
+}
+
 export interface EnvironmentalAnalysisResult {
   emissions: {
     electricity: number;
@@ -14,16 +34,16 @@ export interface EnvironmentalAnalysisResult {
     total: number;
   };
   resources: {
-    energyConsumption: number; // kWh
-    waterConsumption: number; // m3
-    materialEfficiency: number; // %
-    wasteGeneration: number; // kg
+    energy_consumption: number;
+    water_consumption: number;
+    material_efficiency: number;
+    waste_generation: number;
   };
   impacts: {
-    carbonFootprint: number; // kg CO2e
-    waterFootprint: number; // m3
-    energyIntensity: number; // kWh/kg product
-    wasteIntensity: number; // kg waste/kg product
+    carbon_footprint: number;
+    water_footprint: number;
+    energy_intensity: number;
+    waste_intensity: number;
   };
   metrics: {
     sustainabilityScore: number; // 0-100

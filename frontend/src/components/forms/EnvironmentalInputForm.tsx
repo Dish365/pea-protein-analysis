@@ -1,207 +1,307 @@
 "use client";
 
 import React from 'react';
-import { Form, InputNumber, Row, Col, Card, Button, Tooltip } from 'antd';
+import { Form, InputNumber, Row, Col, Card, Button, Tooltip, Space } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import { formatNumber } from '@/lib/formatters';
+import { DEFAULT_PROCESS_ANALYSIS } from '@/config/constants';
+import { EnvironmentalParameters } from '@/types/environmental';
 
 interface EnvironmentalInputFormProps {
-  onSubmit: (values: any) => Promise<void>;
+  onSubmit: (values: EnvironmentalParameters) => Promise<void>;
   isSubmitting?: boolean;
+  initialValues?: Partial<EnvironmentalParameters>;
 }
 
 const EnvironmentalInputForm: React.FC<EnvironmentalInputFormProps> = ({
   onSubmit,
   isSubmitting = false,
+  initialValues = DEFAULT_PROCESS_ANALYSIS,
 }) => {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<EnvironmentalParameters>();
 
-  const handleSubmit = async (values: any) => {
-    await onSubmit(values);
-  };
+  // Helper function for form item tooltip
+  const FormLabel = ({ label, tooltip }: { label: string; tooltip: string }) => (
+    <Space>
+      {label}
+      <Tooltip title={tooltip}>
+        <InfoCircleOutlined style={{ color: '#1890ff' }} />
+      </Tooltip>
+    </Space>
+  );
 
   return (
     <Form
       form={form}
       layout="vertical"
-      onFinish={handleSubmit}
+      onFinish={onSubmit}
+      initialValues={initialValues}
       className="max-w-4xl mx-auto"
     >
-      <Card title="Energy Consumption" className="mb-6">
+      <Card title="Energy Consumption" className="mb-6 shadow-sm">
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="electricity_consumption"
               label={
-                <span>
-                  Electricity Consumption (kWh)
-                  <Tooltip title="Total electricity consumption for the process">
-                    <InfoCircleOutlined className="ml-1" />
-                  </Tooltip>
-                </span>
+                <FormLabel 
+                  label="Electricity (kWh)" 
+                  tooltip="Total electrical energy consumed in the process"
+                />
               }
-              rules={[{ required: true, message: 'Please enter electricity consumption' }]}
+              rules={[{ required: true, type: 'number', min: 0 }]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={10}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+                className="text-right"
+              />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="thermal_energy"
               label={
-                <span>
-                  Thermal Energy (kWh)
-                  <Tooltip title="Thermal energy required for the process">
-                    <InfoCircleOutlined className="ml-1" />
-                  </Tooltip>
-                </span>
+                <FormLabel 
+                  label="Thermal Energy (kWh)" 
+                  tooltip="Thermal energy required for heating processes"
+                />
               }
-              rules={[{ required: true, message: 'Please enter thermal energy consumption' }]}
+              rules={[{ required: true, type: 'number', min: 0 }]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={10}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+                className="text-right"
+              />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              name="cooling_consumption"
+              label={
+                <FormLabel 
+                  label="Cooling Energy (kWh)" 
+                  tooltip="Energy consumed for cooling processes"
+                />
+              }
+              rules={[{ required: true, type: 'number', min: 0 }]}
+            >
+              <InputNumber
+                min={0}
+                step={10}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+                className="text-right"
+              />
             </Form.Item>
           </Col>
         </Row>
       </Card>
 
-      <Card title="Water Usage" className="mb-6">
+      <Card title="Water Usage" className="mb-6 shadow-sm">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="water_consumption"
               label={
-                <span>
-                  Water Consumption (m³)
-                  <Tooltip title="Total water consumption in the process">
-                    <InfoCircleOutlined className="ml-1" />
-                  </Tooltip>
-                </span>
+                <FormLabel 
+                  label="Water Consumption (m³)" 
+                  tooltip="Total water used in the process including cleaning and cooling"
+                />
               }
-              rules={[{ required: true, message: 'Please enter water consumption' }]}
+              rules={[{ required: true, type: 'number', min: 0 }]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={0.1}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+                className="text-right"
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="wastewater_generation"
               label={
-                <span>
-                  Wastewater Generation (m³)
-                  <Tooltip title="Volume of wastewater generated">
-                    <InfoCircleOutlined className="ml-1" />
-                  </Tooltip>
-                </span>
+                <FormLabel 
+                  label="Wastewater Generation (m³)" 
+                  tooltip="Volume of contaminated water requiring treatment"
+                />
               }
               rules={[
-                { required: true, message: 'Please enter wastewater generation' },
+                { required: true, type: 'number', min: 0 },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     if (!value || getFieldValue('water_consumption') >= value) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('Wastewater cannot exceed water consumption'));
+                    return Promise.reject('Wastewater cannot exceed water consumption');
                   },
                 }),
               ]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={0.1}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+                className="text-right"
+              />
             </Form.Item>
           </Col>
         </Row>
       </Card>
 
-      <Card title="Waste Management" className="mb-6">
+      <Card title="Waste Management" className="mb-6 shadow-sm">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="solid_waste"
               label={
-                <span>
-                  Solid Waste Generation (kg)
-                  <Tooltip title="Amount of solid waste produced">
-                    <InfoCircleOutlined className="ml-1" />
-                  </Tooltip>
-                </span>
+                <FormLabel 
+                  label="Solid Waste (kg)" 
+                  tooltip="Total solid waste generated during processing"
+                />
               }
-              rules={[{ required: true, message: 'Please enter solid waste generation' }]}
+              rules={[{ required: true, type: 'number', min: 0 }]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={1}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+                className="text-right"
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="recyclable_waste"
               label={
-                <span>
-                  Recyclable Waste (kg)
-                  <Tooltip title="Amount of waste that can be recycled">
-                    <InfoCircleOutlined className="ml-1" />
-                  </Tooltip>
-                </span>
+                <FormLabel 
+                  label="Recyclable Waste (kg)" 
+                  tooltip="Amount of waste suitable for recycling or reuse"
+                />
               }
               rules={[
-                { required: true, message: 'Please enter recyclable waste amount' },
+                { required: true, type: 'number', min: 0 },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     if (!value || getFieldValue('solid_waste') >= value) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('Recyclable waste cannot exceed total solid waste'));
+                    return Promise.reject('Recyclable waste cannot exceed total solid waste');
                   },
                 }),
               ]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={1}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+                className="text-right"
+              />
             </Form.Item>
           </Col>
         </Row>
       </Card>
 
-      <Card title="Transportation" className="mb-6">
+      <Card title="Transportation" className="mb-6 shadow-sm">
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="transport_distance"
               label={
-                <span>
-                  Transport Distance (km)
-                  <Tooltip title="Total transportation distance for materials">
-                    <InfoCircleOutlined className="ml-1" />
-                  </Tooltip>
-                </span>
+                <FormLabel 
+                  label="Transport Distance (km)" 
+                  tooltip="Total distance for material transportation"
+                />
               }
-              rules={[{ required: true, message: 'Please enter transport distance' }]}
+              rules={[{ required: true, type: 'number', min: 0 }]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={10}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+                className="text-right"
+              />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="transport_load"
               label={
-                <span>
-                  Transport Load (tons)
-                  <Tooltip title="Total mass of materials transported">
-                    <InfoCircleOutlined className="ml-1" />
-                  </Tooltip>
-                </span>
+                <FormLabel 
+                  label="Transport Load (tons)" 
+                  tooltip="Total mass of materials being transported"
+                />
               }
-              rules={[{ required: true, message: 'Please enter transport load' }]}
+              rules={[{ required: true, type: 'number', min: 0 }]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber
+                min={0}
+                step={0.1}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+                className="text-right"
+              />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              name="equipment_mass"
+              label={
+                <FormLabel 
+                  label="Equipment Mass (kg)" 
+                  tooltip="Total mass of process equipment"
+                />
+              }
+              rules={[{ required: true, type: 'number', min: 0 }]}
+            >
+              <InputNumber
+                min={0}
+                step={100}
+                formatter={(value) => formatNumber(value as number)}
+                parser={(value: string | undefined): number => value ? parseFloat(value.replace(/[^\d.]/g, '')) : 0}
+                style={{ width: '100%' }}
+                className="text-right"
+              />
             </Form.Item>
           </Col>
         </Row>
       </Card>
 
-      <div className="flex justify-end mt-6">
+      <div className="flex justify-end gap-4 mt-6">
+        <Button 
+          onClick={() => form.resetFields()} 
+          disabled={isSubmitting}
+        >
+          Reset
+        </Button>
         <Button
           type="primary"
           htmlType="submit"
           loading={isSubmitting}
           size="large"
         >
-          Start Analysis
+          Complete Analysis Setup
         </Button>
       </div>
     </Form>

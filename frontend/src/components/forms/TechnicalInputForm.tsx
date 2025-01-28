@@ -1,18 +1,34 @@
 "use client";
 
 import React from 'react';
-import { Form, Input, Select, InputNumber, Row, Col, Card, Divider } from 'antd';
+import { Form, Input, Select, InputNumber, Row, Col, Card, Divider, Button } from 'antd';
 import { FormInstance } from 'antd/lib/form';
 import { PROCESS_TYPES, DEFAULT_PROCESS_ANALYSIS } from '../../config/constants';
+import { ProcessType } from '@/types/process';
 
 interface TechnicalInputFormProps {
-  form: FormInstance;
+  onSubmit: (values: any) => Promise<void>;
+  isSubmitting?: boolean;
 }
 
-const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({ form }) => {
+const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({
+  onSubmit,
+  isSubmitting = false,
+}) => {
+  const [form] = Form.useForm();
+
+  const handleSubmit = async (values: any) => {
+    await onSubmit(values);
+  };
+
   return (
-    <div className="technical-input-form">
-      <Card title="Process Configuration">
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={handleSubmit}
+      className="max-w-4xl mx-auto"
+    >
+      <Card title="Process Configuration" className="mb-6">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -20,7 +36,13 @@ const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({ form }) => {
               label="Process Type"
               rules={[{ required: true, message: 'Please select process type' }]}
             >
-              <Select options={PROCESS_TYPES} />
+              <Select>
+                {Object.values(ProcessType).map((type) => (
+                  <Select.Option key={type} value={type}>
+                    {type}
+                  </Select.Option>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
         </Row>
@@ -30,7 +52,6 @@ const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({ form }) => {
               name="air_flow"
               label="Air Flow (m³/h)"
               rules={[{ required: true, message: 'Please enter air flow rate' }]}
-              initialValue={DEFAULT_PROCESS_ANALYSIS.air_flow}
             >
               <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
@@ -40,7 +61,6 @@ const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({ form }) => {
               name="classifier_speed"
               label="Classifier Speed (rpm)"
               rules={[{ required: true, message: 'Please enter classifier speed' }]}
-              initialValue={DEFAULT_PROCESS_ANALYSIS.classifier_speed}
             >
               <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
@@ -48,9 +68,7 @@ const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({ form }) => {
         </Row>
       </Card>
 
-      <Divider />
-
-      <Card title="Mass Balance">
+      <Card title="Mass Balance" className="mb-6">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -89,9 +107,7 @@ const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({ form }) => {
         </Row>
       </Card>
 
-      <Divider />
-
-      <Card title="Content Analysis">
+      <Card title="Content Analysis" className="mb-6">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -158,9 +174,7 @@ const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({ form }) => {
         </Row>
       </Card>
 
-      <Divider />
-
-      <Card title="Particle Size Distribution">
+      <Card title="Particle Size Distribution" className="mb-6">
         <Row gutter={16}>
           <Col span={8}>
             <Form.Item
@@ -219,7 +233,35 @@ const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({ form }) => {
           </Col>
         </Row>
       </Card>
-    </div>
+
+      <Card title="Energy Parameters" className="mb-6">
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="thermal_ratio"
+              label="Thermal Energy Ratio"
+              rules={[
+                { required: true, message: 'Please enter thermal ratio' },
+                { type: 'number', min: 0, max: 1, message: 'Ratio must be between 0 and 1' }
+              ]}
+            >
+              <InputNumber min={0} max={1} step={0.01} style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+        </Row>
+      </Card>
+
+      <div className="flex justify-end mt-6">
+        <Button
+          type="primary"
+          htmlType="submit"
+          loading={isSubmitting}
+          size="large"
+        >
+          Start Analysis
+        </Button>
+      </div>
+    </Form>
   );
 };
 

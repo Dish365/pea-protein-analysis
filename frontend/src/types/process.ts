@@ -1,3 +1,5 @@
+import { TechnicalParameters } from './technical';
+
 export enum ProcessType {
   BASELINE = 'baseline',
   RF = 'rf',
@@ -42,48 +44,55 @@ export interface IndirectFactor {
   percentage: number;
 }
 
-export interface ProcessAnalysis {
-  // Basic Info
-  id?: number;
-  process_type: ProcessType;
-  timestamp?: string;
-  status?: ProcessStatus;
-  progress?: number;
-
-  // Technical Analysis Inputs
-  air_flow: number;
-  classifier_speed: number;
-  input_mass: number;
-  output_mass: number;
-  initial_protein_content: number;
-  final_protein_content: number;
-  initial_moisture_content: number;
-  final_moisture_content: number;
-  d10_particle_size: number;
-  d50_particle_size: number;
-  d90_particle_size: number;
-
-  // Economic Analysis Inputs
+export interface ResourceConfiguration {
   equipment: Equipment[];
+  utilities: Utility[];
+  raw_materials: RawMaterial[];
+  labor_config: LaborConfig;
+  indirect_factors: IndirectFactor[];
+}
+
+export interface AllocationConfiguration {
+  allocation_method: 'economic' | 'physical' | 'hybrid';
+  hybrid_weights: Record<string, number>;
+}
+
+export interface RiskConfiguration {
+  sensitivity_range: number;
+  steps: number;
+}
+
+export interface ProcessAnalysis extends 
+  TechnicalParameters,
+  ResourceConfiguration,
+  AllocationConfiguration,
+  RiskConfiguration {
+  
+  // Basic Info
+  id: number;
+  process_type: ProcessType;
+  timestamp: string;
+  status: ProcessStatus;
+  progress: number;
+
+  // Equipment and Costs
   equipment_cost: number;
   maintenance_cost: number;
   installation_factor: number;
   indirect_costs_factor: number;
   maintenance_factor: number;
-  indirect_factors: IndirectFactor[];
+
+  // Operating Costs
   raw_material_cost: number;
   utility_cost: number;
   labor_cost: number;
-  utilities: Utility[];
-  raw_materials: RawMaterial[];
-  labor_config: LaborConfig;
+
+  // Financial Parameters
   project_duration: number;
   discount_rate: number;
   production_volume: number;
   revenue_per_year: number;
   cash_flows: number[];
-  sensitivity_range: number;
-  steps: number;
 
   // Environmental Analysis
   electricity_consumption: number;
@@ -92,22 +101,10 @@ export interface ProcessAnalysis {
   transport_consumption: number;
   equipment_mass: number;
   thermal_ratio: number;
-  energy_consumption: {
-    electricity: number;
-    cooling: number;
-  };
-  production_data: {
-    input_mass: number;
-    output_mass: number;
-    production_volume: number;
-  };
-  product_values: {
-    main_product: number;
-    waste_product: number;
-  };
-  allocation_method: 'economic' | 'physical' | 'hybrid';
-  hybrid_weights: {
-    physical: number;
-    economic: number;
-  };
+
+  // Production Data
+  energy_consumption: Record<string, number>;
+  production_data: Record<string, any>;
+  product_values: Record<string, number>;
 }
+

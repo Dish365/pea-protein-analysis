@@ -1,5 +1,5 @@
 import { ProcessAnalysis } from './process';
-import { AnalysisResult } from './analysis';
+import { AnalysisResult, AnalysisSummary } from './analysis';
 
 // API Response Types
 export interface ApiResponse<T> {
@@ -30,7 +30,7 @@ export interface ProcessCreateResponse {
   process_id: number;
   status: string;
   message?: string;
-  summary?: AnalysisResult['summary'];
+  summary?: AnalysisSummary;
 }
 
 export interface ProcessStatusResponse {
@@ -39,7 +39,13 @@ export interface ProcessStatusResponse {
   message?: string;
 }
 
-export interface ProcessListResponse extends Array<ProcessAnalysis> {}
+export interface ProcessListResponse {
+  items: ProcessAnalysis[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
 
 export interface ProcessDetailResponse extends ProcessAnalysis {
   results?: AnalysisResult;

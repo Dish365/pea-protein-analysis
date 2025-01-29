@@ -1,112 +1,166 @@
 "use client";
 
 import React from 'react';
-import { Card, Statistic, Row, Col, Progress, Tooltip } from 'antd';
-import { DollarOutlined } from '@ant-design/icons';
+import { Card, Statistic, Row, Col, Progress, Tooltip, Tabs } from 'antd';
+import { DollarOutlined, BuildOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { formatCurrency } from '@/lib/formatters';
 
 interface CostBreakdownProps {
-  costs: {
-    equipment: number;
-    maintenance: number;
-    rawMaterial: number;
-    utilities: number;
-    labor: number;
-    indirect: number;
+  capex: {
+    total_capex: number;
+    equipment_cost: number;
+    installation_cost: number;
+    indirect_cost: number;
   };
-  totalCost: number;
-  unitCost: number;
+  opex: {
+    total_opex: number;
+    utilities_cost: number;
+    materials_cost: number;
+    labor_cost: number;
+    maintenance_cost: number;
+  };
+  totalInvestment: number;
+  annualCosts: number;
 }
 
 const CostBreakdown: React.FC<CostBreakdownProps> = ({
-  costs,
-  totalCost,
-  unitCost,
+  capex,
+  opex,
+  totalInvestment,
+  annualCosts,
 }) => {
-  const costItems = [
+  const capexItems = [
     {
       title: 'Equipment',
-      value: costs.equipment,
+      value: capex.equipment_cost,
       color: '#1890ff',
-      tooltip: 'Annual equipment cost including installation',
+      tooltip: 'Base equipment cost',
     },
     {
-      title: 'Maintenance',
-      value: costs.maintenance,
+      title: 'Installation',
+      value: capex.installation_cost,
       color: '#52c41a',
-      tooltip: 'Annual maintenance cost',
+      tooltip: 'Equipment installation cost',
     },
     {
-      title: 'Raw Material',
-      value: costs.rawMaterial,
+      title: 'Indirect Costs',
+      value: capex.indirect_cost,
       color: '#faad14',
-      tooltip: 'Annual raw material cost',
+      tooltip: 'Engineering, construction, and contingency costs',
     },
+  ];
+
+  const opexItems = [
     {
       title: 'Utilities',
-      value: costs.utilities,
+      value: opex.utilities_cost,
       color: '#722ed1',
-      tooltip: 'Annual utility costs',
+      tooltip: 'Annual utility costs (electricity, water, etc.)',
+    },
+    {
+      title: 'Materials',
+      value: opex.materials_cost,
+      color: '#eb2f96',
+      tooltip: 'Annual raw material costs',
     },
     {
       title: 'Labor',
-      value: costs.labor,
-      color: '#eb2f96',
+      value: opex.labor_cost,
+      color: '#f5222d',
       tooltip: 'Annual labor costs',
     },
     {
-      title: 'Indirect',
-      value: costs.indirect,
-      color: '#f5222d',
-      tooltip: 'Annual indirect costs',
+      title: 'Maintenance',
+      value: opex.maintenance_cost,
+      color: '#fa541c',
+      tooltip: 'Annual maintenance costs',
     },
   ];
 
   return (
     <Card title="Cost Analysis" className="h-full">
-      <Row gutter={[16, 16]} className="mb-6">
-        <Col xs={24} sm={12}>
-          <Tooltip title="Total annual cost of operation">
-            <Statistic
-              title="Total Annual Cost"
-              value={totalCost}
-              precision={2}
-              prefix={<DollarOutlined />}
-              formatter={value => formatCurrency(value as number)}
-            />
-          </Tooltip>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Tooltip title="Cost per unit of production">
-            <Statistic
-              title="Unit Cost"
-              value={unitCost}
-              precision={2}
-              prefix={<DollarOutlined />}
-              formatter={value => formatCurrency(value as number)}
-              suffix="/unit"
-            />
-          </Tooltip>
-        </Col>
-      </Row>
-
-      <div className="cost-breakdown">
-        {costItems.map((item, index) => (
-          <Tooltip key={index} title={item.tooltip}>
-            <div className="mb-4">
-              <div className="flex justify-between mb-1">
-                <span>{item.title}</span>
-                <span>{formatCurrency(item.value)} ({((item.value / totalCost) * 100).toFixed(1)}%)</span>
-              </div>
-              <Progress
-                percent={(item.value / totalCost) * 100}
-                strokeColor={item.color}
-                showInfo={false}
-              />
-            </div>
-          </Tooltip>
-        ))}
-      </div>
+      <Tabs
+        items={[
+          {
+            key: 'capex',
+            label: (
+              <span>
+                <BuildOutlined /> Capital Expenditure
+              </span>
+            ),
+            children: (
+              <>
+                <Statistic
+                  title="Total Investment"
+                  value={totalInvestment}
+                  prefix={<DollarOutlined />}
+                  formatter={value => formatCurrency(value as number)}
+                  className="mb-4"
+                />
+                <div className="cost-breakdown">
+                  {capexItems.map((item, index) => (
+                    <Tooltip key={index} title={item.tooltip}>
+                      <div className="mb-4">
+                        <div className="flex justify-between mb-1">
+                          <span>{item.title}</span>
+                          <span>
+                            {formatCurrency(item.value)} (
+                            {((item.value / totalInvestment) * 100).toFixed(1)}%)
+                          </span>
+                        </div>
+                        <Progress
+                          percent={(item.value / totalInvestment) * 100}
+                          strokeColor={item.color}
+                          showInfo={false}
+                        />
+                      </div>
+                    </Tooltip>
+                  ))}
+                </div>
+              </>
+            ),
+          },
+          {
+            key: 'opex',
+            label: (
+              <span>
+                <ThunderboltOutlined /> Operating Expenses
+              </span>
+            ),
+            children: (
+              <>
+                <Statistic
+                  title="Annual Operating Costs"
+                  value={annualCosts}
+                  prefix={<DollarOutlined />}
+                  formatter={value => formatCurrency(value as number)}
+                  className="mb-4"
+                />
+                <div className="cost-breakdown">
+                  {opexItems.map((item, index) => (
+                    <Tooltip key={index} title={item.tooltip}>
+                      <div className="mb-4">
+                        <div className="flex justify-between mb-1">
+                          <span>{item.title}</span>
+                          <span>
+                            {formatCurrency(item.value)} (
+                            {((item.value / annualCosts) * 100).toFixed(1)}%)
+                          </span>
+                        </div>
+                        <Progress
+                          percent={(item.value / annualCosts) * 100}
+                          strokeColor={item.color}
+                          showInfo={false}
+                        />
+                      </div>
+                    </Tooltip>
+                  ))}
+                </div>
+              </>
+            ),
+          },
+        ]}
+      />
     </Card>
   );
 };

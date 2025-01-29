@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
-import { Card, Table, Tooltip, Tag } from 'antd';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import { Card, Table, Tooltip, Tag, Row, Col, Statistic } from 'antd';
+import { QuestionCircleOutlined, DotChartOutlined, ColumnHeightOutlined, BarChartOutlined } from '@ant-design/icons';
 import { ColumnsType } from 'antd/es/table';
 
 interface ParticleSizeDisplayProps {
@@ -16,7 +16,7 @@ interface DataType {
   key: string;
   metric: string;
   value: number;
-  tooltip?: string;
+  tooltip: string;
   status?: {
     text: string;
     color: string;
@@ -36,7 +36,16 @@ const ParticleSizeDisplay: React.FC<ParticleSizeDisplayProps> = ({
     return { text: 'Poor', color: 'error' };
   };
 
+  const getParticleRange = (d10: number, d90: number) => {
+    const range = d90 - d10;
+    if (range <= 50) return { text: 'Narrow', color: 'success' };
+    if (range <= 100) return { text: 'Moderate', color: 'processing' };
+    if (range <= 150) return { text: 'Wide', color: 'warning' };
+    return { text: 'Very Wide', color: 'error' };
+  };
+
   const quality = getDistributionQuality(span);
+  const range = getParticleRange(d10, d90);
 
   const columns: ColumnsType<DataType> = [
     {
@@ -46,11 +55,9 @@ const ParticleSizeDisplay: React.FC<ParticleSizeDisplayProps> = ({
       render: (text: string, record) => (
         <span>
           {text}
-          {record.tooltip && (
-            <Tooltip title={record.tooltip}>
-              <QuestionCircleOutlined style={{ marginLeft: 8 }} />
-            </Tooltip>
-          )}
+          <Tooltip title={record.tooltip}>
+            <QuestionCircleOutlined style={{ marginLeft: 8 }} />
+          </Tooltip>
         </span>
       ),
     },
@@ -58,12 +65,14 @@ const ParticleSizeDisplay: React.FC<ParticleSizeDisplayProps> = ({
       title: 'Value',
       dataIndex: 'value',
       key: 'value',
+      align: 'right',
       render: (value: number) => `${value.toFixed(1)} μm`,
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
+      align: 'center',
       render: (status?: { text: string; color: string }) => {
         if (!status) return null;
         return <Tag color={status.color}>{status.text}</Tag>;
@@ -104,17 +113,63 @@ const ParticleSizeDisplay: React.FC<ParticleSizeDisplayProps> = ({
       title="Particle Size Distribution" 
       className="particle-size-card"
       extra={
-        <Tooltip title="Overall distribution quality">
-          <Tag color={quality.color}>{quality.text} Distribution</Tag>
-        </Tooltip>
+        <Row gutter={16} align="middle">
+          <Col>
+            <Tooltip title="Distribution quality">
+              <Tag color={quality.color} icon={<BarChartOutlined />}>
+                {quality.text} Distribution
+              </Tag>
+            </Tooltip>
+          </Col>
+          <Col>
+            <Tooltip title="Size range">
+              <Tag color={range.color} icon={<ColumnHeightOutlined />}>
+                {range.text} Range
+              </Tag>
+            </Tooltip>
+          </Col>
+        </Row>
       }
     >
-      <Table 
-        columns={columns} 
-        dataSource={data} 
-        pagination={false}
-        className="particle-size-table"
-      />
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={16}>
+          <Table 
+            columns={columns} 
+            dataSource={data} 
+            pagination={false}
+            size="small"
+            className="particle-size-table"
+          />
+        </Col>
+        <Col xs={24} lg={8}>
+          <Card className="summary-card">
+            <Statistic
+              title={
+                <span>
+                  Size Distribution Score
+                  <Tooltip title="Overall quality score based on span and range">
+                    <QuestionCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
+              value={Math.max(0, 100 - (span * 20))}
+              suffix="%"
+              prefix={<DotChartOutlined />}
+              valueStyle={{ 
+                color: quality.color === 'success' ? '#3f8600' : 
+                       quality.color === 'processing' ? '#1890ff' :
+                       quality.color === 'warning' ? '#faad14' : '#cf1322',
+                fontSize: '1.5rem'
+              }}
+            />
+            <div className="mt-4">
+              <Tooltip title="Ideal range: D90-D10 < 100μm">
+                <Tag color={range.color}>Range: {(d90 - d10).toFixed(1)} μm</Tag>
+              </Tooltip>
+            </div>
+          </Card>
+        </Col>
+      </Row>
     </Card>
   );
 };

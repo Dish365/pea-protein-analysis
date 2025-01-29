@@ -5,101 +5,108 @@ import { Card, Statistic, Row, Col, Progress, Tooltip } from 'antd';
 import { 
   DollarOutlined, 
   PercentageOutlined,
-  FieldTimeOutlined 
+  FieldTimeOutlined,
+  RiseOutlined 
 } from '@ant-design/icons';
 import { formatCurrency } from '@/lib/formatters';
 
 interface ProfitabilityMetricsProps {
   metrics: {
-    annualRevenue: number;
-    annualProfit: number;
+    npv: number;
     roi: number;
     paybackPeriod: number;
-    npv: number;
     irr: number;
   };
+  totalInvestment: number;
+  annualCosts: number;
 }
 
-const ProfitabilityMetrics: React.FC<ProfitabilityMetricsProps> = ({ metrics }) => {
-  const getROIStatus = (roi: number) => {
-    if (roi >= 25) return 'success';
-    if (roi >= 15) return 'normal';
-    return 'exception';
+const ProfitabilityMetrics: React.FC<ProfitabilityMetricsProps> = ({ 
+  metrics,
+  totalInvestment,
+  annualCosts
+}) => {
+  const getMetricStatus = (value: number, thresholds: { low: number; medium: number }) => {
+    if (value >= thresholds.medium) return { color: '#3f8600', status: 'success' as const };
+    if (value >= thresholds.low) return { color: '#faad14', status: 'normal' as const };
+    return { color: '#cf1322', status: 'exception' as const };
   };
 
-  const getPaybackStatus = (years: number) => {
-    if (years <= 2) return 'success';
-    if (years <= 4) return 'normal';
-    return 'exception';
-  };
+  const metrics_config = [
+    {
+      title: 'Net Present Value',
+      value: metrics.npv,
+      prefix: <DollarOutlined />,
+      formatter: (value: number) => formatCurrency(value),
+      tooltip: 'Present value of future cash flows minus initial investment',
+      thresholds: { low: 0, medium: totalInvestment * 0.2 }
+    },
+    {
+      title: 'Return on Investment',
+      value: metrics.roi,
+      prefix: <PercentageOutlined />,
+      suffix: '%',
+      tooltip: 'Percentage return on initial investment',
+      thresholds: { low: 15, medium: 25 }
+    },
+    {
+      title: 'Internal Rate of Return',
+      value: metrics.irr,
+      prefix: <RiseOutlined />,
+      suffix: '%',
+      tooltip: 'Discount rate that makes NPV zero',
+      thresholds: { low: 10, medium: 20 }
+    },
+    {
+      title: 'Payback Period',
+      value: metrics.paybackPeriod,
+      prefix: <FieldTimeOutlined />,
+      suffix: 'years',
+      tooltip: 'Time required to recover the investment',
+      thresholds: { low: 5, medium: 3 },
+      inverse: true
+    }
+  ];
 
   return (
     <Card title="Profitability Analysis" className="h-full">
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12}>
-          <Tooltip title="Annual revenue from operations">
-            <Card className="metric-card">
-              <Statistic
-                title="Annual Revenue"
-                value={metrics.annualRevenue}
-                precision={2}
-                prefix={<DollarOutlined />}
-                formatter={value => formatCurrency(value as number)}
-                valueStyle={{ color: '#3f8600' }}
-              />
-            </Card>
-          </Tooltip>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Tooltip title="Annual profit (Revenue - Costs)">
-            <Card className="metric-card">
-              <Statistic
-                title="Annual Profit"
-                value={metrics.annualProfit}
-                precision={2}
-                prefix={<DollarOutlined />}
-                formatter={value => formatCurrency(value as number)}
-                valueStyle={{ color: metrics.annualProfit >= 0 ? '#3f8600' : '#cf1322' }}
-              />
-            </Card>
-          </Tooltip>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Tooltip title="Return on Investment">
-            <Card className="metric-card">
-              <Statistic
-                title="ROI"
-                value={metrics.roi}
-                precision={1}
-                prefix={<PercentageOutlined />}
-                suffix="%"
-                valueStyle={{ color: metrics.roi >= 15 ? '#3f8600' : '#cf1322' }}
-              />
-              <Progress
-                percent={Math.min(100, metrics.roi)}
-                status={getROIStatus(metrics.roi)}
-              />
-            </Card>
-          </Tooltip>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Tooltip title="Time required to recover the investment">
-            <Card className="metric-card">
-              <Statistic
-                title="Payback Period"
-                value={metrics.paybackPeriod}
-                precision={1}
-                prefix={<FieldTimeOutlined />}
-                suffix="years"
-                valueStyle={{ color: metrics.paybackPeriod <= 4 ? '#3f8600' : '#cf1322' }}
-              />
-              <Progress
-                percent={Math.min(100, (5 / metrics.paybackPeriod) * 100)}
-                status={getPaybackStatus(metrics.paybackPeriod)}
-              />
-            </Card>
-          </Tooltip>
-        </Col>
+        {metrics_config.map((metric, index) => {
+          const status = getMetricStatus(
+            metric.value,
+            metric.inverse ? 
+              { low: metric.thresholds.medium, medium: metric.thresholds.low } :
+              metric.thresholds
+          );
+
+          return (
+            <Col xs={24} sm={12} key={index}>
+              <Tooltip title={metric.tooltip}>
+                <Card className="metric-card">
+                  <Statistic
+                    title={metric.title}
+                    value={metric.value}
+                    precision={2}
+                    prefix={metric.prefix}
+                    suffix={metric.suffix}
+                    valueStyle={{ color: status.color }}
+                  />
+                  <Progress
+                    percent={
+                      metric.inverse ?
+                        Math.max(0, 100 - (metric.value / metric.thresholds.low) * 100) :
+                        Math.min(100, (metric.value / metric.thresholds.medium) * 100)
+                    }
+                    status={status.status}
+                    strokeColor={status.color}
+                    size="small"
+                    className="mt-2"
+                  />
+                </Card>
+              </Tooltip>
+            </Col>
+          );
+        })}
       </Row>
     </Card>
   );

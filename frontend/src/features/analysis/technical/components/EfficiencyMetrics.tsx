@@ -5,22 +5,22 @@ import { Card, Statistic, Row, Col, Progress, Tooltip } from 'antd';
 import { 
   ThunderboltOutlined, 
   DeploymentUnitOutlined, 
-  DashboardOutlined,
-  AimOutlined 
+  FilterOutlined,
+  PercentageOutlined 
 } from '@ant-design/icons';
 
 interface EfficiencyMetricsProps {
   massEfficiency: number;
   processEfficiency: number;
-  throughputRate: number;
-  classifierEfficiency: number;
+  separationEfficiency: number;
+  proteinYield: number;
 }
 
 const EfficiencyMetrics: React.FC<EfficiencyMetricsProps> = ({
   massEfficiency,
   processEfficiency,
-  throughputRate,
-  classifierEfficiency,
+  separationEfficiency,
+  proteinYield,
 }) => {
   const metrics = [
     {
@@ -28,7 +28,7 @@ const EfficiencyMetrics: React.FC<EfficiencyMetricsProps> = ({
       value: massEfficiency,
       icon: <DeploymentUnitOutlined />,
       suffix: '%',
-      tooltip: 'Ratio of output mass to input mass',
+      tooltip: 'Ratio of recovered mass to input mass',
       threshold: 85,
     },
     {
@@ -36,23 +36,23 @@ const EfficiencyMetrics: React.FC<EfficiencyMetricsProps> = ({
       value: processEfficiency,
       icon: <ThunderboltOutlined />,
       suffix: '%',
-      tooltip: 'Overall process efficiency',
+      tooltip: 'Overall process performance efficiency',
       threshold: 90,
     },
     {
-      title: 'Throughput Rate',
-      value: throughputRate,
-      icon: <DashboardOutlined />,
-      suffix: 'kg/h',
-      tooltip: 'Material processing rate',
+      title: 'Separation Efficiency',
+      value: separationEfficiency,
+      icon: <FilterOutlined />,
+      suffix: '%',
+      tooltip: 'Efficiency of protein separation process',
       threshold: 80,
     },
     {
-      title: 'Classifier Efficiency',
-      value: classifierEfficiency,
-      icon: <AimOutlined />,
+      title: 'Protein Yield',
+      value: proteinYield,
+      icon: <PercentageOutlined />,
       suffix: '%',
-      tooltip: 'Classifier performance efficiency',
+      tooltip: 'Total protein yield from the process',
       threshold: 95,
     },
   ];
@@ -71,13 +71,16 @@ const EfficiencyMetrics: React.FC<EfficiencyMetricsProps> = ({
                   suffix={metric.suffix}
                   prefix={metric.icon}
                   valueStyle={{ 
-                    color: metric.value >= metric.threshold ? '#3f8600' : '#cf1322'
+                    color: metric.value >= metric.threshold ? '#3f8600' : '#cf1322',
+                    fontSize: '1.5rem'
                   }}
                 />
                 <Progress
-                  percent={metric.value}
+                  percent={Math.min(100, Math.max(0, metric.value))}
                   status={metric.value >= metric.threshold ? 'success' : 'normal'}
                   strokeColor={metric.value >= metric.threshold ? '#52c41a' : '#1890ff'}
+                  size="small"
+                  className="mt-2"
                 />
               </Card>
             </Tooltip>

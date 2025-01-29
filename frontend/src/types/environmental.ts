@@ -26,28 +26,19 @@ export interface EnvironmentalParameters {
 }
 
 export interface EnvironmentalAnalysisResult {
-  emissions: {
-    electricity: number;
-    water: number;
-    transport: number;
-    waste: number;
-    total: number;
+  impact_assessment: {
+    gwp: number;
+    hct: number;
+    frs: number;
   };
-  resources: {
-    energy_consumption: number;
-    water_consumption: number;
-    material_efficiency: number;
-    waste_generation: number;
+  consumption_metrics: {
+    electricity: number | null;
+    cooling: number | null;
+    water: number | null;
   };
-  impacts: {
-    carbon_footprint: number;
-    water_footprint: number;
-    energy_intensity: number;
-    waste_intensity: number;
-  };
-  metrics: {
-    sustainabilityScore: number; // 0-100
-    circularityIndex: number; // 0-1
-    resourceEfficiency: number; // %
+  allocated_impacts: {
+    method: string;
+    factors: Record<string, number>;
+    results: Record<string, Record<string, number>>;
   };
 } 

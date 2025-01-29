@@ -1,84 +1,101 @@
 "use client";
 
 import React from 'react';
-import { Card, Progress, Tooltip } from 'antd';
-import { ThunderboltOutlined, WaterOutlined, CarOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Card, Progress, Tooltip, Divider } from 'antd';
+import { ThunderboltOutlined, DropboxOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { formatNumber } from '@/lib/formatters';
 
 interface EmissionsBreakdownProps {
-  emissions: {
-    electricity: number;
-    water: number;
-    transport: number;
-    waste: number;
-    total: number;
+  impactAssessment: {
+    gwp: number;
+    hct: number;
+    frs: number;
   };
+  processType: string;
 }
 
-const EmissionsBreakdown: React.FC<EmissionsBreakdownProps> = ({ emissions }) => {
-  const emissionSources = [
+const EmissionsBreakdown: React.FC<EmissionsBreakdownProps> = ({ 
+  impactAssessment,
+  processType 
+}) => {
+  const metrics = [
     {
-      key: 'electricity',
-      label: 'Electricity',
-      value: emissions.electricity,
+      key: 'gwp',
+      label: 'Global Warming Potential',
+      value: impactAssessment.gwp,
       icon: <ThunderboltOutlined />,
       color: '#1890ff',
-      unit: 'kg CO₂e',
+      unit: 'kg CO₂eq',
+      description: 'Carbon dioxide equivalent emissions'
     },
     {
-      key: 'water',
-      label: 'Water Usage',
-      value: emissions.water,
-      icon: <WaterOutlined />,
-      color: '#13c2c2',
-      unit: 'kg CO₂e',
-    },
-    {
-      key: 'transport',
-      label: 'Transportation',
-      value: emissions.transport,
-      icon: <CarOutlined />,
+      key: 'hct',
+      label: 'Human Carcinogenic Toxicity',
+      value: impactAssessment.hct,
+      icon: <ExperimentOutlined />,
       color: '#722ed1',
-      unit: 'kg CO₂e',
+      unit: 'CTUh',
+      description: 'Comparative Toxic Units for human health'
     },
     {
-      key: 'waste',
-      label: 'Waste Management',
-      value: emissions.waste,
-      icon: <DeleteOutlined />,
-      color: '#eb2f96',
-      unit: 'kg CO₂e',
-    },
+      key: 'frs',
+      label: 'Fossil Resource Scarcity',
+      value: impactAssessment.frs,
+      icon: <DropboxOutlined />,
+      color: '#13c2c2',
+      unit: 'kg oil eq',
+      description: 'Oil equivalent of fossil resources used'
+    }
   ];
 
+  const totalImpact = Object.values(impactAssessment).reduce((a, b) => a + b, 0);
+
   return (
-    <Card title="Carbon Emissions Breakdown" className="h-full">
-      {emissionSources.map(source => {
-        const percentage = (source.value / emissions.total) * 100;
+    <Card 
+      title="Environmental Impact Assessment" 
+      className="h-full"
+      extra={
+        <Tooltip title="Process type">
+          <span className="text-sm text-gray-500">{processType.toUpperCase()}</span>
+        </Tooltip>
+      }
+    >
+      {metrics.map(metric => {
+        const percentage = (metric.value / totalImpact) * 100;
         return (
-          <div key={source.key} className="mb-4">
-            <Tooltip title={`${source.value.toFixed(2)} ${source.unit}`}>
+          <div key={metric.key} className="mb-4">
+            <Tooltip title={metric.description}>
               <div className="flex justify-between mb-1">
-                <span>
-                  {source.icon} {source.label}
+                <span className="flex items-center">
+                  {metric.icon} <span className="ml-2">{metric.label}</span>
                 </span>
-                <span>{percentage.toFixed(1)}%</span>
+                <span className="font-medium">
+                  {formatNumber(metric.value)} {metric.unit}
+                </span>
               </div>
               <Progress
                 percent={percentage}
-                strokeColor={source.color}
+                strokeColor={metric.color}
                 showInfo={false}
+                strokeWidth={8}
+                className="custom-progress"
               />
             </Tooltip>
           </div>
         );
       })}
-      <div className="mt-6 pt-4 border-t">
-        <div className="flex justify-between">
-          <span className="font-semibold">Total Emissions</span>
-          <span className="font-semibold">
-            {emissions.total.toFixed(2)} kg CO₂e
-          </span>
-        </div>
+      
+      <Divider className="my-4" />
+      
+      <div className="text-center">
+        <Tooltip title="Total environmental impact score">
+          <div className="text-lg font-medium">
+            Total Impact Score
+          </div>
+          <div className="text-3xl font-bold text-primary-600">
+            {formatNumber(totalImpact)}
+          </div>
+        </Tooltip>
       </div>
     </Card>
   );

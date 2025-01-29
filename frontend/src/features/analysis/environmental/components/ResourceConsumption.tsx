@@ -1,78 +1,95 @@
 "use client";
 
 import React from 'react';
-import { Card, Statistic, Row, Col, Tooltip } from 'antd';
+import { Card, Statistic, Row, Col, Tooltip, Progress } from 'antd';
 import { 
   ThunderboltOutlined, 
-  WaterOutlined,
-  ReconciliationOutlined,
-  DeleteOutlined 
+  DropboxOutlined,
+  ExperimentOutlined
 } from '@ant-design/icons';
+import { formatNumber } from '@/lib/formatters';
 
 interface ResourceConsumptionProps {
-  resources: {
-    energyConsumption: number;
-    waterConsumption: number;
-    materialEfficiency: number;
-    wasteGeneration: number;
+  consumptionMetrics: {
+    electricity: number | null;
+    cooling: number | null;
+    water: number | null;
   };
+  processType: string;
 }
 
-const ResourceConsumption: React.FC<ResourceConsumptionProps> = ({ resources }) => {
+const ResourceConsumption: React.FC<ResourceConsumptionProps> = ({ 
+  consumptionMetrics,
+  processType 
+}) => {
   const metrics = [
     {
-      key: 'energy',
-      title: 'Energy Consumption',
-      value: resources.energyConsumption,
+      key: 'electricity',
+      title: 'Electricity Consumption',
+      value: consumptionMetrics.electricity,
       suffix: 'kWh',
       icon: <ThunderboltOutlined />,
-      tooltip: 'Total energy consumed in the process',
+      tooltip: 'Total electrical energy consumed',
       color: '#1890ff',
+      visible: processType === 'rf'
+    },
+    {
+      key: 'cooling',
+      title: 'Cooling Energy',
+      value: consumptionMetrics.cooling,
+      suffix: 'kWh',
+      icon: <ExperimentOutlined />,
+      tooltip: 'Total cooling energy required',
+      color: '#13c2c2',
+      visible: processType === 'ir'
     },
     {
       key: 'water',
-      title: 'Water Consumption',
-      value: resources.waterConsumption,
+      title: 'Water Usage',
+      value: consumptionMetrics.water,
       suffix: 'm³',
-      icon: <WaterOutlined />,
-      tooltip: 'Total water used in the process',
-      color: '#13c2c2',
-    },
-    {
-      key: 'efficiency',
-      title: 'Material Efficiency',
-      value: resources.materialEfficiency,
-      suffix: '%',
-      icon: <ReconciliationOutlined />,
-      tooltip: 'Percentage of input material effectively used',
+      icon: <DropboxOutlined />,
+      tooltip: 'Total water consumption',
       color: '#52c41a',
-    },
-    {
-      key: 'waste',
-      title: 'Waste Generation',
-      value: resources.wasteGeneration,
-      suffix: 'kg',
-      icon: <DeleteOutlined />,
-      tooltip: 'Total waste generated during the process',
-      color: '#eb2f96',
-    },
-  ];
+      visible: true
+    }
+  ].filter(metric => metric.visible);
 
   return (
-    <Card title="Resource Consumption" className="h-full">
+    <Card 
+      title="Resource Consumption" 
+      className="h-full"
+      extra={
+        <Tooltip title="Process specific consumption">
+          <span className="text-sm text-gray-500">{processType.toUpperCase()}</span>
+        </Tooltip>
+      }
+    >
       <Row gutter={[16, 16]}>
         {metrics.map(metric => (
-          <Col xs={12} key={metric.key}>
+          <Col xs={24} sm={12} key={metric.key}>
             <Tooltip title={metric.tooltip}>
-              <Card className="metric-card">
+              <Card className="resource-metric-card">
                 <Statistic
-                  title={metric.title}
-                  value={metric.value}
-                  precision={2}
-                  suffix={metric.suffix}
-                  prefix={metric.icon}
+                  title={
+                    <span className="flex items-center">
+                      {metric.icon}
+                      <span className="ml-2">{metric.title}</span>
+                    </span>
+                  }
+                  value={metric.value !== null ? formatNumber(metric.value) : 'N/A'}
+                  suffix={metric.value !== null ? metric.suffix : ''}
                   valueStyle={{ color: metric.color }}
                 />
+                {metric.value !== null && (
+                  <Progress 
+                    percent={75} // You can calculate this based on benchmarks
+                    strokeColor={metric.color}
+                    showInfo={false}
+                    size="small"
+                    className="mt-2"
+                  />
+                )}
               </Card>
             </Tooltip>
           </Col>

@@ -1,46 +1,82 @@
 "use client";
 
 import React from 'react';
-import { Card, Progress, Row, Col, Tooltip } from 'antd';
+import { Card, Progress, Row, Col, Tooltip, Statistic } from 'antd';
 import { CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { formatNumber } from '@/lib/formatters';
 
 interface SustainabilityScoreProps {
-  metrics: {
-    sustainabilityScore: number;
-    circularityIndex: number;
-    resourceEfficiency: number;
+  impacts: {
+    gwp: number;
+    hct: number;
+    frs: number;
   };
+  processType: string;
 }
 
-const SustainabilityScore: React.FC<SustainabilityScoreProps> = ({ metrics }) => {
-  const getScoreColor = (score: number, type: 'score' | 'circularity' | 'efficiency') => {
-    const thresholds = {
-      score: { good: 70, medium: 50 },
-      circularity: { good: 0.7, medium: 0.5 },
-      efficiency: { good: 70, medium: 50 },
+const SustainabilityScore: React.FC<SustainabilityScoreProps> = ({ 
+  impacts,
+  processType 
+}) => {
+  // Calculate sustainability metrics based on impacts
+  const calculateMetrics = () => {
+    const benchmarks = {
+      baseline: { gwp: 100, hct: 0.1, frs: 50 },
+      rf: { gwp: 90, hct: 0.08, frs: 45 },
+      ir: { gwp: 95, hct: 0.09, frs: 47 }
     };
 
-    const threshold = thresholds[type];
-    if (type === 'circularity') {
-      return score >= threshold.good ? '#52c41a' : 
-             score >= threshold.medium ? '#faad14' : '#f5222d';
-    }
-    return score >= threshold.good ? '#52c41a' : 
-           score >= threshold.medium ? '#faad14' : '#f5222d';
+    const benchmark = benchmarks[processType as keyof typeof benchmarks] || benchmarks.baseline;
+    
+    // Calculate relative scores (0-100)
+    const gwpScore = Math.max(0, 100 * (1 - impacts.gwp / benchmark.gwp));
+    const hctScore = Math.max(0, 100 * (1 - impacts.hct / benchmark.hct));
+    const frsScore = Math.max(0, 100 * (1 - impacts.frs / benchmark.frs));
+
+    // Calculate overall sustainability score
+    const sustainabilityScore = (gwpScore + hctScore + frsScore) / 3;
+
+    // Calculate circularity based on resource efficiency
+    const circularityIndex = Math.min(1, Math.max(0, 1 - (impacts.frs / benchmark.frs)));
+
+    // Calculate resource efficiency
+    const resourceEfficiency = Math.min(100, Math.max(0, 100 * (1 - impacts.gwp / benchmark.gwp)));
+
+    return {
+      sustainabilityScore,
+      circularityIndex,
+      resourceEfficiency
+    };
+  };
+
+  const metrics = calculateMetrics();
+
+  const getScoreColor = (score: number) => {
+    if (score >= 70) return '#52c41a';
+    if (score >= 50) return '#faad14';
+    return '#f5222d';
   };
 
   return (
-    <Card title="Sustainability Assessment" className="h-full">
+    <Card 
+      title="Sustainability Assessment" 
+      className="h-full"
+      extra={
+        <Tooltip title="Process type">
+          <span className="text-sm text-gray-500">{processType.toUpperCase()}</span>
+        </Tooltip>
+      }
+    >
       <div className="text-center mb-6">
-        <Tooltip title="Overall sustainability score based on multiple factors">
+        <Tooltip title="Overall sustainability score based on environmental impacts">
           <div className="mb-4">
             <Progress
               type="dashboard"
-              percent={metrics.sustainabilityScore}
-              strokeColor={getScoreColor(metrics.sustainabilityScore, 'score')}
+              percent={Math.round(metrics.sustainabilityScore)}
+              strokeColor={getScoreColor(metrics.sustainabilityScore)}
               format={percent => (
                 <div>
-                  <div className="text-2xl">{percent}</div>
+                  <div className="text-2xl">{formatNumber(percent || 0)}</div>
                   <div className="text-xs">Sustainability Score</div>
                 </div>
               )}
@@ -51,28 +87,28 @@ const SustainabilityScore: React.FC<SustainabilityScoreProps> = ({ metrics }) =>
 
       <Row gutter={[16, 16]}>
         <Col span={12}>
-          <Tooltip title="Measure of material circularity in the process">
+          <Tooltip title="Measure of process circularity">
             <Card className="text-center">
-              <Progress
-                type="circle"
-                percent={metrics.circularityIndex * 100}
-                strokeColor={getScoreColor(metrics.circularityIndex, 'circularity')}
-                size={80}
+              <Statistic
+                title="Circularity Index"
+                value={metrics.circularityIndex}
+                precision={2}
+                valueStyle={{ color: getScoreColor(metrics.circularityIndex * 100) }}
+                suffix="/ 1.0"
               />
-              <div className="mt-2">Circularity Index</div>
             </Card>
           </Tooltip>
         </Col>
         <Col span={12}>
-          <Tooltip title="Overall resource utilization efficiency">
+          <Tooltip title="Resource utilization efficiency">
             <Card className="text-center">
-              <Progress
-                type="circle"
-                percent={metrics.resourceEfficiency}
-                strokeColor={getScoreColor(metrics.resourceEfficiency, 'efficiency')}
-                size={80}
+              <Statistic
+                title="Resource Efficiency"
+                value={metrics.resourceEfficiency}
+                precision={1}
+                valueStyle={{ color: getScoreColor(metrics.resourceEfficiency) }}
+                suffix="%"
               />
-              <div className="mt-2">Resource Efficiency</div>
             </Card>
           </Tooltip>
         </Col>
@@ -88,7 +124,9 @@ const SustainabilityScore: React.FC<SustainabilityScoreProps> = ({ metrics }) =>
           <span>
             {metrics.sustainabilityScore >= 70
               ? 'Process meets sustainability targets'
-              : 'Improvements needed to meet targets'}
+              : metrics.sustainabilityScore >= 50
+              ? 'Process needs minor improvements'
+              : 'Significant improvements needed'}
           </span>
         </div>
       </div>

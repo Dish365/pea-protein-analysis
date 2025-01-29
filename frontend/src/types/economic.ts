@@ -35,5 +35,7 @@ export interface EconomicAnalysisResult {
   profitability_analysis: {
     npv: number;
     roi: number;
+    payback_period: number;
+    irr: number;
   };
 } 

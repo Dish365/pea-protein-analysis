@@ -2,94 +2,86 @@
 
 import React from 'react';
 import { Card, Statistic, Row, Col, Progress, Tooltip } from 'antd';
-import { ExperimentOutlined, PercentageOutlined } from '@ant-design/icons';
+import { ExperimentOutlined, PercentageOutlined, ScissorOutlined } from '@ant-design/icons';
 
 interface ProteinRecoveryCardProps {
-  initialMass: number;
-  finalMass: number;
-  recoveryRate: number;
-  concentrationIncrease: number;
+  massRecovery: number;
+  contentRecovery: number;
+  yieldRecovery: number;
 }
 
 const ProteinRecoveryCard: React.FC<ProteinRecoveryCardProps> = ({
-  initialMass,
-  finalMass,
-  recoveryRate,
-  concentrationIncrease,
+  massRecovery,
+  contentRecovery,
+  yieldRecovery,
 }) => {
   const metrics = [
     {
-      title: 'Recovery Rate',
-      value: recoveryRate,
+      title: 'Mass Recovery',
+      value: massRecovery,
       icon: <ExperimentOutlined />,
       suffix: '%',
-      tooltip: 'Percentage of initial protein recovered in final product',
+      tooltip: 'Percentage of protein mass recovered',
       threshold: 90,
     },
     {
-      title: 'Concentration Increase',
-      value: concentrationIncrease,
+      title: 'Content Recovery',
+      value: contentRecovery,
       icon: <PercentageOutlined />,
       suffix: '%',
-      tooltip: 'Percentage increase in protein concentration',
-      threshold: 10,
+      tooltip: 'Protein content in recovered material',
+      threshold: 95,
+    },
+    {
+      title: 'Yield Recovery',
+      value: yieldRecovery,
+      icon: <ScissorOutlined />,
+      suffix: '%',
+      tooltip: 'Overall protein yield efficiency',
+      threshold: 85,
     },
   ];
 
   return (
-    <Card title="Protein Recovery Analysis" className="h-full">
+    <Card 
+      title="Protein Recovery Analysis" 
+      className="h-full"
+      extra={
+        <Tooltip title="Overall recovery performance">
+          <span className={`text-${yieldRecovery >= 85 ? 'success' : 'warning'}`}>
+            {yieldRecovery >= 85 ? 'Optimal' : 'Suboptimal'}
+          </span>
+        </Tooltip>
+      }
+    >
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12}>
-          <Tooltip title="Total protein mass before processing">
-            <Statistic
-              title="Initial Protein Mass"
-              value={initialMass}
-              precision={2}
-              suffix="kg"
-              prefix={<ExperimentOutlined />}
-            />
-          </Tooltip>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Tooltip title="Total protein mass after processing">
-            <Statistic
-              title="Final Protein Mass"
-              value={finalMass}
-              precision={2}
-              suffix="kg"
-              prefix={<ExperimentOutlined />}
-            />
-          </Tooltip>
-        </Col>
+        {metrics.map((metric, index) => (
+          <Col xs={24} key={index}>
+            <Tooltip title={metric.tooltip}>
+              <Card className="metric-card">
+                <Statistic
+                  title={metric.title}
+                  value={metric.value}
+                  precision={1}
+                  suffix={metric.suffix}
+                  prefix={metric.icon}
+                  valueStyle={{ 
+                    color: metric.value >= metric.threshold ? '#3f8600' : '#cf1322',
+                    fontSize: '1.5rem'
+                  }}
+                />
+                <Progress
+                  percent={Math.min(100, Math.max(0, metric.value))}
+                  status={metric.value >= metric.threshold ? 'success' : 'normal'}
+                  strokeColor={metric.value >= metric.threshold ? '#52c41a' : '#1890ff'}
+                  size="small"
+                  className="mt-2"
+                />
+              </Card>
+            </Tooltip>
+          </Col>
+        ))}
       </Row>
-
-      <div className="mt-6">
-        <Row gutter={[16, 16]}>
-          {metrics.map((metric, index) => (
-            <Col xs={24} sm={12} key={index}>
-              <Tooltip title={metric.tooltip}>
-                <Card className="metric-card">
-                  <Statistic
-                    title={metric.title}
-                    value={metric.value}
-                    precision={1}
-                    suffix={metric.suffix}
-                    prefix={metric.icon}
-                    valueStyle={{ 
-                      color: metric.value >= metric.threshold ? '#3f8600' : '#cf1322'
-                    }}
-                  />
-                  <Progress
-                    percent={Math.min(100, Math.max(0, metric.value))}
-                    status={metric.value >= metric.threshold ? 'success' : 'normal'}
-                    strokeColor={metric.value >= metric.threshold ? '#52c41a' : '#1890ff'}
-                  />
-                </Card>
-              </Tooltip>
-            </Col>
-          ))}
-        </Row>
-      </div>
     </Card>
   );
 };

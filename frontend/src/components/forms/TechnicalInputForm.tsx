@@ -1,25 +1,25 @@
 "use client";
 
 import React from 'react';
-import { Form, Select, InputNumber, Row, Col, Card, Button, Tooltip, Space } from 'antd';
+import { Form, Select, InputNumber, Row, Col, Card, Button, Tooltip, Space, FormInstance } from 'antd';
 import { PROCESS_TYPES, DEFAULT_PROCESS_ANALYSIS } from '../../config/constants';
 import { TechnicalParameters } from '@/types/technical';
 import { formatNumber } from '@/lib/formatters';
 import { InfoCircleOutlined } from '@ant-design/icons';
 
 interface TechnicalInputFormProps {
+  form: FormInstance;
   onSubmit: (values: TechnicalParameters) => Promise<void>;
   isSubmitting?: boolean;
   initialValues?: Partial<TechnicalParameters>;
 }
 
 const TechnicalInputForm: React.FC<TechnicalInputFormProps> = ({
+  form,
   onSubmit,
   isSubmitting = false,
   initialValues = DEFAULT_PROCESS_ANALYSIS,
 }) => {
-  const [form] = Form.useForm<TechnicalParameters>();
-
   // Helper function for form item tooltip
   const FormLabel = ({ label, tooltip }: { label: string; tooltip: string }) => (
     <Space>

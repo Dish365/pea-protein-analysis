@@ -8,6 +8,7 @@ import { useRecentAnalyses, Analysis } from '@/hooks/useRecentAnalyses';
 import { formatDistanceToNow } from 'date-fns';
 import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { Key } from 'react';
 
 const statusConfig = {
   [ProcessStatus.PENDING]: {
@@ -61,7 +62,8 @@ const RecentAnalyses: React.FC = () => {
         text: config.label,
         value,
       })),
-      onFilter: (value, record) => record.type === value,
+      onFilter: (value: Key | boolean, record: Analysis) =>
+        record.type === value.toString(),
     },
     {
       title: 'Status',
@@ -76,7 +78,8 @@ const RecentAnalyses: React.FC = () => {
         text: config.label,
         value,
       })),
-      onFilter: (value, record) => record.status === value,
+      onFilter: (value: Key | boolean, record: Analysis) =>
+        record.status === value.toString(),
     },
     {
       title: 'Started',
@@ -87,29 +90,31 @@ const RecentAnalyses: React.FC = () => {
           {formatDistanceToNow(new Date(date), { addSuffix: true })}
         </Tooltip>
       ),
-      sorter: (a, b) => 
+      sorter: (a: Analysis, b: Analysis) =>
         new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
     },
     {
       title: 'Completed',
       dataIndex: 'completedAt',
       key: 'completedAt',
-      render: (date?: string) => 
+      render: (date?: string) =>
         date ? (
           <Tooltip title={new Date(date).toLocaleString()}>
             {formatDistanceToNow(new Date(date), { addSuffix: true })}
           </Tooltip>
         ) : '-',
-      sorter: (a, b) => {
+      sorter: (a: Analysis, b: Analysis) => {
         if (!a.completedAt) return 1;
         if (!b.completedAt) return -1;
-        return new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime();
+        return (
+          new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+        );
       },
     },
     {
       title: 'Action',
       key: 'action',
-      render: (_, record) => (
+      render: (_: unknown, record: Analysis) => (
         <Button
           type="link"
           icon={<EyeOutlined />}
@@ -154,10 +159,7 @@ const RecentAnalyses: React.FC = () => {
       }
       className="mb-6"
       extra={
-        <Button 
-          type="link" 
-          onClick={() => router.push('/analysis/history')}
-        >
+        <Button type="link" onClick={() => router.push('/analysis/history')}>
           View All
         </Button>
       }
@@ -180,4 +182,4 @@ const RecentAnalyses: React.FC = () => {
   );
 };
 
-export default RecentAnalyses; 
+export default RecentAnalyses;

@@ -30,21 +30,16 @@ export const useRecentAnalyses = (limit: number = 5) => {
     queryKey: ['recentAnalyses', limit],
     queryFn: async () => {
       const { data } = await axios.get<ProcessListResponse>(
-        `${PROCESS_ENDPOINTS.LIST}?limit=${limit}`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
+        `${PROCESS_ENDPOINTS.LIST}?limit=${limit}`
       );
       return data;
     },
-    staleTime: 30000, // 30 seconds
-    refetchInterval: (query: Query<ProcessListResponse, Error, ProcessListResponse, readonly unknown[]>) => {
+    staleTime: 30000,
+    refetchInterval: (query) => {
       const hasInProgress = query.state.data?.data.some(
-        (analysis: Analysis) => analysis.status === ProcessStatus.PROCESSING 
+        (analysis) => analysis.status === ProcessStatus.PROCESSING 
       );
       return hasInProgress ? 5000 : false;
     },
   });
-}; 
+};

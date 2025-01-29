@@ -1,25 +1,25 @@
 "use client";
 
 import React from 'react';
-import { Form, InputNumber, Row, Col, Card, Button, Tooltip, Space } from 'antd';
+import { Form, InputNumber, Row, Col, Card, Button, Tooltip, Space, FormInstance } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { formatCurrency, formatPercentage, formatNumber } from '@/lib/formatters';
 import { DEFAULT_PROCESS_ANALYSIS } from '@/config/constants';
 import { EconomicParameters } from '@/types/economic';
 
 interface EconomicInputFormProps {
+  form: FormInstance;
   onSubmit: (values: EconomicParameters) => Promise<void>;
   isSubmitting?: boolean;
   initialValues?: Partial<EconomicParameters>;
 }
 
 const EconomicInputForm: React.FC<EconomicInputFormProps> = ({
+  form,
   onSubmit,
   isSubmitting = false,
   initialValues = DEFAULT_PROCESS_ANALYSIS,
 }) => {
-  const [form] = Form.useForm<EconomicParameters>();
-
   // Helper function for form item tooltip
   const FormLabel = ({ label, tooltip }: { label: string; tooltip: string }) => (
     <Space>

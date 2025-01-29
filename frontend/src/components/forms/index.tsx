@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Form, Steps, Button, message, Card } from 'antd';
-import { ProcessAnalysis } from '@/types/process';
+import { ProcessAnalysis, ProcessType } from '@/types/process';
 import { DEFAULT_PROCESS_ANALYSIS } from '@/config/constants';
 import TechnicalInputForm from './TechnicalInputForm';
 import EconomicInputForm from './EconomicInputForm';
 import EnvironmentalInputForm from './EnvironmentalInputForm';
 import { PROCESS_ENDPOINTS, API_CONFIG } from '@/config/endpoints';
 import axios from 'axios';
+import { EnvironmentalParameters } from '@/types/environmental';
 
 const { Step } = Steps;
 
@@ -30,43 +31,9 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
   initialValues = DEFAULT_PROCESS_ANALYSIS,
   loading: externalLoading = false,
 }) => {
+  const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState(initialValues);
-
-  const handleSubmit = async (values: Partial<ProcessAnalysis>) => {
-    try {
-      setLoading(true);
-      
-      // Combine all form data
-      const processData = {
-        ...DEFAULT_PROCESS_ANALYSIS,
-        ...formData,
-        ...values,
-      };
-
-      // Validate process requirements
-      const errors = validateProcessTypeRequirements(processData as ProcessAnalysis);
-      if (errors.length > 0) {
-        throw new Error(errors.join(', '));
-      }
-
-      // Submit to API
-      const response = await axios.post(
-        PROCESS_ENDPOINTS.CREATE,
-        processData,
-        API_CONFIG
-      );
-
-      message.success('Process analysis started successfully');
-      onSuccess?.(response.data);
-      onSubmit?.(processData as ProcessAnalysis);
-    } catch (error: any) {
-      message.error(error.response?.data?.message || error.message || 'Failed to start process analysis');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const steps: FormStep[] = [
     {
@@ -87,13 +54,14 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
         'd90_particle_size',
       ],
       component: (
-        <TechnicalInputForm
+        <TechnicalInputForm 
+          form={form}
           onSubmit={async (values) => {
-            setFormData(prev => ({ ...prev, ...values }));
+            await form.validateFields();
             next();
           }}
-          initialValues={formData}
           isSubmitting={loading}
+          initialValues={initialValues}
         />
       ),
     },
@@ -109,16 +77,17 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
         'project_duration',
         'discount_rate',
         'production_volume',
-        'revenue_per_year',
+        'revenue_per_year'
       ],
       component: (
-        <EconomicInputForm
+        <EconomicInputForm 
+          form={form}
           onSubmit={async (values) => {
-            setFormData(prev => ({ ...prev, ...values }));
+            await form.validateFields();
             next();
           }}
-          initialValues={formData}
           isSubmitting={loading}
+          initialValues={initialValues}
         />
       ),
     },
@@ -127,21 +96,21 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
       description: 'Specify environmental impacts',
       validateFields: [
         'electricity_consumption',
-        'thermal_energy',
         'cooling_consumption',
         'water_consumption',
-        'wastewater_generation',
-        'solid_waste',
-        'recyclable_waste',
-        'transport_distance',
-        'transport_load',
+        'transport_consumption',
         'equipment_mass',
+        'allocation_method'
       ],
       component: (
-        <EnvironmentalInputForm
-          onSubmit={handleSubmit}
-          initialValues={formData}
+        <EnvironmentalInputForm 
+          form={form}
+          onSubmit={async (values: EnvironmentalParameters) => {
+            await form.validateFields();
+            handleSubmit(form.getFieldsValue() as ProcessAnalysis);
+          }}
           isSubmitting={loading}
+          initialValues={initialValues}
         />
       ),
     },
@@ -152,12 +121,12 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
     const { process_type, electricity_consumption, cooling_consumption } = values;
 
     switch (process_type) {
-      case 'rf':
+      case ProcessType.RF:
         if (!electricity_consumption) {
           errors.push('RF process requires electricity consumption');
         }
         break;
-      case 'ir':
+      case ProcessType.IR:
         if (!cooling_consumption) {
           errors.push('IR process requires cooling consumption');
         }
@@ -167,8 +136,63 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
     return errors;
   };
 
-  const next = () => {
-    setCurrentStep(currentStep + 1);
+  const handleSubmit = async (values: ProcessAnalysis) => {
+    try {
+      setLoading(true);
+
+      // Merge with default values
+      const processData = {
+        ...DEFAULT_PROCESS_ANALYSIS,
+        ...values,
+      };
+
+      // Validate process requirements
+      const errors = validateProcessTypeRequirements(processData);
+      if (errors.length > 0) {
+        throw new Error(errors.join(', '));
+      }
+
+      // Validate mass balance
+      if (processData.output_mass > processData.input_mass) {
+        throw new Error('Output mass cannot exceed input mass');
+      }
+
+      // Validate moisture content
+      if (processData.final_moisture_content > processData.initial_moisture_content) {
+        throw new Error('Final moisture content cannot exceed initial moisture content');
+      }
+
+      // Validate particle size distribution
+      if (processData.d50_particle_size <= processData.d10_particle_size ||
+          processData.d90_particle_size <= processData.d50_particle_size) {
+        throw new Error('Invalid particle size distribution (D10 < D50 < D90)');
+      }
+
+      // Submit to API
+      const response = await axios.post(
+        PROCESS_ENDPOINTS.CREATE,
+        processData,
+        API_CONFIG
+      );
+
+      message.success('Process analysis started successfully');
+      onSuccess?.(response.data);
+      onSubmit?.(processData);
+    } catch (error: any) {
+      message.error(error.response?.data?.message || error.message || 'Failed to start process analysis');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const next = async () => {
+    try {
+      await form.validateFields(steps[currentStep].validateFields);
+      setCurrentStep(currentStep + 1);
+    } catch (error) {
+      console.error('Validation failed:', error);
+      message.error('Please fill in all required fields correctly');
+    }
   };
 
   const prev = () => {
@@ -183,30 +207,47 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
         ))}
       </Steps>
 
-      <div className="steps-content mb-8">
-        {steps[currentStep].component}
-      </div>
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{ ...DEFAULT_PROCESS_ANALYSIS, ...initialValues }}
+        onFinish={handleSubmit}
+        className="process-form"
+      >
+        <div className="steps-content mb-8">
+          {steps[currentStep].component}
+        </div>
 
-      <div className="flex justify-between mt-8">
-        {currentStep > 0 && (
-          <Button 
-            onClick={prev}
-            disabled={loading || externalLoading}
-          >
-            Previous
-          </Button>
-        )}
-        <div className="flex-1" />
-        {currentStep < steps.length - 1 && (
-          <Button 
-            type="primary"
-            onClick={next}
-            disabled={loading || externalLoading}
-          >
-            Next
-          </Button>
-        )}
-      </div>
+        <div className="steps-action flex justify-between mt-8">
+          {currentStep > 0 && (
+            <Button
+              onClick={prev}
+              disabled={loading || externalLoading}
+            >
+              Previous
+            </Button>
+          )}
+          {currentStep < steps.length - 1 && (
+            <Button
+              type="primary"
+              onClick={next}
+              disabled={loading || externalLoading}
+            >
+              Next
+            </Button>
+          )}
+          {currentStep === steps.length - 1 && (
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading || externalLoading}
+              disabled={loading || externalLoading}
+            >
+              Start Analysis
+            </Button>
+          )}
+        </div>
+      </Form>
     </Card>
   );
 };

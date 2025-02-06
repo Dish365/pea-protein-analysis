@@ -1,3 +1,5 @@
+import { ProcessType } from './process';
+
 export interface EmissionFactors {
   electricity: number; // kg CO2e/kWh
   water: number; // kg CO2e/m3
@@ -6,23 +8,15 @@ export interface EmissionFactors {
 }
 
 export interface EnvironmentalParameters {
-  // Energy Consumption
-  electricity_consumption: number;
-  thermal_energy: number;
-  cooling_consumption: number;
-  
-  // Water Usage
-  water_consumption: number;
-  wastewater_generation: number;
-  
-  // Waste Management
-  solid_waste: number;
-  recyclable_waste: number;
-  
-  // Transportation
-  transport_distance: number;
-  transport_load: number;
-  equipment_mass: number;
+  processType: ProcessType;
+  productionVolume: number;
+  electricityConsumption: number;
+  waterConsumption: number;
+  naturalGasConsumption: number;
+  wasteGeneration: number;
+  transportDistance: number;
+  packagingMaterial: string;
+  recycledContent: number;
 }
 
 export interface EnvironmentalAnalysisResult {
@@ -41,4 +35,33 @@ export interface EnvironmentalAnalysisResult {
     factors: Record<string, number>;
     results: Record<string, Record<string, number>>;
   };
+}
+
+export interface EmissionsBreakdown {
+  electricity: number;
+  heating: number;
+  cooling: number;
+  transport: number;
+  waste: number;
+}
+
+export interface ResourceConsumption {
+  water: number;
+  electricity: number;
+  naturalGas: number;
+  compressedAir: number;
+}
+
+export interface EnvironmentalResults {
+  carbonFootprint: number;
+  waterFootprint: number;
+  energyEfficiency: number;
+  emissionsBreakdown: EmissionsBreakdown;
+  resourceConsumption: ResourceConsumption;
+  wasteRecyclingRate: number;
+}
+
+export interface EnvironmentalAnalysis {
+  parameters: EnvironmentalParameters;
+  results?: EnvironmentalResults;
 } 

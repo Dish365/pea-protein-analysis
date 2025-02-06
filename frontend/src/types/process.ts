@@ -8,9 +8,9 @@ export enum ProcessStatus {
 }
 
 export enum ProcessType {
-  BASELINE = 'baseline',
   RF = 'rf',
-  IR = 'ir'
+  IR = 'ir',
+  BASELINE = 'baseline',
 }
 
 export interface Equipment {
@@ -67,49 +67,11 @@ export interface RiskConfiguration {
   steps: number;
 }
 
-export interface ProcessAnalysis extends 
-  TechnicalParameters,
-  ResourceConfiguration,
-  AllocationConfiguration,
-  RiskConfiguration {
-  
-  // Basic Info
-  id: number;
-  process_type: ProcessType;
-  timestamp: string;
+export interface ProcessAnalysis {
+  id: string;
+  type: ProcessType;
   status: ProcessStatus;
-  progress: number;
-
-  // Equipment and Costs
-  equipment_cost: number;
-  maintenance_cost: number;
-  installation_factor: number;
-  indirect_costs_factor: number;
-  maintenance_factor: number;
-
-  // Operating Costs
-  raw_material_cost: number;
-  utility_cost: number;
-  labor_cost: number;
-
-  // Financial Parameters
-  project_duration: number;
-  discount_rate: number;
-  production_volume: number;
-  revenue_per_year: number;
-  cash_flows: number[];
-
-  // Environmental Analysis
-  electricity_consumption: number;
-  cooling_consumption: number;
-  water_consumption: number;
-  transport_consumption: number;
-  equipment_mass: number;
-  thermal_ratio: number;
-
-  // Production Data
-  energy_consumption: Record<string, number>;
-  production_data: Record<string, any>;
-  product_values: Record<string, number>;
+  parameters: Record<string, any>;
+  results?: Record<string, any>;
 }
 

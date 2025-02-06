@@ -1,3 +1,5 @@
+import { ProcessType } from './process';
+
 export interface ProteinRecovery {
   mass: number;
   content: number;
@@ -11,33 +13,26 @@ export interface ParticleSizeDistribution {
 }
 
 export interface TechnicalParameters {
-  // Process Parameters
-  air_flow: number;
-  classifier_speed: number;
-  
-  // Mass Balance
-  input_mass: number;
-  output_mass: number;
-  
-  // Content Analysis
-  initial_protein_content: number;
-  final_protein_content: number;
-  initial_moisture_content: number;
-  final_moisture_content: number;
-  
-  // Particle Size Analysis
-  d10_particle_size: number;
-  d50_particle_size: number;
-  d90_particle_size: number;
+  processType: ProcessType;
+  airFlowRate: number;
+  temperature: number;
+  pressure: number;
+  inputMass: number;
+  outputMass: number;
+  initialProteinContent: number;
+  targetProteinContent: number;
 }
 
 export interface TechnicalResults {
-  protein_recovery: ProteinRecovery;
-  separation_efficiency: number;
-  process_efficiency: number;
-  particle_size_distribution: ParticleSizeDistribution;
+  efficiency: number;
+  yieldRate: number;
+  proteinRecovery: number;
+  energyConsumption: number;
+  processTime: number;
+  qualityScore: number;
 }
 
-export interface TechnicalAnalysis extends TechnicalParameters {
+export interface TechnicalAnalysis {
+  parameters: TechnicalParameters;
   results?: TechnicalResults;
 } 

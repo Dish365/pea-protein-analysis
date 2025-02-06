@@ -1,11 +1,8 @@
 {
-<<<<<<< HEAD
-  "/page": "app/page.js"
-=======
   "/not-found": "app/not-found.js",
-  "/page": "app/page.js",
-  "/technical/page": "app/technical/page.js",
-  "/economic/page": "app/economic/page.js",
-  "/environmental/page": "app/environmental/page.js"
->>>>>>> 6a70f89a718af77eda03ccfdc647bf114c010d66
+  "/signin/page": "app/signin/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/analysis/technical/page": "app/dashboard/analysis/technical/page.js",
+  "/dashboard/analysis/economic/page": "app/dashboard/analysis/economic/page.js",
+  "/dashboard/analysis/environmental/page": "app/dashboard/analysis/environmental/page.js"
 }

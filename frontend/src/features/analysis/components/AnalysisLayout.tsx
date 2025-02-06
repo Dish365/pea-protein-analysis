@@ -1,58 +1,50 @@
 "use client";
 
 import React from 'react';
-import { Card, Steps } from 'antd';
-import LoadingSpinner from '@/components/shared/LoadingSpinner';
-
-const { Step } = Steps;
+import { Steps, Spin } from 'antd';
 
 interface AnalysisLayoutProps {
   title: string;
   currentStep: number;
-  loading?: boolean;
-  loadingText?: string;
-  progress?: number;
   steps: Array<{
     title: string;
     description: string;
   }>;
+  loading?: boolean;
+  loadingText?: string;
   children: React.ReactNode;
 }
 
-export const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
+export default function AnalysisLayout({
   title,
   currentStep,
-  loading = false,
-  loadingText,
-  progress,
   steps,
+  loading,
+  loadingText,
   children,
-}) => {
+}: AnalysisLayoutProps) {
   return (
-    <div className="analysis-pipeline">
-      <Card title={title} className="mb-6">
-        <Steps current={currentStep} className="analysis-steps">
-          {steps.map(item => (
-            <Step 
-              key={item.title} 
-              title={item.title} 
-              description={item.description} 
-            />
-          ))}
-        </Steps>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold">{title}</h1>
+      
+      <Steps
+        current={currentStep}
+        items={steps.map((step, index) => ({
+          key: index,
+          title: step.title,
+          description: step.description,
+        }))}
+      />
 
-        <div className="analysis-content mt-6">
-          {loading ? (
-            <LoadingSpinner 
-              tip={loadingText || 'Processing analysis...'}
-            />
-          ) : (
-            children
-          )}
-        </div>
-      </Card>
+      <div className="mt-8">
+        {loading ? (
+          <div className="text-center py-12">
+            <Spin tip={loadingText} />
+          </div>
+        ) : (
+          children
+        )}
+      </div>
     </div>
   );
-};
-
-export default AnalysisLayout; 
+} 

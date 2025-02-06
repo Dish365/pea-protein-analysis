@@ -1,0 +1,124 @@
+@import 'antd/dist/reset.css';
+@tailwind base;
+@tailwind utilities;
+@tailwind components;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 249, 250, 251;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+}
+
+/* Add these custom styles */
+.ant-layout {
+  background: #fff !important;
+}
+
+.ant-layout-header {
+  background: #fff !important;
+  padding: 0 24px !important;
+  height: 64px !important;
+  line-height: 64px !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+}
+
+.ant-layout-sider {
+  background: #fff !important;
+  border-right: 1px solid #f0f0f0;
+}
+
+/* Ensure content doesn't get hidden under the fixed header */
+.ant-layout-content {
+  margin-left: 250px; /* Width of Sider */
+}
+
+/* Add smooth transitions */
+.ant-layout-sider,
+.ant-layout-header {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Collapsed state adjustments */
+.ant-layout-sider-collapsed + .ant-layout .ant-layout-content {
+  margin-left: 80px !important; /* Width of collapsed sidebar */
+}
+
+/* Smooth transitions */
+.ant-layout-sider,
+.ant-layout-content {
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Toggle button styles */
+.ant-layout-sider-trigger {
+  background: #fff !important;
+  color: #000 !important;
+  border-top: 1px solid #f0f0f0;
+}
+
+.ant-layout-sider-collapsed {
+  width: 80px !important;
+  min-width: 80px !important;
+}
+
+/* Ensure menu items transition smoothly */
+.ant-menu-inline-collapsed {
+  width: 80px !important;
+}
+
+.ant-menu-inline-collapsed .ant-menu-item {
+  padding: 0 24px !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ant-layout-content {
+    margin-left: 0 !important;
+  }
+  
+  .ant-layout-sider {
+    position: fixed;
+    z-index: 999;
+    height: 100vh;
+    left: -250px;
+  }
+  
+  .ant-layout-sider-collapsed {
+    left: 0;
+  }
+}
+
+/* Add these styles to your existing globals.css */
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+
+/* Ensure the menu doesn't show horizontal scrollbar */
+.ant-menu-inline {
+  border-right: none !important;
+}
+
+.ant-layout-sider .ant-menu {
+  overflow-x: hidden;
+} 

@@ -1,21 +1,39 @@
+import { ProcessType } from './process';
+
+export interface CostBreakdown {
+  equipment: number;
+  utilities: number;
+  rawMaterials: number;
+  labor: number;
+  maintenance: number;
+  indirect: number;
+}
+
 export interface EconomicParameters {
-  // Capital Costs
-  equipment_cost: number;
-  maintenance_cost: number;
-  installation_factor: number;
-  indirect_costs_factor: number;
-  maintenance_factor: number;
+  processType: ProcessType;
+  productionVolume: number;
+  operatingHours: number;
+  equipmentCost: number;
+  utilityRate: number;
+  rawMaterialCost: number;
+  laborRate: number;
+  maintenanceFactor: number;
+  indirectCostFactor: number;
+}
 
-  // Operating Costs
-  raw_material_cost: number;
-  utility_cost: number;
-  labor_cost: number;
+export interface EconomicResults {
+  totalCapitalCost: number;
+  operatingCost: number;
+  costBreakdown: CostBreakdown;
+  unitProductionCost: number;
+  paybackPeriod: number;
+  roi: number;
+  npv: number;
+}
 
-  // Project Parameters
-  project_duration: number;
-  discount_rate: number;
-  production_volume: number;
-  revenue_per_year: number;
+export interface EconomicAnalysis {
+  parameters: EconomicParameters;
+  results?: EconomicResults;
 }
 
 export interface EconomicAnalysisResult {

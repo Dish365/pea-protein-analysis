@@ -11,23 +11,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-<<<<<<< HEAD
     "@ant-design/icons": "^5.6.0",
-    "@ant-design/plots": "^2.3.3",
-    "@hookform/resolvers": "^3.10.0",
-    "@tanstack/react-query": "^5.65.1",
+    "@tanstack/react-query": "^5.66.0",
     "antd": "^5.23.3",
     "axios": "^1.7.9",
-    "clsx": "^2.1.1",
-=======
-    "@ant-design/icons": "^5.3.0",
-    "@ant-design/plots": "^2.3.3",
-    "@hookform/resolvers": "^3.3.4",
-    "@tanstack/react-query": "^5.65.0",
-    "antd": "^5.14.1",
-    "axios": "^1.6.7",
-    "clsx": "^2.1.0",
->>>>>>> 6a70f89a718af77eda03ccfdc647bf114c010d66
     "date-fns": "^4.1.0",
     "lucide-react": "^0.338.0",
     "next": "14.1.0",

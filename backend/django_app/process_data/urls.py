@@ -1,25 +1,14 @@
-from django.urls import path
-from .views.process_views import ProcessAnalysisView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import ProcessAnalysisViewSet
 
-app_name = 'process_data'  # Namespace for URL reversing
+router = DefaultRouter()
+router.register(r'', ProcessAnalysisViewSet, basename='process')
+
+app_name = 'process_data'
 
 urlpatterns = [
-    # Process Analysis Endpoints
-    path('', 
-         ProcessAnalysisView.as_view(),
-         name='process-list-create'),  # GET: List all, POST: Create new
-    
-    path('<int:process_id>/',
-         ProcessAnalysisView.as_view(),
-         name='process-detail'),  # GET: Get specific process details
-    
-    path('<int:process_id>/status/',
-         ProcessAnalysisView.as_view(),
-         name='process-status'),  # GET: Get analysis status and progress
-    
-    path('<int:process_id>/results/',
-         ProcessAnalysisView.as_view(),
-         name='process-results'),  # GET: Get complete analysis results
+    path('', include(router.urls)),
 ]
 
 # URL Pattern Documentation
@@ -46,4 +35,4 @@ API Endpoints for Process Analysis:
    - Path: /api/v1/process/{id}/results/
    - Methods:
      * GET: Get complete analysis results
-""" 
+"""

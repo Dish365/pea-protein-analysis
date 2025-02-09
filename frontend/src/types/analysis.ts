@@ -1,7 +1,7 @@
-import { ProcessType } from './process';
-import { TechnicalResults } from './technical';
-import { EconomicAnalysisResult } from './economic';
-import { EnvironmentalAnalysisResult } from './environmental';
+import { ProcessType } from "./process";
+import { TechnicalResults } from "./technical";
+import { EconomicAnalysisResult } from "./economic";
+import { EnvironmentalAnalysisResult } from "./environmental";
 
 export interface EfficiencyResults {
   efficiency_metrics: {
@@ -39,4 +39,23 @@ export interface AnalysisFilter {
   endDate?: string;
   status?: string;
   type?: string;
+}
+
+export interface TechnicalParameters {
+  processType: "baseline" | "rf" | "ir";
+  airFlowRate: number;
+  temperature: number;
+  pressure: number;
+  inputMass: number;
+  outputMass: number;
+  initialProteinContent: number;
+  targetProteinContent: number;
+}
+
+export interface EconomicParameters {
+  // Add economic parameters
+}
+
+export interface EnvironmentalParameters {
+  // Add environmental parameters
 }

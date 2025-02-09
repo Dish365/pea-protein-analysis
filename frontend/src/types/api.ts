@@ -1,9 +1,9 @@
-import { ProcessAnalysis } from './process';
-import { AnalysisSummary } from './analysis';
-import { TechnicalResults } from './technical';
-import { EconomicAnalysisResult } from './economic';
-import { EnvironmentalAnalysisResult } from './environmental';
-import { EfficiencyResults } from './analysis';
+import { ProcessAnalysis } from "./process";
+import { AnalysisSummary } from "./analysis";
+import { TechnicalResults } from "./technical";
+import { EconomicAnalysisResult } from "./economic";
+import { EnvironmentalAnalysisResult } from "./environmental";
+import { EfficiencyResults } from "./analysis";
 
 // API Response Types
 export interface ApiResponse<T> {
@@ -31,14 +31,13 @@ export interface PaginatedResponse<T> {
 }
 
 export interface ProcessCreateResponse {
-  process_id: number;
+  id: string;
   status: string;
-  message?: string;
-  summary?: AnalysisSummary;
+  timestamp: string;
 }
 
 export interface ProcessStatusResponse {
-  status: ProcessAnalysis['status'];
+  status: ProcessAnalysis["status"];
   progress: number;
   message?: string;
 }
@@ -61,12 +60,11 @@ export interface ErrorResponse {
 }
 
 export interface AnalysisResult {
-  id: number;
-  process: number;
-  timestamp: string;
-  process_status: ProcessAnalysis['status'];
-  technical_results: TechnicalResults;
-  economic_results: EconomicAnalysisResult;
-  environmental_results: EnvironmentalAnalysisResult;
-  efficiency_results: EfficiencyResults;
+  status: "pending" | "processing" | "completed" | "failed";
+  results?: {
+    technical?: TechnicalResults;
+    economic?: EconomicAnalysisResult;
+    environmental?: EnvironmentalAnalysisResult;
+  };
+  progress: number;
 }

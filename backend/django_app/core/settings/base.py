@@ -1,3 +1,4 @@
+from .database import DATABASES
 import os
 from pathlib import Path
 from datetime import timedelta
@@ -21,7 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 ensure_directories_exist()
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-your-secret-key-here")
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY", "django-insecure-your-secret-key-here")
 
 # Application definition
 INSTALLED_APPS = [
@@ -51,8 +53,8 @@ INTERNAL_IPS = [
 AUTH_USER_MODEL = 'auth.User'
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "corsheaders.middleware.CorsMiddleware",  # CORS middleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -82,7 +84,6 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 
 # Import database settings
-from .database import DATABASES
 
 # Database configurations
 DATABASES = DATABASES
@@ -146,10 +147,23 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": False,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "VERIFYING_KEY": None,
+    "AUDIENCE": None,
+    "ISSUER": None,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
 }
 
 # Celery Configuration
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_BROKER_URL = os.environ.get(
+    "CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get(
     "CELERY_RESULT_BACKEND", "redis://localhost:6379/0"
 )
@@ -242,7 +256,8 @@ LOGGING = {
 }
 
 # FastAPI Service Configuration
-FASTAPI_BASE_URL = os.environ.get('FASTAPI_BASE_URL', 'http://localhost:8001/api/v1')
+FASTAPI_BASE_URL = os.environ.get(
+    'FASTAPI_BASE_URL', 'http://localhost:8001/api/v1')
 FASTAPI_TIMEOUT = 30  # seconds
 FASTAPI_RETRY_COUNT = 3
 
@@ -263,3 +278,9 @@ PROCESS_ANALYSIS = {
         'SAVING': {'weight': 5, 'timeout': 10}
     }
 }
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Frontend development server
+]
+
+CORS_ALLOW_CREDENTIALS = True

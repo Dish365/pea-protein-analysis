@@ -1,5 +1,5 @@
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const FASTAPI_BASE_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8001";
 
 export const API_ENDPOINTS = {
   // Auth endpoints
@@ -16,5 +16,11 @@ export const API_ENDPOINTS = {
     getById: (id: string) => `/api/v1/process/${id}/`,
     getResults: (id: string) => `/api/v1/process/${id}/results/`,
     getStatus: (id: string) => `/api/v1/process/${id}/status/`,
+    
+    // FastAPI analysis endpoints
+    analyze: "/api/v1/process/analyze",
+    technical: "/api/v1/process/technical",
+    economic: "/api/v1/process/economic", 
+    environmental: "/api/v1/process/environmental",
   },
 };

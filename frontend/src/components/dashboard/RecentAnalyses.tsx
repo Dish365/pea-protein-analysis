@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Card, List, Tag, Button, Space } from 'antd';
+import { Card, List, Tag, Button, Space, Progress } from 'antd';
 import { useRouter } from 'next/navigation';
 import { ProcessType, ProcessStatus } from '@/types/process';
 import { useRecentAnalyses } from '@/hooks/useRecentAnalyses';
@@ -75,10 +75,10 @@ const RecentAnalyses: React.FC = () => {
           View All
         </Button>
       }
+      loading={isLoading}
     >
       <List
         dataSource={analyses || []}
-        loading={isLoading}
         renderItem={(analysis) => (
           <List.Item
             key={analysis.id}
@@ -92,6 +92,12 @@ const RecentAnalyses: React.FC = () => {
                 View Details
               </Button>,
             ]}
+            extra={
+              <Progress 
+                percent={analysis.progress} 
+                status={analysis.status === "completed" ? "success" : "active"}
+              />
+            }
           >
             <div className="flex items-center">
               <div className="mr-4">
@@ -100,8 +106,12 @@ const RecentAnalyses: React.FC = () => {
                 {analysis.type === "environmental" && "🌍"}
               </div>
               <div>
-                <div className="font-medium">{analysis.name}</div>
-                <div className="text-sm text-gray-500">{analysis.date}</div>
+                <div className="font-medium">
+                  {analysis.type.charAt(0).toUpperCase() + analysis.type.slice(1)} Analysis
+                </div>
+                <div className="text-sm text-gray-500">
+                  {formatDistanceToNow(new Date(analysis.date), { addSuffix: true })}
+                </div>
               </div>
             </div>
             <Tag color={analysis.status === "completed" ? "success" : "processing"}>

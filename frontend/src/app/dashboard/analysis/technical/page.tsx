@@ -1,64 +1,60 @@
 "use client";
 
-import React, { useState } from 'react';
-import { message } from 'antd';
-import { useSubmitAnalysis, useAnalysisResults } from '@/hooks/useAnalysis';
-import TechnicalAnalysisView from '@/features/analysis/technical/components/TechnicalAnalysisView';
-import AnalysisLayout from '@/features/analysis/components/AnalysisLayout';
-import TechnicalInputForm from '@/components/forms/TechnicalInputForm';
-import { ProcessAnalysis } from '@/types/process';
+import React, { useState } from "react";
+import { message } from "antd";
+import { useSubmitAnalysis, useAnalysisResults } from "@/hooks/useAnalysis";
+import TechnicalAnalysisView from "@/features/analysis/technical/components/TechnicalAnalysisView";
+import AnalysisLayout from "@/features/analysis/components/AnalysisLayout";
+import TechnicalInputForm from "@/components/forms/TechnicalInputForm";
 
 const steps = [
   {
-    title: 'Input Parameters',
-    description: 'Enter technical process parameters',
+    title: "Input Parameters",
+    description: "Enter technical process parameters",
   },
   {
-    title: 'Analysis Results',
-    description: 'View technical analysis results',
+    title: "Analysis Results",
+    description: "View technical analysis results",
   },
 ];
 
 export default function TechnicalAnalysisPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
-  
-  const { mutate: submitAnalysis, isPending: isSubmitting } = useSubmitAnalysis();
-  const { 
-    data: analysisData, 
-    isLoading: isLoadingResults,
-    error 
-  } = useAnalysisResults(analysisId);
 
-  const handleAnalysisComplete = async (values: ProcessAnalysis) => {
+  const { mutate: submitAnalysis, isLoading: isSubmitting } =
+    useSubmitAnalysis();
+  const { data: analysisData, error } = useAnalysisResults(analysisId);
+
+  const handleAnalysisComplete = async (values: any) => {
     try {
-      submitAnalysis(values, {
-        onSuccess: (response) => {
-          setAnalysisId(response.analysisId);
-          setCurrentStep(1);
-          message.success('Technical analysis started successfully');
+      submitAnalysis(
+        {
+          type: "technical",
+          parameters: values,
         },
-        onError: (error) => {
-          message.error(error.message || 'Failed to start analysis');
+        {
+          onSuccess: (data) => {
+            setAnalysisId(data.analysisId);
+            setCurrentStep(1);
+            message.success("Analysis started successfully");
+          },
+          onError: (error) => {
+            message.error("Failed to start analysis");
+          },
         }
-      });
-    } catch (error: any) {
-      message.error(error.message || 'An error occurred');
+      );
+    } catch (error) {
+      message.error("Failed to submit analysis");
     }
   };
-
-  const loading = isSubmitting || isLoadingResults;
-  const loadingText = isSubmitting 
-    ? 'Submitting analysis...' 
-    : 'Processing technical analysis...';
 
   return (
     <AnalysisLayout
       title="Technical Analysis"
       currentStep={currentStep}
       steps={steps}
-      loading={loading}
-      loadingText={loadingText}
+      loading={isSubmitting}
     >
       {currentStep === 0 ? (
         <TechnicalInputForm
@@ -69,7 +65,7 @@ export default function TechnicalAnalysisPage() {
         <>
           {error ? (
             <div className="text-red-500 text-center p-4">
-              {error.message || 'An error occurred while processing the analysis'}
+              {error.message || "An error occurred during analysis"}
             </div>
           ) : (
             analysisData?.results?.technical && (
@@ -80,4 +76,4 @@ export default function TechnicalAnalysisPage() {
       )}
     </AnalysisLayout>
   );
-} 
+}

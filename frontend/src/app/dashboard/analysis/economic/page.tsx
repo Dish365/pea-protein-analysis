@@ -6,7 +6,6 @@ import { useSubmitAnalysis, useAnalysisResults } from "@/hooks/useAnalysis";
 import EconomicAnalysisView from "@/features/analysis/economic/components/EconomicAnalysisView";
 import AnalysisLayout from "@/features/analysis/components/AnalysisLayout";
 import EconomicInputForm from "@/components/forms/EconomicInputForm";
-import { ProcessAnalysis } from "@/types/process";
 
 const steps = [
   {
@@ -23,43 +22,39 @@ export default function EconomicAnalysisPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
 
-  const { mutate: submitAnalysis, isPending: isSubmitting } =
+  const { mutate: submitAnalysis, isLoading: isSubmitting } =
     useSubmitAnalysis();
-  const {
-    data: analysisData,
-    isLoading: isLoadingResults,
-    error,
-  } = useAnalysisResults(analysisId);
+  const { data: analysisData, error } = useAnalysisResults(analysisId);
 
-  const handleAnalysisComplete = async (values: ProcessAnalysis) => {
+  const handleAnalysisComplete = async (values: any) => {
     try {
-      submitAnalysis(values, {
-        onSuccess: (response) => {
-          setAnalysisId(response.analysisId);
-          setCurrentStep(1);
-          message.success("Economic analysis started successfully");
+      submitAnalysis(
+        {
+          type: "economic",
+          parameters: values,
         },
-        onError: (error) => {
-          message.error(error.message || "Failed to start analysis");
-        },
-      });
-    } catch (error: any) {
-      message.error(error.message || "An error occurred");
+        {
+          onSuccess: (data) => {
+            setAnalysisId(data.analysisId);
+            setCurrentStep(1);
+            message.success("Analysis started successfully");
+          },
+          onError: (error) => {
+            message.error("Failed to start analysis");
+          },
+        }
+      );
+    } catch (error) {
+      message.error("Failed to submit analysis");
     }
   };
-
-  const loading = isSubmitting || isLoadingResults;
-  const loadingText = isSubmitting
-    ? "Submitting analysis..."
-    : "Processing economic analysis...";
 
   return (
     <AnalysisLayout
       title="Economic Analysis"
       currentStep={currentStep}
       steps={steps}
-      loading={loading}
-      loadingText={loadingText}
+      loading={isSubmitting}
     >
       {currentStep === 0 ? (
         <EconomicInputForm
@@ -70,8 +65,7 @@ export default function EconomicAnalysisPage() {
         <>
           {error ? (
             <div className="text-red-500 text-center p-4">
-              {error.message ||
-                "An error occurred while processing the analysis"}
+              {error.message || "An error occurred during analysis"}
             </div>
           ) : (
             analysisData?.results?.economic && (

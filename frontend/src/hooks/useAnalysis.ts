@@ -2,42 +2,49 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { API_ENDPOINTS } from "@/config/api";
 import type { ProcessAnalysis } from "@/types/process";
-import { AnalysisResult, ProcessCreateResponse } from "@/types/api";
-import axios from "axios";
+import { AnalysisResult } from "@/types/api";
+
+export function useSubmitAnalysis() {
+  return useMutation({
+    mutationFn: async (data: ProcessAnalysis) => {
+      // First, submit to Django to create analysis record
+      const processResponse = await api.post(API_ENDPOINTS.process.submit, {
+        process_type: data.type,
+        status: "pending",
+        ...data.parameters,
+      });
+
+      const analysisId = processResponse.data.id;
+
+      // Then trigger FastAPI analysis pipeline
+      const analysisResponse = await api.post(
+        `${API_ENDPOINTS.process.analyze}/${analysisId}`,
+        data
+      );
+
+      return {
+        analysisId,
+        ...analysisResponse.data,
+      };
+    },
+  });
+}
 
 export function useAnalysisResults(analysisId: string | null) {
   return useQuery({
     queryKey: ["analysis", analysisId],
     queryFn: async () => {
       if (!analysisId) throw new Error("No analysis ID");
-      try {
-        const response = await api.get(
-          API_ENDPOINTS.process.getResults(analysisId)
-        );
-        return response.data;
-      } catch (error) {
-        // Handle specific error cases
-        if (axios.isAxiosError(error)) {
-          if (error.response?.status === 404) {
-            throw new Error("Analysis not found");
-          }
-          if (error.response?.status === 401) {
-            throw new Error("Unauthorized");
-          }
-        }
-        throw error;
-      }
-    },
-    enabled: !!analysisId,
-    refetchInterval: (data) => (data?.status === "completed" ? false : 5000), // Poll every 5s until complete
-  });
-}
 
-export function useSubmitAnalysis() {
-  return useMutation({
-    mutationFn: async (data: ProcessAnalysis) => {
-      const response = await api.post(API_ENDPOINTS.process.submit, data);
+      // Get results from Django
+      const response = await api.get(
+        API_ENDPOINTS.process.getResults(analysisId)
+      );
+
       return response.data;
     },
+    enabled: !!analysisId,
+    // Poll until analysis is complete
+    refetchInterval: (data) => (data?.status === "completed" ? false : 5000),
   });
 }

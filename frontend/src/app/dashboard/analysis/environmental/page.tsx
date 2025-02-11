@@ -6,16 +6,15 @@ import { useSubmitAnalysis, useAnalysisResults } from "@/hooks/useAnalysis";
 import EnvironmentalAnalysisView from "@/features/analysis/environmental/components/EnvironmentalAnalysisView";
 import AnalysisLayout from "@/features/analysis/components/AnalysisLayout";
 import EnvironmentalInputForm from "@/components/forms/EnvironmentalInputForm";
-import { ProcessAnalysis } from "@/types/process";
 
 const steps = [
   {
     title: "Input Parameters",
-    description: "Enter environmental process parameters",
+    description: "Enter environmental parameters",
   },
   {
     title: "Analysis Results",
-    description: "View environmental impact analysis",
+    description: "View environmental analysis results",
   },
 ];
 
@@ -23,43 +22,39 @@ export default function EnvironmentalAnalysisPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
 
-  const { mutate: submitAnalysis, isPending: isSubmitting } =
+  const { mutate: submitAnalysis, isLoading: isSubmitting } =
     useSubmitAnalysis();
-  const {
-    data: analysisData,
-    isLoading: isLoadingResults,
-    error,
-  } = useAnalysisResults(analysisId);
+  const { data: analysisData, error } = useAnalysisResults(analysisId);
 
-  const handleAnalysisComplete = async (values: ProcessAnalysis) => {
+  const handleAnalysisComplete = async (values: any) => {
     try {
-      submitAnalysis(values, {
-        onSuccess: (response) => {
-          setAnalysisId(response.analysisId);
-          setCurrentStep(1);
-          message.success("Environmental analysis started successfully");
+      submitAnalysis(
+        {
+          type: "environmental",
+          parameters: values,
         },
-        onError: (error) => {
-          message.error(error.message || "Failed to start analysis");
-        },
-      });
-    } catch (error: any) {
-      message.error(error.message || "An error occurred");
+        {
+          onSuccess: (data) => {
+            setAnalysisId(data.analysisId);
+            setCurrentStep(1);
+            message.success("Analysis started successfully");
+          },
+          onError: (error) => {
+            message.error("Failed to start analysis");
+          },
+        }
+      );
+    } catch (error) {
+      message.error("Failed to submit analysis");
     }
   };
-
-  const loading = isSubmitting || isLoadingResults;
-  const loadingText = isSubmitting
-    ? "Submitting analysis..."
-    : "Processing environmental analysis...";
 
   return (
     <AnalysisLayout
       title="Environmental Analysis"
       currentStep={currentStep}
       steps={steps}
-      loading={loading}
-      loadingText={loadingText}
+      loading={isSubmitting}
     >
       {currentStep === 0 ? (
         <EnvironmentalInputForm
@@ -70,8 +65,7 @@ export default function EnvironmentalAnalysisPage() {
         <>
           {error ? (
             <div className="text-red-500 text-center p-4">
-              {error.message ||
-                "An error occurred while processing the analysis"}
+              {error.message || "An error occurred during analysis"}
             </div>
           ) : (
             analysisData?.results?.environmental && (

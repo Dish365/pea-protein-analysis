@@ -16,7 +16,7 @@ interface AnalysisLayoutProps {
   children: React.ReactNode;
 }
 
-export default function AnalysisLayout({
+export default function AnalysisLayout({ 
   title,
   currentStep,
   steps,

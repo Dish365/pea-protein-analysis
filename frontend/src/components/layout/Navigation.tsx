@@ -1,60 +1,72 @@
 "use client";
 
 import React from "react";
-import { Layout, Menu } from "antd";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import {
-  HomeOutlined,
-  ExperimentOutlined,
-  DollarOutlined,
-  EnvironmentOutlined,
-} from "@ant-design/icons";
+  BarChart2,
+  Activity,
+  DollarSign,
+  Leaf,
+} from "lucide-react";
 
-const { Header } = Layout;
+const menuItems = [
+  {
+    key: "/dashboard",
+    icon: BarChart2,
+    label: "Dashboard",
+  },
+  {
+    key: "/dashboard/analysis/technical",
+    icon: Activity,
+    label: "Technical Analysis",
+  },
+  {
+    key: "/dashboard/analysis/economic",
+    icon: DollarSign,
+    label: "Economic Analysis",
+  },
+  {
+    key: "/dashboard/analysis/environmental",
+    icon: Leaf,
+    label: "Environmental Analysis",
+  },
+];
 
-const Navigation = () => {
-  const router = useRouter();
+export function Navigation() {
   const pathname = usePathname();
 
-  const menuItems = [
-    {
-      key: "/",
-      icon: <HomeOutlined />,
-      label: "Dashboard",
-    },
-    {
-      key: "/technical",
-      icon: <ExperimentOutlined />,
-      label: "Technical Analysis",
-    },
-    {
-      key: "/economic",
-      icon: <DollarOutlined />,
-      label: "Economic Analysis",
-    },
-    {
-      key: "/environmental",
-      icon: <EnvironmentOutlined />,
-      label: "Environmental Analysis",
-    },
-  ];
-
   return (
-    <Header className="bg-white border-b border-gray-200 px-6">
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
-        <div className="text-xl font-bold text-primary-600">
-          PEA Protein Analysis
-        </div>
-        <Menu
-          mode="horizontal"
-          selectedKeys={[pathname || "/"]}
-          items={menuItems}
-          onClick={({ key }) => router.push(key)}
-          className="border-none flex-1 justify-end"
-        />
-      </div>
-    </Header>
-  );
-};
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center justify-between">
+        <Link href="/dashboard" className="flex items-center space-x-2">
+          <span className="text-xl font-bold">PEA Protein Analysis</span>
+        </Link>
 
-export default Navigation;
+        <nav className="flex items-center space-x-6">
+          {menuItems.map((item) => {
+            const isActive = pathname === item.key;
+            const Icon = item.icon;
+            
+            return (
+              <Link
+                key={item.key}
+                href={item.key}
+                className={cn(
+                  "flex items-center space-x-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-primary"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </header>
+  );
+}

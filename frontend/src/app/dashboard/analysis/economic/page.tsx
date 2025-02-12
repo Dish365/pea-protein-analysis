@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { message } from "antd";
 import { useSubmitAnalysis, useAnalysisResults } from "@/hooks/useAnalysis";
-import EconomicAnalysisView from "@/features/analysis/economic/components/EconomicAnalysisView";
+import { EconomicAnalysisView } from "@/features/analysis/economic/components/EconomicAnalysisView";
 import AnalysisLayout from "@/features/analysis/components/AnalysisLayout";
 import EconomicInputForm from "@/components/forms/EconomicInputForm";
+import { useToast } from "@/hooks/useToast";
 
 const steps = [
   {
@@ -22,9 +22,9 @@ export default function EconomicAnalysisPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
 
-  const { mutate: submitAnalysis, isLoading: isSubmitting } =
-    useSubmitAnalysis();
+  const { mutate: submitAnalysis, isPending: isSubmitting } = useSubmitAnalysis();
   const { data: analysisData, error } = useAnalysisResults(analysisId);
+  const { toast } = useToast();
 
   const handleAnalysisComplete = async (values: any) => {
     try {
@@ -37,15 +37,26 @@ export default function EconomicAnalysisPage() {
           onSuccess: (data) => {
             setAnalysisId(data.analysisId);
             setCurrentStep(1);
-            message.success("Analysis started successfully");
+            toast({
+              title: "Success",
+              description: "Analysis started successfully",
+            });
           },
           onError: (error) => {
-            message.error("Failed to start analysis");
+            toast({
+              title: "Error",
+              description: "Failed to start analysis",
+              variant: "destructive",
+            });
           },
         }
       );
     } catch (error) {
-      message.error("Failed to submit analysis");
+      toast({
+        title: "Error",
+        description: "Failed to submit analysis",
+        variant: "destructive",
+      });
     }
   };
 
@@ -64,7 +75,7 @@ export default function EconomicAnalysisPage() {
       ) : (
         <>
           {error ? (
-            <div className="text-red-500 text-center p-4">
+            <div className="text-destructive text-center p-4">
               {error.message || "An error occurred during analysis"}
             </div>
           ) : (

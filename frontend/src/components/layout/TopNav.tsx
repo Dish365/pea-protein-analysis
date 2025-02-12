@@ -1,74 +1,52 @@
 "use client";
 
 import React from "react";
-import { Layout, Menu, Button, Avatar, Dropdown, message } from "antd";
-import { UserOutlined, SettingOutlined, LogoutOutlined } from "@ant-design/icons";
-import { useRouter } from "next/navigation";
-import { useUser } from "@/hooks/useUser";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { User } from "@/types/user";
 
-const { Header } = Layout;
-
-export default function TopNav() {
-  const router = useRouter();
-  const { user } = useUser();
-  const { signOut } = useAuth();
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      message.success("Successfully logged out");
-      router.push("/signin");
-    } catch (error) {
-      message.error("Failed to logout");
-    }
-  };
-
-  const userMenu = (
-    <Menu>
-      <Menu.Item 
-        key="profile" 
-        icon={<UserOutlined />}
-        onClick={() => router.push("/dashboard/profile")}
-      >
-        Profile
-      </Menu.Item>
-      <Menu.Item 
-        key="settings" 
-        icon={<SettingOutlined />}
-        onClick={() => router.push("/dashboard/settings")}
-      >
-        Settings
-      </Menu.Item>
-      <Menu.Divider />
-      <Menu.Item 
-        key="logout" 
-        icon={<LogoutOutlined />}
-        onClick={handleLogout}
-        danger
-      >
-        Logout
-      </Menu.Item>
-    </Menu>
-  );
+export function TopNav() {
+  const { user, signOut } = useAuth();
 
   return (
-    <Header 
-      className="fixed top-0 w-full z-10 flex justify-between items-center bg-white border-b px-6"
-      style={{ height: '64px' }}
-    >
-      <div className="flex items-center">
-        <h1 className="text-lg font-semibold m-0">Process Analysis Dashboard</h1>
-      </div>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center">
+        <div className="flex flex-1 items-center justify-between">
+          <Link href="/dashboard" className="flex items-center space-x-2">
+            <span className="font-bold">Process Analysis</span>
+          </Link>
 
-      <div className="flex items-center">
-        <Dropdown overlay={userMenu} trigger={["click"]}>
-          <Button type="text" className="flex items-center">
-            <Avatar size="small" icon={<UserOutlined />} className="mr-2" />
-            <span>{user?.name || "User"}</span>
-          </Button>
-        </Dropdown>
+          <div className="flex items-center gap-4">
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatarUrl} alt={user.name} />
+                      <AvatarFallback>
+                        {user.name?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => signOut()}>
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
       </div>
-    </Header>
+    </header>
   );
 } 

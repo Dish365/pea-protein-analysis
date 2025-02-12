@@ -1,11 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Layout } from "antd";
-import TopNav from "./TopNav";
-import SideNav from "./SideNav";
-
-const { Content } = Layout;
+import React from "react";
+import { SideNav } from "./SideNav";
+import { TopNav } from "./TopNav";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -13,24 +10,14 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <Layout className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <TopNav />
-      <Layout>
+      <div className="flex">
         <SideNav />
-        <Layout>
-          <Content
-            className="p-6 overflow-auto transition-all duration-200"
-            style={{
-              marginTop: '64px',
-              marginLeft: '250px', // This will be adjusted by CSS based on collapsed state
-              minHeight: 'calc(100vh - 64px)',
-              backgroundColor: '#fff'
-            }}
-          >
-            {children}
-          </Content>
-        </Layout>
-      </Layout>
-    </Layout>
+        <main className="flex-1 p-8 pt-6">
+          {children}
+        </main>
+      </div>
+    </div>
   );
 }

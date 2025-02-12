@@ -1,141 +1,167 @@
 "use client";
 
-import React from 'react';
-import { Form, Input, Select, Button, Tooltip, Space, Card } from 'antd';
-import { PROCESS_TYPES } from '@/config/constants';
-import { EconomicParameters } from '@/types/economic';
-import { formatNumber, formatCurrency } from '@/lib/formatters';
-import { InfoCircleOutlined } from '@ant-design/icons';
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+
+const economicSchema = z.object({
+  capitalCost: z.number().min(0),
+  operatingCost: z.number().min(0),
+  laborCost: z.number().min(0),
+  maintenanceCost: z.number().min(0),
+  productionRate: z.number().min(0),
+  sellingPrice: z.number().min(0),
+});
+
+type EconomicFormValues = z.infer<typeof economicSchema>;
 
 interface EconomicInputFormProps {
-  onSubmit: (values: EconomicParameters) => void;
-  isSubmitting: boolean;
+  onSubmit: (values: EconomicFormValues) => void;
+  isSubmitting?: boolean;
 }
 
-export default function EconomicInputForm({ onSubmit, isSubmitting }: EconomicInputFormProps) {
-  const [form] = Form.useForm();
+export default function EconomicInputForm({
+  onSubmit,
+  isSubmitting = false,
+}: EconomicInputFormProps) {
+  const form = useForm<EconomicFormValues>({
+    resolver: zodResolver(economicSchema),
+    defaultValues: {
+      capitalCost: 0,
+      operatingCost: 0,
+      laborCost: 0,
+      maintenanceCost: 0,
+      productionRate: 0,
+      sellingPrice: 0,
+    },
+  });
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={onSubmit}
-    >
-      <Card title="Process Information" className="mb-6">
-        <Form.Item
-          label="Process Type"
-          name="processType"
-          rules={[{ required: true }]}
-        >
-          <Select options={PROCESS_TYPES} />
-        </Form.Item>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="capitalCost"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Capital Cost ($)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Form.Item
-            label="Production Volume (kg/year)"
-            name="productionVolume"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" />
-          </Form.Item>
+        <FormField
+          control={form.control}
+          name="operatingCost"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Operating Cost ($/year)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <Form.Item
-            label="Operating Hours (h/year)"
-            name="operatingHours"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" />
-          </Form.Item>
-        </div>
-      </Card>
+        <FormField
+          control={form.control}
+          name="laborCost"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Labor Cost ($/year)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <Card title="Cost Factors" className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Form.Item
-            label={
-              <Space>
-                Equipment Cost
-                <Tooltip title="Total cost of processing equipment">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </Space>
-            }
-            name="equipmentCost"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" prefix="$" />
-          </Form.Item>
+        <FormField
+          control={form.control}
+          name="maintenanceCost"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Maintenance Cost ($/year)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <Form.Item
-            label="Utility Rate ($/kWh)"
-            name="utilityRate"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" prefix="$" />
-          </Form.Item>
+        <FormField
+          control={form.control}
+          name="productionRate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Production Rate (kg/year)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <Form.Item
-            label="Raw Material Cost ($/kg)"
-            name="rawMaterialCost"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" prefix="$" />
-          </Form.Item>
+        <FormField
+          control={form.control}
+          name="sellingPrice"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Selling Price ($/kg)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <Form.Item
-            label="Labor Rate ($/h)"
-            name="laborRate"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" prefix="$" />
-          </Form.Item>
-        </div>
-      </Card>
-
-      <Card title="Cost Factors">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Form.Item
-            label={
-              <Space>
-                Maintenance Factor (%)
-                <Tooltip title="Percentage of equipment cost">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </Space>
-            }
-            name="maintenanceFactor"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" suffix="%" />
-          </Form.Item>
-
-          <Form.Item
-            label={
-              <Space>
-                Indirect Cost Factor (%)
-                <Tooltip title="Percentage of direct costs">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </Space>
-            }
-            name="indirectCostFactor"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" suffix="%" />
-          </Form.Item>
-        </div>
-      </Card>
-
-      <div className="flex justify-end mt-6">
-        <Space>
-          <Button onClick={() => form.resetFields()}>
-            Reset
-          </Button>
-          <Button type="primary" htmlType="submit" loading={isSubmitting}>
-            Analyze
-          </Button>
-        </Space>
-      </div>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Processing..." : "Submit Analysis"}
+        </Button>
+      </form>
     </Form>
   );
 }

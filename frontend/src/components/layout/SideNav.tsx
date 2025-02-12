@@ -1,122 +1,83 @@
 "use client";
 
-import React, { useState } from "react";
-import { Layout, Menu, message } from "antd";
-import type { MenuProps } from 'antd';
+import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import {
-  DashboardOutlined,
-  ExperimentOutlined,
-  DollarOutlined,
-  EnvironmentOutlined,
-  UserOutlined,
-  SettingOutlined,
-  LogoutOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-} from "@ant-design/icons";
-import { useRouter, usePathname } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+  Activity,
+  BarChart2,
+  Settings,
+  User,
+  DollarSign,
+  Leaf,
+} from "lucide-react";
 
-const { Sider } = Layout;
+const navigation = [
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: BarChart2,
+  },
+  {
+    name: "Technical Analysis",
+    href: "/dashboard/analysis/technical",
+    icon: Activity,
+  },
+  {
+    name: "Economic Analysis",
+    href: "/dashboard/analysis/economic",
+    icon: DollarSign,
+  },
+  {
+    name: "Environmental Analysis",
+    href: "/dashboard/analysis/environmental",
+    icon: Leaf,
+  },
+  {
+    name: "Profile",
+    href: "/dashboard/profile",
+    icon: User,
+  },
+  {
+    name: "Settings",
+    href: "/dashboard/settings",
+    icon: Settings,
+  },
+];
 
-type MenuItem = Required<MenuProps>['items'][number];
-
-export default function SideNav() {
-  const router = useRouter();
+export function SideNav() {
   const pathname = usePathname();
-  const { signOut } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      message.success("Successfully logged out");
-      router.push("/signin");
-    } catch (error) {
-      message.error("Failed to logout");
-    }
-  };
-
-  const menuItems: MenuItem[] = [
-    {
-      key: "/dashboard",
-      icon: <DashboardOutlined />,
-      label: "Dashboard",
-    },
-    {
-      key: "/dashboard/analysis/technical",
-      icon: <ExperimentOutlined />,
-      label: "Technical Analysis",
-    },
-    {
-      key: "/dashboard/analysis/economic",
-      icon: <DollarOutlined />,
-      label: "Economic Analysis",
-    },
-    {
-      key: "/dashboard/analysis/environmental",
-      icon: <EnvironmentOutlined />,
-      label: "Environmental Analysis",
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: "/dashboard/profile",
-      icon: <UserOutlined />,
-      label: "Profile",
-    },
-    {
-      key: "/dashboard/settings",
-      icon: <SettingOutlined />,
-      label: "Settings",
-    },
-    {
-      key: "logout",
-      icon: <LogoutOutlined />,
-      label: "Logout",
-      danger: true,
-    },
-  ];
 
   return (
-    <Sider
-      width={250}
-      collapsible
-      collapsed={collapsed}
-      onCollapse={(value) => setCollapsed(value)}
-      trigger={null}
-      className="fixed left-0"
-      style={{
-        height: 'calc(100vh - 64px)',
-        marginTop: '64px',
-        backgroundColor: '#fff',
-      }}
-    >
-      <div className="flex justify-end p-4">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-        </button>
+    <div className="flex h-screen w-64 flex-col border-r bg-card">
+      <div className="flex-1 overflow-y-auto py-4">
+        <nav className="space-y-1 px-2">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <item.icon
+                  className={cn(
+                    "mr-3 h-5 w-5",
+                    isActive ? "text-primary-foreground" : "text-muted-foreground"
+                  )}
+                />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
-      <div className="h-[calc(100%-56px)] overflow-y-auto overflow-x-hidden">
-        <Menu
-          mode="inline"
-          selectedKeys={[pathname || ""]}
-          items={menuItems}
-          onClick={({ key }) => {
-            if (key === 'logout') {
-              handleLogout();
-            } else {
-              router.push(key);
-            }
-          }}
-          className="border-r"
-          inlineCollapsed={collapsed}
-        />
-      </div>
-    </Sider>
+    </div>
   );
 } 

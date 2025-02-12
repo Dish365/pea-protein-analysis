@@ -2,12 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { API_BASE_URL, API_ENDPOINTS } from "@/config/api";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+import { User } from "@/types/user";
 
 interface SignInCredentials {
   email: string;
@@ -18,7 +13,17 @@ interface SignUpCredentials extends SignInCredentials {
   name: string;
 }
 
-export function useAuth() {
+export interface UseAuth {
+  user: User | null;
+  isAuthenticated: boolean;
+  signIn: (credentials: { email: string; password: string }) => Promise<any>;
+  signUp: (credentials: SignUpCredentials) => Promise<void>;
+  signOut: () => void;
+  resetPassword: (email: string) => Promise<void>;
+  refreshToken: () => Promise<any>;
+}
+
+export function useAuth(): UseAuth {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 

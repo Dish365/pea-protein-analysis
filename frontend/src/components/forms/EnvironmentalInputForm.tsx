@@ -1,124 +1,147 @@
 "use client";
 
-import React from 'react';
-import { Form, Input, Select, Button, Tooltip, Space, Card } from 'antd';
-import { PROCESS_TYPES } from '@/config/constants';
-import { EnvironmentalParameters } from '@/types/environmental';
-import { formatNumber } from '@/lib/formatters';
-import { InfoCircleOutlined } from '@ant-design/icons';
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+
+const environmentalSchema = z.object({
+  energyConsumption: z.number().min(0),
+  waterConsumption: z.number().min(0),
+  wasteGeneration: z.number().min(0),
+  co2Emissions: z.number().min(0),
+  recyclingRate: z.number().min(0).max(100),
+});
+
+type EnvironmentalFormValues = z.infer<typeof environmentalSchema>;
 
 interface EnvironmentalInputFormProps {
-  onSubmit: (values: EnvironmentalParameters) => void;
-  isSubmitting: boolean;
+  onSubmit: (values: EnvironmentalFormValues) => void;
+  isSubmitting?: boolean;
 }
 
-export default function EnvironmentalInputForm({ onSubmit, isSubmitting }: EnvironmentalInputFormProps) {
-  const [form] = Form.useForm();
+export default function EnvironmentalInputForm({
+  onSubmit,
+  isSubmitting = false,
+}: EnvironmentalInputFormProps) {
+  const form = useForm<EnvironmentalFormValues>({
+    resolver: zodResolver(environmentalSchema),
+    defaultValues: {
+      energyConsumption: 0,
+      waterConsumption: 0,
+      wasteGeneration: 0,
+      co2Emissions: 0,
+      recyclingRate: 0,
+    },
+  });
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={onSubmit}
-    >
-      <Card title="Process Information" className="mb-6">
-        <Form.Item
-          label="Process Type"
-          name="processType"
-          rules={[{ required: true }]}
-        >
-          <Select options={PROCESS_TYPES} />
-        </Form.Item>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="energyConsumption"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Energy Consumption (kWh)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <Form.Item
-          label="Production Volume (kg/year)"
-          name="productionVolume"
-          rules={[{ required: true }]}
-        >
-          <Input type="number" />
-        </Form.Item>
-      </Card>
+        <FormField
+          control={form.control}
+          name="waterConsumption"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Water Consumption (m³)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <Card title="Resource Consumption" className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Form.Item
-            label="Electricity Consumption (kWh/kg)"
-            name="electricityConsumption"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" />
-          </Form.Item>
+        <FormField
+          control={form.control}
+          name="wasteGeneration"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Waste Generation (kg)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <Form.Item
-            label="Water Consumption (L/kg)"
-            name="waterConsumption"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" />
-          </Form.Item>
+        <FormField
+          control={form.control}
+          name="co2Emissions"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>CO₂ Emissions (kg)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <Form.Item
-            label="Natural Gas Consumption (m³/kg)"
-            name="naturalGasConsumption"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" />
-          </Form.Item>
+        <FormField
+          control={form.control}
+          name="recyclingRate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Recycling Rate (%)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <Form.Item
-            label="Waste Generation (kg/kg product)"
-            name="wasteGeneration"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" />
-          </Form.Item>
-        </div>
-      </Card>
-
-      <Card title="Transport & Packaging">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Form.Item
-            label="Transport Distance (km)"
-            name="transportDistance"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" />
-          </Form.Item>
-
-          <Form.Item
-            label="Packaging Material"
-            name="packagingMaterial"
-            rules={[{ required: true }]}
-          >
-            <Select
-              options={[
-                { value: 'plastic', label: 'Plastic' },
-                { value: 'paper', label: 'Paper' },
-                { value: 'composite', label: 'Composite' },
-              ]}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Recycled Content (%)"
-            name="recycledContent"
-            rules={[{ required: true }]}
-          >
-            <Input type="number" suffix="%" />
-          </Form.Item>
-        </div>
-      </Card>
-
-      <div className="flex justify-end mt-6">
-        <Space>
-          <Button onClick={() => form.resetFields()}>
-            Reset
-          </Button>
-          <Button type="primary" htmlType="submit" loading={isSubmitting}>
-            Analyze
-          </Button>
-        </Space>
-      </div>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Processing..." : "Submit Analysis"}
+        </Button>
+      </form>
     </Form>
   );
 }

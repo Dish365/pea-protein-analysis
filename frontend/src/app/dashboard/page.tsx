@@ -1,46 +1,53 @@
 "use client";
 
 import React from "react";
-import { Card, Row, Col, Progress, List, Tag } from "antd";
+import { Activity, DollarSign, Leaf } from "lucide-react";
+import { AnalysisCard } from "@/components/dashboard/AnalysisCard";
 import {
-  ExperimentOutlined,
-  DollarOutlined,
-  EnvironmentOutlined,
-} from "@ant-design/icons";
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
-interface AnalysisOverview {
-  title: string;
-  icon: React.ReactNode;
-  color: string;
-  total: number;
-  completed: number;
-  inProgress: number;
-}
-
-const analysisOverviews: AnalysisOverview[] = [
+const analysisOverviews = [
   {
     title: "Technical Analysis",
-    icon: <ExperimentOutlined style={{ fontSize: "24px" }} />,
-    color: "#1890ff",
-    total: 27,
-    completed: 24,
-    inProgress: 3,
+    description: "Process optimization and efficiency metrics",
+    icon: <Activity className="h-6 w-6" />,
+    color: "#1e40af",
+    metrics: {
+      completed: 24,
+      inProgress: 3,
+      trend: 8,
+    },
+    onClick: () => window.location.href = "/dashboard/analysis/technical",
   },
   {
     title: "Economic Analysis",
-    icon: <DollarOutlined style={{ fontSize: "24px" }} />,
-    color: "#52c41a",
-    total: 20,
-    completed: 18,
-    inProgress: 2,
+    description: "Cost and profitability assessment",
+    icon: <DollarSign className="h-6 w-6" />,
+    color: "#15803d",
+    metrics: {
+      completed: 18,
+      inProgress: 2,
+      trend: 12,
+    },
+    onClick: () => window.location.href = "/dashboard/analysis/economic",
   },
   {
     title: "Environmental Analysis",
-    icon: <EnvironmentOutlined style={{ fontSize: "24px" }} />,
-    color: "#722ed1",
-    total: 19,
-    completed: 15,
-    inProgress: 4,
+    description: "Sustainability and environmental impact",
+    icon: <Leaf className="h-6 w-6" />,
+    color: "#7e22ce",
+    metrics: {
+      completed: 15,
+      inProgress: 4,
+      trend: -5,
+    },
+    onClick: () => window.location.href = "/dashboard/analysis/environmental",
   },
 ];
 
@@ -73,87 +80,75 @@ const recentAnalyses = [
 
 export default function DashboardPage() {
   return (
-    <div>
+    <div className="space-y-6">
       {/* Analysis Overview Cards */}
-      <Row gutter={[16, 16]} className="mb-6">
+      <div className="grid gap-6 md:grid-cols-3">
         {analysisOverviews.map((analysis) => (
-          <Col xs={24} md={8} key={analysis.title}>
-            <Card bordered={false}>
-              <div className="mb-4">
-                <span
-                  className="inline-flex items-center justify-center w-10 h-10 rounded-lg"
-                  style={{ backgroundColor: `${analysis.color}20` }}
-                >
-                  <span style={{ color: analysis.color }}>{analysis.icon}</span>
-                </span>
-              </div>
-              <div className="mb-2">
-                <h3 className="text-lg font-medium">{analysis.title}</h3>
-                <div className="text-3xl font-semibold mt-2">
-                  {analysis.total}
-                </div>
-              </div>
-              <Progress
-                percent={Math.round(
-                  (analysis.completed / analysis.total) * 100
-                )}
-                strokeColor={analysis.color}
-                className="mb-2"
-              />
-              <div className="text-sm text-gray-500">
-                {analysis.completed} Completed • {analysis.inProgress} In Progress
-              </div>
-            </Card>
-          </Col>
+          <AnalysisCard key={analysis.title} {...analysis} />
         ))}
-      </Row>
+      </div>
 
       {/* Recent Analyses */}
-      <Card title="Recently Performed Analyses" bordered={false}>
-        <List
-          dataSource={recentAnalyses}
-          renderItem={(item) => (
-            <List.Item
-              key={item.id}
-              extra={
-                <Tag
-                  color={item.status === "Complete" ? "success" : "processing"}
-                  className="ml-4"
-                >
-                  {item.status}
-                </Tag>
-              }
-            >
-              <List.Item.Meta
-                avatar={
-                  <span
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-full"
+      <Card>
+        <CardHeader>
+          <CardTitle>Recently Performed Analyses</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {recentAnalyses.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between p-4 border rounded-lg"
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className="p-2 rounded-full"
                     style={{
                       backgroundColor:
                         item.type === "technical"
-                          ? "#1890ff20"
+                          ? "#1e40af20"
                           : item.type === "economic"
-                          ? "#52c41a20"
-                          : "#722ed120",
+                          ? "#15803d20"
+                          : "#7e22ce20",
+                      color:
+                        item.type === "technical"
+                          ? "#1e40af"
+                          : item.type === "economic"
+                          ? "#15803d"
+                          : "#7e22ce",
                     }}
                   >
-                    {item.type === "technical" && "🔬"}
-                    {item.type === "economic" && "💰"}
-                    {item.type === "environmental" && "🌍"}
-                  </span>
-                }
-                title={item.name}
-                description={item.date}
-              />
-              <Progress
-                percent={item.progress}
-                size="small"
-                status={item.status === "Complete" ? "success" : "active"}
-                style={{ width: 180 }}
-              />
-            </List.Item>
-          )}
-        />
+                    {item.type === "technical" && <Activity className="h-4 w-4" />}
+                    {item.type === "economic" && <DollarSign className="h-4 w-4" />}
+                    {item.type === "environmental" && <Leaf className="h-4 w-4" />}
+                  </div>
+                  <div>
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">{item.date}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-32">
+                    <Progress
+                      value={item.progress}
+                      className={item.status === "Complete" ? "bg-emerald-100" : "bg-blue-100"}
+                      indicatorColor={
+                        item.status === "Complete"
+                          ? "rgb(16 185 129)"
+                          : "rgb(59 130 246)"
+                      }
+                    />
+                  </div>
+                  <Badge
+                    variant={item.status === "Complete" ? "success" : "default"}
+                  >
+                    {item.status}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

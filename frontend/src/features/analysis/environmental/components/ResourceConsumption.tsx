@@ -1,121 +1,80 @@
 "use client";
 
 import React from 'react';
-import { Zap, Droplet, Snowflake } from 'lucide-react';
-import { formatNumber } from '@/lib/formatters';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConsumptionMetrics } from '@/types/environmental';
+import { Zap, Droplets, Snowflake } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 
 interface ResourceConsumptionProps {
-  consumptionMetrics: {
-    electricity: number | null;
-    cooling: number | null;
-    water: number | null;
-  };
-  processType: string;
+  metrics: ConsumptionMetrics;
+  efficiency: number;
 }
 
-export function ResourceConsumption({ 
-  consumptionMetrics,
-  processType 
+export function ResourceConsumption({
+  metrics,
+  efficiency,
 }: ResourceConsumptionProps) {
-  const metrics = [
+  const consumptionData = [
     {
-      key: 'electricity',
-      title: 'Electricity Consumption',
-      value: consumptionMetrics.electricity,
-      suffix: 'kWh',
+      name: 'Electricity',
+      value: metrics.electricity,
+      unit: 'kWh',
       icon: <Zap className="h-4 w-4" />,
-      tooltip: 'Total electrical energy consumed',
+      color: 'rgb(234 179 8)', // yellow-500
+      description: 'Total electricity consumption',
+    },
+    {
+      name: 'Water',
+      value: metrics.water,
+      unit: 'm³',
+      icon: <Droplets className="h-4 w-4" />,
       color: 'rgb(59 130 246)', // blue-500
-      bgColor: 'bg-blue-100',
-      textColor: 'text-blue-700',
-      visible: processType === 'rf'
+      description: 'Total water consumption',
     },
     {
-      key: 'cooling',
-      title: 'Cooling Energy',
-      value: consumptionMetrics.cooling,
-      suffix: 'kWh',
+      name: 'Cooling',
+      value: metrics.cooling,
+      unit: 'kWh',
       icon: <Snowflake className="h-4 w-4" />,
-      tooltip: 'Total cooling energy required',
-      color: 'rgb(34 211 238)', // cyan-500
-      bgColor: 'bg-cyan-100',
-      textColor: 'text-cyan-700',
-      visible: processType === 'ir'
+      color: 'rgb(99 102 241)', // indigo-500
+      description: 'Total cooling energy consumption',
     },
-    {
-      key: 'water',
-      title: 'Water Usage',
-      value: consumptionMetrics.water,
-      suffix: 'm³',
-      icon: <Droplet className="h-4 w-4" />,
-      tooltip: 'Total water consumption',
-      color: 'rgb(34 197 94)', // green-500
-      bgColor: 'bg-green-100',
-      textColor: 'text-green-700',
-      visible: true
-    }
-  ].filter(metric => metric.visible);
+  ].filter((item) => item.value !== null);
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader>
         <CardTitle>Resource Consumption</CardTitle>
-        <Badge variant="outline" className="font-mono">
-          {processType.toUpperCase()}
-        </Badge>
+        <p className="text-sm text-muted-foreground">
+          Energy Efficiency: {efficiency.toFixed(1)}%
+        </p>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-2">
-          {metrics.map(metric => (
-            <TooltipProvider key={metric.key}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`rounded-full p-2 ${metric.bgColor} ${metric.textColor}`}>
-                              {metric.icon}
-                            </div>
-                            <span className="font-medium">{metric.title}</span>
-                          </div>
-                          <span className="font-medium">
-                            {metric.value !== null ? `${formatNumber(metric.value)} ${metric.suffix}` : 'N/A'}
-                          </span>
-                        </div>
-                        {metric.value !== null && (
-                          <Progress
-                            value={75} // You can calculate this based on benchmarks
-                            className={metric.bgColor}
-                            indicatorColor={metric.color}
-                          />
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{metric.tooltip}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-        </div>
+      <CardContent className="space-y-6">
+        {consumptionData.map((item) => (
+          <div key={item.name} className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className={`rounded-full p-2 bg-${item.color.split(' ')[1]}/20`}>
+                {item.icon}
+              </div>
+              <div>
+                <p className="font-medium">{item.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {item.description}
+                </p>
+              </div>
+              <div className="ml-auto text-right">
+                <p className="text-lg font-semibold">
+                  {item.value.toFixed(1)} {item.unit}
+                </p>
+              </div>
+            </div>
+            <Progress
+              value={item.value / Math.max(...consumptionData.map(d => d.value || 0)) * 100}
+              className="h-2"
+            />
+          </div>
+        ))}
       </CardContent>
     </Card>
   );

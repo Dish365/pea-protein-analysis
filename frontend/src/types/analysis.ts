@@ -1,7 +1,7 @@
 import { ProcessType } from "./process";
-import { TechnicalResults } from "./technical";
-import { EconomicAnalysisResult } from "./economic";
-import { EnvironmentalAnalysisResult } from "./environmental";
+import { TechnicalParameters, TechnicalResults } from "./technical";
+import { EconomicParameters, EconomicResults } from "./economic";
+import { EnvironmentalParameters, EnvironmentalResults } from "./environmental";
 
 export interface EfficiencyResults {
   efficiency_metrics: {
@@ -14,8 +14,8 @@ export interface EfficiencyResults {
 
 export interface AnalysisSummary {
   technical: TechnicalResults;
-  economic: EconomicAnalysisResult;
-  environmental: EnvironmentalAnalysisResult;
+  economic: EconomicResults;
+  environmental: EnvironmentalResults;
   efficiency: EfficiencyResults;
 }
 
@@ -24,38 +24,19 @@ export interface AnalysisResult {
   process: number;
   timestamp: string;
   technical_results: TechnicalResults;
-  economic_results: EconomicAnalysisResult;
-  environmental_results: EnvironmentalAnalysisResult;
+  economic_results: EconomicResults;
+  environmental_results: EnvironmentalResults;
   efficiency_results: EfficiencyResults;
 }
 
 export interface AnalysisRequest {
   process_type: ProcessType;
-  parameters: Record<string, any>;
+  parameters: TechnicalParameters | EconomicParameters | EnvironmentalParameters;
 }
 
 export interface AnalysisFilter {
-  startDate?: string;
-  endDate?: string;
+  start_date?: string;
+  end_date?: string;
   status?: string;
   type?: string;
-}
-
-export interface TechnicalParameters {
-  processType: "baseline" | "rf" | "ir";
-  airFlowRate: number;
-  temperature: number;
-  pressure: number;
-  inputMass: number;
-  outputMass: number;
-  initialProteinContent: number;
-  targetProteinContent: number;
-}
-
-export interface EconomicParameters {
-  // Add economic parameters
-}
-
-export interface EnvironmentalParameters {
-  // Add environmental parameters
 }

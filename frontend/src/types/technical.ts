@@ -1,4 +1,4 @@
-import { ProcessType } from './process';
+import { ProcessType, ProcessTypeValues } from './process';
 
 export interface ProteinRecovery {
   mass: number;
@@ -13,23 +13,31 @@ export interface ParticleSizeDistribution {
 }
 
 export interface TechnicalParameters {
-  processType: ProcessType;
-  airFlowRate: number;
-  temperature: number;
-  pressure: number;
+  processType: ProcessTypeValues;
+  airFlow: number;
+  classifierSpeed: number;
+  
+  // Mass Balance
   inputMass: number;
   outputMass: number;
+  
+  // Content Analysis
   initialProteinContent: number;
-  targetProteinContent: number;
+  finalProteinContent: number;
+  initialMoistureContent: number;
+  finalMoistureContent: number;
+  
+  // Particle Size Analysis
+  d10ParticleSize: number;
+  d50ParticleSize: number;
+  d90ParticleSize: number;
 }
 
 export interface TechnicalResults {
-  efficiency: number;
-  yieldRate: number;
-  proteinRecovery: number;
-  energyConsumption: number;
-  processTime: number;
-  qualityScore: number;
+  proteinRecovery: ProteinRecovery;
+  separationEfficiency: number;
+  processEfficiency: number;
+  particleSizeDistribution: ParticleSizeDistribution;
 }
 
 export interface TechnicalAnalysis {

@@ -56,6 +56,15 @@ CACHES = {
 # Debug Toolbar configuration
 DEBUG_TOOLBAR_CONFIG = {
     'SHOW_TOOLBAR_CALLBACK': lambda request: True,
+    'DISABLE_PANELS': {
+        'debug_toolbar.panels.redirects.RedirectsPanel',
+    },
+    'SHOW_TEMPLATE_CONTEXT': True,
+    'RENDER_PANELS': True,
+    'RESULTS_CACHE_SIZE': 10,
+    'ENABLE_STACKTRACES': True,
+    'SHOW_COLLAPSED': True,
+    'SQL_WARNING_THRESHOLD': 100,
 }
 
 # Additional development apps
@@ -63,21 +72,30 @@ INSTALLED_APPS += [
     "debug_toolbar",
 ]
 
-MIDDLEWARE += [
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
-]
-
 # Debug toolbar settings
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
+# Add debug toolbar middleware
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
+]
+
 # Development-specific Process Analysis settings
-PROCESS_ANALYSIS.update({
+PROCESS_ANALYSIS = {
     'DEFAULT_TIMEOUT': 120,  # Longer timeout for development
     'MAX_RETRIES': 5,  # More retries for development
     'CACHE_TIMEOUT': 1800,  # 30 minutes for development
-})
+}
 
 # Development-specific FastAPI settings
 FASTAPI_BASE_URL = 'http://localhost:8001/api/v1'

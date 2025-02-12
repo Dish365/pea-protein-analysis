@@ -44,6 +44,13 @@ API URL Structure:
        - Details: /api/v1/process/{id}/
        - Status: /api/v1/process/{id}/status/
        - Results: /api/v1/process/{id}/results/
+       - Analysis:
+         * Create: /api/v1/process/analysis/create/
+         * Update Step: /api/v1/process/analysis/{id}/update/
+         * Submit: /api/v1/process/analysis/{id}/submit/
+         * Technical: /api/v1/process/analysis/{id}/technical/
+         * Economic: /api/v1/process/analysis/{id}/economic/
+         * Environmental: /api/v1/process/analysis/{id}/environmental/
 
 2. Admin Interface:
    - Path: /admin/

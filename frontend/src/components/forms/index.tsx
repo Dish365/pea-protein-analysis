@@ -6,22 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { ProcessType } from '@/types/process';
-import { DEFAULT_PROCESS_ANALYSIS } from '@/config/constants';
 import TechnicalInputForm from './TechnicalInputForm';
 import EconomicInputForm from './EconomicInputForm';
 import EnvironmentalInputForm from './EnvironmentalInputForm';
-import { PROCESS_ENDPOINTS, API_CONFIG } from '@/config/endpoints';
-import axios from 'axios';
-import { EnvironmentalParameters } from '@/types/environmental';
 import { Steps } from "@/components/ui/steps";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/useToast";
@@ -30,7 +19,7 @@ const processSchema = z.object({
   type: z.enum(["technical", "economic", "environmental"] as const),
   parameters: z.object({
     // Technical parameters
-    processType: z.enum(["batch", "continuous"]).optional(),
+    processType: z.enum(["baseline", "rf", "ir"] as const),
     airFlow: z.number().optional(),
     classifierSpeed: z.number().optional(),
     inputMass: z.number().optional(),
@@ -44,23 +33,28 @@ const processSchema = z.object({
     d90ParticleSize: z.number().optional(),
     
     // Economic parameters
-    equipmentCost: z.number().optional(),
-    maintenanceCost: z.number().optional(),
-    rawMaterialCost: z.number().optional(),
-    utilityCost: z.number().optional(),
-    laborCost: z.number().optional(),
-    projectDuration: z.number().optional(),
-    discountRate: z.number().optional(),
-    productionVolume: z.number().optional(),
-    revenuePerYear: z.number().optional(),
+    production_volume: z.number().optional(),
+    operating_hours: z.number().optional(),
+    equipment_cost: z.number().optional(),
+    utility_cost: z.number().optional(),
+    raw_material_cost: z.number().optional(),
+    labor_cost: z.number().optional(),
+    maintenance_factor: z.number().optional(),
+    indirect_costs_factor: z.number().optional(),
+    installation_factor: z.number().optional(),
+    project_duration: z.number().optional(),
+    discount_rate: z.number().optional(),
+    revenue_per_year: z.number().optional(),
     
     // Environmental parameters
-    electricityConsumption: z.number().optional(),
-    coolingConsumption: z.number().optional(),
-    waterConsumption: z.number().optional(),
-    transportConsumption: z.number().optional(),
-    equipmentMass: z.number().optional(),
-    allocationMethod: z.string().optional(),
+    electricity_consumption: z.number().optional(),
+    cooling_consumption: z.number().optional(),
+    water_consumption: z.number().optional(),
+    transport_consumption: z.number().optional(),
+    equipment_mass: z.number().optional(),
+    thermal_ratio: z.number().optional(),
+    allocation_method: z.enum(["economic", "physical", "hybrid"]).optional(),
+    hybrid_weights: z.record(z.string(), z.number()).optional(),
   }),
 });
 
@@ -82,7 +76,9 @@ interface FormStep {
 
 const DEFAULT_FORM_VALUES: ProcessAnalysis = {
   type: "technical",
-  parameters: {}
+  parameters: {
+    processType: "baseline",
+  }
 };
 
 const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
@@ -134,15 +130,16 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
       title: 'Economic Parameters',
       description: 'Define cost and revenue factors',
       validateFields: [
-        'parameters.equipmentCost',
-        'parameters.maintenanceCost',
-        'parameters.rawMaterialCost',
-        'parameters.utilityCost',
-        'parameters.laborCost',
-        'parameters.projectDuration',
-        'parameters.discountRate',
-        'parameters.productionVolume',
-        'parameters.revenuePerYear'
+        'parameters.equipment_cost',
+        'parameters.utility_cost',
+        'parameters.raw_material_cost',
+        'parameters.labor_cost',
+        'parameters.maintenance_factor',
+        'parameters.indirect_costs_factor',
+        'parameters.installation_factor',
+        'parameters.project_duration',
+        'parameters.discount_rate',
+        'parameters.revenue_per_year',
       ],
       component: (
         <EconomicInputForm 
@@ -159,12 +156,14 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
       title: 'Environmental Parameters',
       description: 'Specify environmental impacts',
       validateFields: [
-        'parameters.electricityConsumption',
-        'parameters.coolingConsumption',
-        'parameters.waterConsumption',
-        'parameters.transportConsumption',
-        'parameters.equipmentMass',
-        'parameters.allocationMethod'
+        'parameters.electricity_consumption',
+        'parameters.cooling_consumption',
+        'parameters.water_consumption',
+        'parameters.transport_consumption',
+        'parameters.equipment_mass',
+        'parameters.thermal_ratio',
+        'parameters.allocation_method',
+        'parameters.hybrid_weights',
       ],
       component: (
         <EnvironmentalInputForm 
@@ -181,13 +180,13 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
 
   const validateProcessTypeRequirements = (values: ProcessAnalysis) => {
     const errors: string[] = [];
-    const { electricityConsumption, coolingConsumption, processType } = values.parameters;
+    const params = values.parameters;
 
-    if (processType === "batch" && !electricityConsumption) {
-      errors.push('Batch process requires electricity consumption');
+    if (params.processType === "rf" && !params.electricity_consumption) {
+      errors.push('RF process requires electricity consumption');
     }
-    if (processType === "continuous" && !coolingConsumption) {
-      errors.push('Continuous process requires cooling consumption');
+    if (params.processType === "ir" && !params.cooling_consumption) {
+      errors.push('IR process requires cooling consumption');
     }
 
     return errors;

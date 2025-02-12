@@ -1,139 +1,126 @@
 "use client";
 
 import React from 'react';
-import { Zap, Droplets, TestTubes } from 'lucide-react';
-import { formatNumber } from '@/lib/formatters';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImpactAssessment } from '@/types/environmental';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 interface EmissionsBreakdownProps {
-  impactAssessment: {
-    gwp: number;
-    hct: number;
-    frs: number;
+  impacts: ImpactAssessment;
+  allocatedImpacts: {
+    method: string;
+    factors: Record<string, number>;
+    results: Record<string, ImpactAssessment>;
   };
-  processType: string;
 }
 
-export function EmissionsBreakdown({ 
-  impactAssessment,
-  processType 
+export function EmissionsBreakdown({
+  impacts,
+  allocatedImpacts,
 }: EmissionsBreakdownProps) {
-  const metrics = [
+  const impactData = [
     {
-      key: 'gwp',
-      label: 'Global Warming Potential',
-      value: impactAssessment.gwp,
-      icon: <Zap className="h-4 w-4" />,
-      color: 'rgb(59 130 246)', // blue-500
-      bgColor: 'bg-blue-100',
-      textColor: 'text-blue-700',
-      unit: 'kg CO₂eq',
-      description: 'Carbon dioxide equivalent emissions'
+      name: 'Global Warming',
+      value: impacts.gwp,
+      unit: 'kg CO₂e',
+      description: 'Global Warming Potential',
     },
     {
-      key: 'hct',
-      label: 'Human Carcinogenic Toxicity',
-      value: impactAssessment.hct,
-      icon: <TestTubes className="h-4 w-4" />,
-      color: 'rgb(147 51 234)', // purple-500
-      bgColor: 'bg-purple-100',
-      textColor: 'text-purple-700',
+      name: 'Human Toxicity',
+      value: impacts.hct,
       unit: 'CTUh',
-      description: 'Comparative Toxic Units for human health'
+      description: 'Human Toxicity Potential',
     },
     {
-      key: 'frs',
-      label: 'Fossil Resource Scarcity',
-      value: impactAssessment.frs,
-      icon: <Droplets className="h-4 w-4" />,
-      color: 'rgb(34 211 238)', // cyan-500
-      bgColor: 'bg-cyan-100',
-      textColor: 'text-cyan-700',
-      unit: 'kg oil eq',
-      description: 'Oil equivalent of fossil resources used'
-    }
+      name: 'Resource Scarcity',
+      value: impacts.frs,
+      unit: 'MJ',
+      description: 'Fossil Resource Scarcity',
+    },
   ];
 
-  const totalImpact = Object.values(impactAssessment).reduce((a, b) => a + b, 0);
+  const allocationData = Object.entries(allocatedImpacts.results).map(([key, value]) => ({
+    name: key,
+    gwp: value.gwp,
+    hct: value.hct,
+    frs: value.frs,
+  }));
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Environmental Impact Assessment</CardTitle>
-        <Badge variant="outline" className="font-mono">
-          {processType.toUpperCase()}
-        </Badge>
+      <CardHeader>
+        <CardTitle>Environmental Impact Breakdown</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {metrics.map(metric => {
-            const percentage = (metric.value / totalImpact) * 100;
-            return (
-              <TooltipProvider key={metric.key}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`rounded-full p-2 ${metric.bgColor} ${metric.textColor}`}>
-                            {metric.icon}
-                          </div>
-                          <span className="font-medium">{metric.label}</span>
+        <div className="space-y-6">
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={impactData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="rounded-lg bg-white p-2 shadow-md border">
+                          <p className="font-medium">{data.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {data.description}
+                          </p>
+                          <p className="mt-1 font-medium">
+                            {data.value.toFixed(2)} {data.unit}
+                          </p>
                         </div>
-                        <span className="font-medium">
-                          {formatNumber(metric.value)} {metric.unit}
-                        </span>
-                      </div>
-                      <Progress
-                        value={percentage}
-                        className={metric.bgColor}
-                        indicatorColor={metric.color}
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{metric.description}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            );
-          })}
-        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar
+                  dataKey="value"
+                  fill="#10b981"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-        <Separator className="my-6" />
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={allocationData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="gwp" name="GWP" fill="#10b981" stackId="a" />
+                <Bar dataKey="hct" name="HCT" fill="#3b82f6" stackId="a" />
+                <Bar dataKey="frs" name="FRS" fill="#6366f1" stackId="a" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-        <div className="text-center space-y-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total Impact Score
-                  </p>
-                  <p className="text-3xl font-bold text-primary">
-                    {formatNumber(totalImpact)}
-                  </p>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Total environmental impact score</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="grid grid-cols-3 gap-4">
+            {impactData.map((impact) => (
+              <div key={impact.name} className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">{impact.name}</p>
+                <p className="text-lg font-semibold">
+                  {impact.value.toFixed(2)} {impact.unit}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </CardContent>
     </Card>

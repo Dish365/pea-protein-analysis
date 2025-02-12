@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CostBreakdown as CostBreakdownType } from '@/types/economic';
 
 interface CostBreakdownProps {
   capex: {
@@ -32,20 +33,20 @@ interface CostBreakdownProps {
     labor_cost: number;
     maintenance_cost: number;
   };
-  totalInvestment: number;
-  annualCosts: number;
+  costBreakdown: CostBreakdownType;
+  unitCost: number;
 }
 
 export function CostBreakdown({
   capex,
   opex,
-  totalInvestment,
-  annualCosts,
+  costBreakdown,
+  unitCost,
 }: CostBreakdownProps) {
   const capexItems = [
     {
       title: 'Equipment',
-      value: capex.equipment_cost,
+      value: costBreakdown.equipment_cost,
       color: 'rgb(59 130 246)', // blue-500
       tooltip: 'Base equipment cost',
     },
@@ -57,7 +58,7 @@ export function CostBreakdown({
     },
     {
       title: 'Indirect Costs',
-      value: capex.indirect_cost,
+      value: costBreakdown.indirect_cost,
       color: 'rgb(234 179 8)', // yellow-500
       tooltip: 'Engineering, construction, and contingency costs',
     },
@@ -66,25 +67,25 @@ export function CostBreakdown({
   const opexItems = [
     {
       title: 'Utilities',
-      value: opex.utilities_cost,
+      value: costBreakdown.utilities_cost,
       color: 'rgb(147 51 234)', // purple-500
       tooltip: 'Annual utility costs (electricity, water, etc.)',
     },
     {
       title: 'Materials',
-      value: opex.materials_cost,
+      value: costBreakdown.raw_materials_cost,
       color: 'rgb(236 72 153)', // pink-500
       tooltip: 'Annual raw material costs',
     },
     {
       title: 'Labor',
-      value: opex.labor_cost,
+      value: costBreakdown.labor_cost,
       color: 'rgb(239 68 68)', // red-500
       tooltip: 'Annual labor costs',
     },
     {
       title: 'Maintenance',
-      value: opex.maintenance_cost,
+      value: costBreakdown.maintenance_cost,
       color: 'rgb(249 115 22)', // orange-500
       tooltip: 'Annual maintenance costs',
     },
@@ -123,6 +124,9 @@ export function CostBreakdown({
     <Card>
       <CardHeader>
         <CardTitle>Cost Analysis</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Unit Production Cost: {formatCurrency(unitCost)}/kg
+        </p>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="capex" className="space-y-4">
@@ -145,13 +149,13 @@ export function CostBreakdown({
                     <DollarSign className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Investment</p>
-                    <p className="text-2xl font-bold text-primary">{formatCurrency(totalInvestment)}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Total CAPEX</p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(capex.total_capex)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            {renderCostBreakdown(capexItems, totalInvestment)}
+            {renderCostBreakdown(capexItems, capex.total_capex)}
           </TabsContent>
 
           <TabsContent value="opex" className="space-y-4">
@@ -162,13 +166,13 @@ export function CostBreakdown({
                     <DollarSign className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Annual Operating Costs</p>
-                    <p className="text-2xl font-bold text-primary">{formatCurrency(annualCosts)}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Annual OPEX</p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(opex.total_opex)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            {renderCostBreakdown(opexItems, annualCosts)}
+            {renderCostBreakdown(opexItems, opex.total_opex)}
           </TabsContent>
         </Tabs>
       </CardContent>

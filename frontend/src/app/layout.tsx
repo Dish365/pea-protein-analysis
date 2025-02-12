@@ -1,35 +1,33 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "@/styles/globals.css";
-import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/components/providers/auth";
-import { QueryProvider } from "@/components/providers/query";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import "@/app/globals.css"
+import { Inter } from "next/font/google"
+import { cn } from "@/lib/utils"
+import { Toaster } from "@/components/ui/toaster"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"] })
 
-export const metadata: Metadata = {
-  title: "Process Analysis",
-  description: "Analyze and optimize your processes",
-};
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: false,
+    },
+  },
+})
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <QueryProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              {children}
-              <Toaster />
-            </TooltipProvider>
-          </AuthProvider>
-        </QueryProvider>
+      <body className={cn(inter.className, "min-h-screen bg-background antialiased")}>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <Toaster />
+        </QueryClientProvider>
       </body>
     </html>
-  );
+  )
 }

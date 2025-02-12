@@ -316,4 +316,88 @@ class ProcessInputSerializer(serializers.Serializer):
                     'cooling_consumption': 'IR process requires positive cooling consumption'
                 })
         
-        return data 
+        return data
+
+
+class TechnicalInputSerializer(serializers.Serializer):
+    """
+    Serializer for technical analysis input validation.
+    """
+    # Process Parameters
+    air_flow = serializers.FloatField(min_value=0)
+    classifier_speed = serializers.FloatField(min_value=0)
+    
+    # Mass Balance
+    input_mass = serializers.FloatField(min_value=0)
+    output_mass = serializers.FloatField(min_value=0)
+    
+    # Content Analysis
+    initial_protein_content = serializers.FloatField(min_value=0, max_value=100)
+    final_protein_content = serializers.FloatField(min_value=0, max_value=100)
+    initial_moisture_content = serializers.FloatField(min_value=0, max_value=100)
+    final_moisture_content = serializers.FloatField(min_value=0, max_value=100)
+    
+    # Particle Size Analysis
+    d10_particle_size = serializers.FloatField(min_value=0)
+    d50_particle_size = serializers.FloatField(min_value=0)
+    d90_particle_size = serializers.FloatField(min_value=0)
+
+
+class EconomicInputSerializer(serializers.Serializer):
+    """
+    Serializer for economic analysis input validation.
+    """
+    # Equipment and Costs
+    equipment = serializers.JSONField()
+    equipment_cost = serializers.FloatField(min_value=0)
+    maintenance_cost = serializers.FloatField(min_value=0)
+    installation_factor = serializers.FloatField(min_value=0, max_value=1, default=0.2)
+    indirect_costs_factor = serializers.FloatField(min_value=0, max_value=1, default=0.15)
+    maintenance_factor = serializers.FloatField(min_value=0, max_value=1, default=0.05)
+    indirect_factors = serializers.JSONField()
+    
+    # Operating Costs
+    raw_material_cost = serializers.FloatField(min_value=0)
+    utility_cost = serializers.FloatField(min_value=0)
+    labor_cost = serializers.FloatField(min_value=0)
+    
+    # Resource Configuration
+    utilities = serializers.JSONField()
+    raw_materials = serializers.JSONField()
+    labor_config = serializers.JSONField()
+    
+    # Financial Parameters
+    project_duration = serializers.IntegerField(min_value=1)
+    discount_rate = serializers.FloatField(min_value=0, max_value=1)
+    production_volume = serializers.FloatField(min_value=0)
+    revenue_per_year = serializers.FloatField(min_value=0)
+    cash_flows = serializers.JSONField()
+    
+    # Risk Analysis
+    sensitivity_range = serializers.FloatField(min_value=0, max_value=1, default=0.2)
+    steps = serializers.IntegerField(min_value=1, default=10)
+
+
+class EnvironmentalInputSerializer(serializers.Serializer):
+    """
+    Serializer for environmental analysis input validation.
+    """
+    # Environmental Analysis
+    electricity_consumption = serializers.FloatField(min_value=0)
+    cooling_consumption = serializers.FloatField(min_value=0)
+    water_consumption = serializers.FloatField(min_value=0)
+    transport_consumption = serializers.FloatField(min_value=0)
+    equipment_mass = serializers.FloatField(min_value=0)
+    thermal_ratio = serializers.FloatField(min_value=0, max_value=1, default=0.3)
+    energy_consumption = serializers.JSONField()
+    
+    # Production Data
+    production_data = serializers.JSONField()
+    product_values = serializers.JSONField()
+    
+    # Allocation Configuration
+    allocation_method = serializers.ChoiceField(
+        choices=['economic', 'physical', 'hybrid'],
+        default='hybrid'
+    )
+    hybrid_weights = serializers.JSONField() 

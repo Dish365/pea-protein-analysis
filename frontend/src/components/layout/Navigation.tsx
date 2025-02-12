@@ -9,33 +9,83 @@ import {
   Activity,
   DollarSign,
   Leaf,
+  History,
+  Settings,
+  FlaskConical,
+  LucideIcon,
 } from "lucide-react";
 
-const menuItems = [
+interface MenuItem {
+  key: string;
+  icon: LucideIcon;
+  label: string;
+  description?: string;
+}
+
+interface MenuDivider {
+  type: 'divider';
+}
+
+type MenuItemOrDivider = MenuItem | MenuDivider;
+
+const menuItems: MenuItemOrDivider[] = [
   {
     key: "/dashboard",
     icon: BarChart2,
     label: "Dashboard",
   },
   {
-    key: "/dashboard/analysis/technical",
+    key: "/analysis/new",
+    icon: FlaskConical,
+    label: "New Analysis",
+  },
+  {
+    key: "/analysis/history",
+    icon: History,
+    label: "Analysis History",
+  },
+  {
+    type: "divider",
+  },
+  {
+    key: "/analysis/technical",
     icon: Activity,
     label: "Technical Analysis",
+    description: "Process efficiency metrics",
   },
   {
-    key: "/dashboard/analysis/economic",
+    key: "/analysis/economic",
     icon: DollarSign,
     label: "Economic Analysis",
+    description: "Cost and profitability analysis",
   },
   {
-    key: "/dashboard/analysis/environmental",
+    key: "/analysis/environmental",
     icon: Leaf,
     label: "Environmental Analysis",
+    description: "Environmental impact assessment",
+  },
+  {
+    type: "divider",
+  },
+  {
+    key: "/settings",
+    icon: Settings,
+    label: "Settings",
   },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
+
+  const isActiveLink = (path: string) => {
+    if (path === "/dashboard") {
+      return pathname === path;
+    }
+    return pathname.startsWith(path);
+  };
+
+  const navigationItems = menuItems.filter((item): item is MenuItem => !('type' in item));
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -45,8 +95,8 @@ export function Navigation() {
         </Link>
 
         <nav className="flex items-center space-x-6">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.key;
+          {navigationItems.map((item) => {
+            const isActive = isActiveLink(item.key);
             const Icon = item.icon;
             
             return (

@@ -1,9 +1,7 @@
 import { ProcessAnalysis } from "./process";
-import { AnalysisSummary } from "./analysis";
 import { TechnicalResults } from "./technical";
-import { EconomicAnalysisResult } from "./economic";
-import { EnvironmentalAnalysisResult } from "./environmental";
-import { EfficiencyResults } from "./analysis";
+import { EconomicAnalysis } from "./economic";
+import { EnvironmentalAnalysis } from "./environmental";
 
 // API Response Types
 export interface ApiResponse<T> {
@@ -63,8 +61,8 @@ export interface AnalysisResult {
   status: "pending" | "processing" | "completed" | "failed";
   results?: {
     technical?: TechnicalResults;
-    economic?: EconomicAnalysisResult;
-    environmental?: EnvironmentalAnalysisResult;
+    economic?: EconomicAnalysis;
+    environmental?: EnvironmentalAnalysis;
   };
   progress: number;
 }

@@ -5,7 +5,10 @@ from ..models.process import ProcessAnalysis, AnalysisResult
 from ..serializers.process_serializers import (
     ProcessAnalysisSerializer,
     ProcessInputSerializer,
-    AnalysisResultSerializer
+    AnalysisResultSerializer,
+    TechnicalInputSerializer,
+    EconomicInputSerializer,
+    EnvironmentalInputSerializer
 )
 from ..services.fastapi_service import FastAPIService
 import logging
@@ -272,4 +275,169 @@ class ProcessAnalysisView(APIView):
         return {
             'efficiency_metrics': efficiency.get('efficiency_metrics', {}),
             'performance_indicators': efficiency.get('performance_indicators', {})
+        }
+
+class ProcessAnalysisCreateView(APIView):
+    """Handle initial analysis creation"""
+    
+    def post(self, request, *args, **kwargs):
+        """Create a new analysis process"""
+        try:
+            # Create initial process record
+            process = ProcessAnalysis.objects.create(
+                status='draft',
+                progress=0
+            )
+            
+            return Response({
+                'id': process.id,
+                'status': 'draft',
+                'message': 'Analysis created successfully'
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Failed to create analysis: {str(e)}", exc_info=True)
+            return Response(
+                {'error': 'Failed to create analysis', 'details': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class ProcessAnalysisUpdateView(APIView):
+    """Handle step-by-step analysis updates"""
+    
+    def put(self, request, process_id, *args, **kwargs):
+        """Update analysis with step data"""
+        try:
+            process = ProcessAnalysis.objects.get(id=process_id)
+            step_type = request.data.get('type')
+            
+            if step_type == 'technical':
+                serializer = TechnicalInputSerializer(data=request.data)
+            elif step_type == 'economic':
+                serializer = EconomicInputSerializer(data=request.data)
+            elif step_type == 'environmental':
+                serializer = EnvironmentalInputSerializer(data=request.data)
+            else:
+                return Response(
+                    {'error': 'Invalid step type'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            if not serializer.is_valid():
+                return Response(
+                    {'error': 'Invalid input data', 'details': serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            # Update process with step data
+            process_data = process.data or {}
+            process_data.update(serializer.validated_data)
+            process.data = process_data
+            process.save()
+            
+            return Response({
+                'id': process.id,
+                'status': 'draft',
+                'message': f'{step_type.capitalize()} parameters updated successfully'
+            })
+            
+        except ProcessAnalysis.DoesNotExist:
+            return Response(
+                {'error': 'Process not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Failed to update analysis: {str(e)}", exc_info=True)
+            return Response(
+                {'error': 'Failed to update analysis', 'details': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class ProcessAnalysisSubmitView(APIView):
+    """Handle final analysis submission and processing"""
+    
+    def post(self, request, process_id, *args, **kwargs):
+        """Submit analysis for processing"""
+        try:
+            process = ProcessAnalysis.objects.get(id=process_id)
+            
+            if not process.data:
+                return Response(
+                    {'error': 'No analysis data found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            # Update status to pending
+            process.status = 'pending'
+            process.save()
+            
+            # Initialize FastAPI service and execute analysis
+            async def run_analysis():
+                try:
+                    async with FastAPIService() as service:
+                        return await service.analyze_process(process.data)
+                except Exception as e:
+                    logger.error(f"FastAPI service error: {str(e)}", exc_info=True)
+                    raise
+
+            # Run the analysis using asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                results = loop.run_until_complete(run_analysis())
+                if results is None:
+                    raise RuntimeError("Analysis failed with no results")
+                    
+                # Store results
+                result_data = self._prepare_result_data(process, results)
+                analysis_result = AnalysisResult.objects.create(**result_data)
+                
+                # Update process status
+                process.status = 'completed'
+                process.progress = 100
+                process.save()
+                
+                return Response({
+                    'id': process.id,
+                    'status': 'completed',
+                    'message': 'Analysis completed successfully',
+                    'results': AnalysisResultSerializer(analysis_result).data
+                })
+                
+            except Exception as e:
+                process.status = 'failed'
+                process.save()
+                error_msg = str(e)
+                logger.error(f"Analysis failed: {error_msg}", exc_info=True)
+                return Response(
+                    {'error': error_msg},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            finally:
+                loop.close()
+                try:
+                    asyncio.set_event_loop(None)
+                except Exception:
+                    pass
+                    
+        except ProcessAnalysis.DoesNotExist:
+            return Response(
+                {'error': 'Process not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Failed to submit analysis: {str(e)}", exc_info=True)
+            return Response(
+                {'error': 'Failed to submit analysis', 'details': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+    def _prepare_result_data(self, process: ProcessAnalysis, results: Dict[str, Any]) -> Dict[str, Any]:
+        """Prepare analysis results for storage"""
+        return {
+            'process': process,
+            'technical_results': results.get('technical_results', {}),
+            'economic_results': results.get('economic_analysis', {}),
+            'environmental_results': results.get('environmental_results', {}),
+            'efficiency_results': results.get('efficiency_results', {})
         }

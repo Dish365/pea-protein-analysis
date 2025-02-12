@@ -140,6 +140,20 @@ class ProcessAnalysis(models.Model):
         ordering = ['-timestamp']
         app_label = 'process_data'
 
+def get_default_environmental_results():
+    return {
+        'impact_assessment': {
+            'gwp': 0.0,
+            'hct': 0.0,
+            'frs': 0.0
+        },
+        'consumption_metrics': {
+            'electricity': None,
+            'cooling': None,
+            'water': None
+        }
+    }
+
 class AnalysisResult(models.Model):
     process = models.OneToOneField(ProcessAnalysis, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -157,18 +171,7 @@ class AnalysisResult(models.Model):
     environmental_results = models.JSONField(
         null=True,
         help_text="Environmental results including impact assessment and consumption metrics",
-        default=lambda: {
-            'impact_assessment': {
-                'gwp': 0.0,
-                'hct': 0.0,
-                'frs': 0.0
-            },
-            'consumption_metrics': {
-                'electricity': None,
-                'cooling': None,
-                'water': None
-            }
-        }
+        default=get_default_environmental_results
     )
     efficiency_results = models.JSONField(
         null=True,

@@ -1,216 +1,128 @@
 "use client";
 
 import React from 'react';
-import { formatNumber } from '@/lib/formatters';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImpactAssessment } from '@/types/environmental';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
-  Tooltip as RechartsTooltip,
 } from 'recharts';
 
 interface ImpactMetricsProps {
-  impacts: {
-    gwp: number;
-    hct: number;
-    frs: number;
-  };
+  impacts: ImpactAssessment;
   allocatedImpacts: {
     method: string;
     factors: Record<string, number>;
-    results: Record<string, {
-      gwp: number;
-      hct: number;
-      frs: number;
-    }>;
+    results: Record<string, ImpactAssessment>;
   };
 }
 
-interface AllocationData {
-  id: string;
-  product: string;
-  gwp: number;
-  hct: number;
-  frs: number;
-}
-
-export function ImpactMetrics({ impacts, allocatedImpacts }: ImpactMetricsProps) {
-  const impactMetrics = [
+export function ImpactMetrics({
+  impacts,
+  allocatedImpacts,
+}: ImpactMetricsProps) {
+  const impactData = [
     {
-      key: 'gwp',
-      name: 'Global Warming Potential',
+      name: 'Global Warming',
       value: impacts.gwp,
-      unit: 'kg CO₂eq',
-      description: 'Carbon dioxide equivalent emissions',
-      benchmark: 100, // Example benchmark
-      color: 'rgb(59 130 246)', // blue-500
+      unit: 'kg CO₂e',
+      description: 'Global Warming Potential',
     },
     {
-      key: 'hct',
-      name: 'Human Carcinogenic Toxicity',
+      name: 'Human Toxicity',
       value: impacts.hct,
       unit: 'CTUh',
-      description: 'Comparative Toxic Units for human health',
-      benchmark: 0.1,
-      color: 'rgb(147 51 234)', // purple-500
+      description: 'Human Toxicity Potential',
     },
     {
-      key: 'frs',
-      name: 'Fossil Resource Scarcity',
+      name: 'Resource Scarcity',
       value: impacts.frs,
-      unit: 'kg oil eq',
-      description: 'Oil equivalent of fossil resources used',
-      benchmark: 50,
-      color: 'rgb(34 211 238)', // cyan-500
-    }
+      unit: 'MJ',
+      description: 'Fossil Resource Scarcity',
+    },
   ];
 
-  // Prepare data for Area chart
-  const chartData = impactMetrics.map(metric => ({
-    category: metric.name,
-    value: (metric.value / metric.benchmark) * 100,
-    actual: metric.value,
-    benchmark: metric.benchmark,
-    unit: metric.unit,
-    color: metric.color,
-  }));
-
-  // Prepare allocation data for table
-  const allocationData: AllocationData[] = Object.entries(allocatedImpacts.results).map(([product, impacts]) => ({
-    id: product,
-    product,
-    gwp: impacts.gwp,
-    hct: impacts.hct,
-    frs: impacts.frs
+  const allocationData = Object.entries(allocatedImpacts.results).map(([key, value]) => ({
+    name: key,
+    gwp: value.gwp,
+    hct: value.hct,
+    frs: value.frs,
   }));
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Environmental Impact Analysis</CardTitle>
-        <Badge variant="outline" className="font-mono">
-          {allocatedImpacts.method.toUpperCase()}
-        </Badge>
+      <CardHeader>
+        <CardTitle>Impact Assessment</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Allocation Method: {allocatedImpacts.method}
+        </p>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div>
-            <h4 className="text-sm font-medium mb-4">Impact Metrics vs Benchmarks</h4>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="category" 
-                    className="text-xs"
-                    tick={{ fill: 'currentColor' }}
-                  />
-                  <YAxis 
-                    className="text-xs"
-                    tick={{ fill: 'currentColor' }}
-                    label={{ 
-                      value: '% of Benchmark', 
-                      angle: -90, 
-                      position: 'insideLeft',
-                      className: "fill-current"
-                    }}
-                  />
-                  <RechartsTooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="rounded-lg border bg-background p-2 shadow-md">
-                            <p className="text-sm font-medium">{data.category}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatNumber(data.actual)} {data.unit}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatNumber(data.value)}% of benchmark
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  {impactMetrics.map((metric) => (
-                    <Area
-                      key={metric.key}
-                      type="monotone"
-                      dataKey="value"
-                      name={metric.name}
-                      stroke={metric.color}
-                      fill={metric.color}
-                      fillOpacity={0.2}
-                    />
-                  ))}
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={impactData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="rounded-lg bg-white p-2 shadow-md border">
+                          <p className="font-medium">{data.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {data.description}
+                          </p>
+                          <p className="mt-1 font-medium">
+                            {data.value.toFixed(2)} {data.unit}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar
+                  dataKey="value"
+                  fill="#10b981"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
 
-          <div>
-            <h4 className="text-sm font-medium mb-4">Allocated Impacts by Product</h4>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    {impactMetrics.map((metric) => (
-                      <TableHead key={metric.key}>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger className="text-left font-medium">
-                              {metric.name}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{metric.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allocationData.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="font-medium">{row.product}</TableCell>
-                      {impactMetrics.map((metric) => (
-                        <TableCell key={metric.key}>
-                          {formatNumber(row[metric.key as keyof Omit<AllocationData, 'id' | 'product'>])} {metric.unit}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={allocationData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="gwp" name="GWP" fill="#10b981" stackId="a" />
+                <Bar dataKey="hct" name="HCT" fill="#3b82f6" stackId="a" />
+                <Bar dataKey="frs" name="FRS" fill="#6366f1" stackId="a" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            {impactData.map((impact) => (
+              <div key={impact.name} className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">{impact.name}</p>
+                <p className="text-lg font-semibold">
+                  {impact.value.toFixed(2)} {impact.unit}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>

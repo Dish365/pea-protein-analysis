@@ -1,11 +1,10 @@
 import axios from "axios";
-import { API_BASE_URL } from "@/config/api";
+import { API_BASE_URL, API_CONFIG, API_ENDPOINTS } from "@/config/api";
 
+// Create axios instance with default configuration
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  ...API_CONFIG,
 });
 
 // Add auth interceptor
@@ -19,29 +18,38 @@ api.interceptors.request.use((config) => {
 
 // Add refresh token interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Ensure response data is serializable
+    if (response.data) {
+      response.data = JSON.parse(JSON.stringify(response.data));
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response.status === 401 && !originalRequest._retry) {
+    // Handle 401 Unauthorized errors with token refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
         const refresh = localStorage.getItem("refreshToken");
         const response = await axios.post(
-          `${API_BASE_URL}/api/v1/auth/token/refresh/`,
+          API_ENDPOINTS.auth.refresh,
           { refresh }
         );
 
-        localStorage.setItem("token", response.data.access);
-        originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
+        const newToken = response.data.access;
+        localStorage.setItem("token", newToken);
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
 
         return api(originalRequest);
-      } catch (err) {
-        // Handle refresh token error
+      } catch (refreshError) {
+        // Clear auth state on refresh failure
         localStorage.removeItem("token");
         localStorage.removeItem("refreshToken");
         window.location.href = "/signin";
+        return Promise.reject(refreshError);
       }
     }
 

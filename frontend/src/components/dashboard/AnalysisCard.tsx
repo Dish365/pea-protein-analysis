@@ -18,12 +18,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 interface AnalysisCardProps {
   title: string
   description: string
   icon: React.ReactNode
-  color: string
+  variant: 'default' | 'destructive' | 'success' | 'warning'
   metrics: {
     completed: number
     inProgress: number
@@ -32,25 +33,50 @@ interface AnalysisCardProps {
   onClick: () => void
 }
 
+const variantStyles = {
+  default: {
+    border: 'border-primary',
+    background: 'bg-primary/10',
+    text: 'text-primary',
+    button: 'bg-primary hover:bg-primary/90',
+  },
+  destructive: {
+    border: 'border-destructive',
+    background: 'bg-destructive/10',
+    text: 'text-destructive',
+    button: 'bg-destructive hover:bg-destructive/90',
+  },
+  success: {
+    border: 'border-emerald-500',
+    background: 'bg-emerald-500/10',
+    text: 'text-emerald-500',
+    button: 'bg-emerald-500 hover:bg-emerald-500/90',
+  },
+  warning: {
+    border: 'border-yellow-500',
+    background: 'bg-yellow-500/10',
+    text: 'text-yellow-500',
+    button: 'bg-yellow-500 hover:bg-yellow-500/90',
+  },
+} as const
+
 export function AnalysisCard({
   title,
   description,
   icon,
-  color,
+  variant = 'default',
   metrics,
   onClick,
 }: AnalysisCardProps) {
   const totalAnalyses = metrics.completed + metrics.inProgress
-  const completionRate = (metrics.completed / totalAnalyses) * 100
+  const completionRate = totalAnalyses > 0 ? (metrics.completed / totalAnalyses) * 100 : 0
+  const styles = variantStyles[variant]
 
   return (
-    <Card className="h-full" style={{ borderTop: `2px solid ${color}` }}>
+    <Card className={cn("h-full border-t-2", styles.border)}>
       <CardHeader>
         <div className="flex items-start gap-4">
-          <div
-            className="p-2 rounded-lg"
-            style={{ backgroundColor: `${color}20` }}
-          >
+          <div className={cn("p-2 rounded-lg", styles.background)}>
             {icon}
           </div>
           <div>
@@ -64,7 +90,7 @@ export function AnalysisCard({
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <Progress value={completionRate} indicatorColor={color} />
+                <Progress value={completionRate} className={cn("h-2", styles.background)} />
               </div>
             </TooltipTrigger>
             <TooltipContent>
@@ -76,13 +102,13 @@ export function AnalysisCard({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Completed</p>
-            <p className="text-2xl font-semibold" style={{ color }}>
+            <p className={cn("text-2xl font-semibold", styles.text)}>
               {metrics.completed}
             </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">In Progress</p>
-            <p className="text-2xl font-semibold" style={{ color: '#faad14' }}>
+            <p className="text-2xl font-semibold text-yellow-500">
               {metrics.inProgress}
             </p>
           </div>
@@ -95,13 +121,13 @@ export function AnalysisCard({
               {metrics.trend > 0 ? (
                 <TrendingUp className="text-emerald-500" />
               ) : (
-                <TrendingDown className="text-red-500" />
+                <TrendingDown className="text-destructive" />
               )}
               <p
-                className="text-2xl font-semibold"
-                style={{
-                  color: metrics.trend > 0 ? '#10b981' : '#ef4444',
-                }}
+                className={cn(
+                  "text-2xl font-semibold",
+                  metrics.trend > 0 ? "text-emerald-500" : "text-destructive"
+                )}
               >
                 {metrics.trend}%
               </p>
@@ -111,12 +137,8 @@ export function AnalysisCard({
       </CardContent>
       <CardFooter>
         <Button
-          className="w-full"
+          className={cn("w-full text-primary-foreground", styles.button)}
           onClick={onClick}
-          style={{
-            backgroundColor: color,
-            borderColor: color,
-          }}
         >
           Start New Analysis
         </Button>

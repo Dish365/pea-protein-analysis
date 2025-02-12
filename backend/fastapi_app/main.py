@@ -11,10 +11,7 @@ from backend.fastapi_app.process_analysis import (
     efficiency_endpoints,
     impact_endpoints,
     allocation_endpoints,
-    protein_endpoints,
-    technical_endpoints,
-    economic_endpoints,
-    environmental_endpoints
+    protein_endpoints
 )
 
 # Configure logging
@@ -59,19 +56,13 @@ app.add_middleware(
 # Create main API router
 api_router = APIRouter(prefix="/api/v1")
 
-# Technical analysis router
-logger.debug("Configuring technical analysis endpoints")
-technical_router = APIRouter()
-
 # Include protein analysis endpoints
 logger.debug("Including Protein Analysis endpoints")
-technical_router.include_router(
+api_router.include_router(
     protein_endpoints.router,
+    prefix="/protein",
     tags=["Protein Analysis"]
 )
-
-# Include technical router in main API router
-api_router.include_router(technical_router, prefix="/technical")
 
 # Economic analysis endpoints
 logger.debug("Configuring economic analysis endpoints")
@@ -137,17 +128,25 @@ router = APIRouter(prefix="/api/v1/process")
 async def analyze_process(process_id: str, data: dict):
     """Complete analysis pipeline"""
     try:
-        # Perform technical analysis
-        technical_results = await technical_endpoints.analyze_technical(data)
+        # Perform protein analysis
+        protein_results = await protein_endpoints.analyze_protein(data)
 
         # Perform economic analysis
-        economic_results = await economic_endpoints.analyze_economic(data)
+        economic_results = {
+            "capex": await capex_endpoints.analyze_capex(data),
+            "opex": await opex_endpoints.analyze_opex(data),
+            "profitability": await profitability_endpoints.analyze_profitability(data)
+        }
 
         # Perform environmental analysis
-        environmental_results = await environmental_endpoints.analyze_environmental(data)
+        environmental_results = {
+            "impact": await impact_endpoints.analyze_impact(data),
+            "allocation": await allocation_endpoints.analyze_allocation(data),
+            "efficiency": await efficiency_endpoints.analyze_efficiency(data)
+        }
 
         return {
-            "technical": technical_results,
+            "protein": protein_results,
             "economic": economic_results,
             "environmental": environmental_results
         }

@@ -1,163 +1,101 @@
 "use client";
 
 import React from 'react';
-import { AlertCircle, CheckCircle } from 'lucide-react';
-import { formatNumber } from '@/lib/formatters';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { Zap, Recycle, Leaf } from 'lucide-react';
 
 interface SustainabilityScoreProps {
-  impacts: {
-    gwp: number;
-    hct: number;
-    frs: number;
-  };
-  processType: string;
+  energyEfficiency: number;
+  resourceDepletion: number;
+  wasteRecycling: number;
 }
 
-export function SustainabilityScore({ impacts, processType }: SustainabilityScoreProps) {
-  const calculateMetrics = () => {
-    const benchmarks = {
-      baseline: { gwp: 100, hct: 0.1, frs: 50 },
-      rf: { gwp: 90, hct: 0.08, frs: 45 },
-      ir: { gwp: 95, hct: 0.09, frs: 47 }
-    };
+export function SustainabilityScore({
+  energyEfficiency,
+  resourceDepletion,
+  wasteRecycling,
+}: SustainabilityScoreProps) {
+  const metrics = [
+    {
+      label: "Energy Efficiency",
+      value: energyEfficiency,
+      icon: <Zap className="h-4 w-4" />,
+      description: "Process energy utilization efficiency",
+      target: 80,
+    },
+    {
+      label: "Resource Conservation",
+      value: 100 - resourceDepletion,
+      icon: <Leaf className="h-4 w-4" />,
+      description: "Resource conservation rate",
+      target: 70,
+    },
+    {
+      label: "Waste Recycling",
+      value: wasteRecycling,
+      icon: <Recycle className="h-4 w-4" />,
+      description: "Waste recycling and recovery rate",
+      target: 75,
+    },
+  ];
 
-    const benchmark = benchmarks[processType as keyof typeof benchmarks] || benchmarks.baseline;
-    
-    const gwpScore = Math.max(0, 100 * (1 - impacts.gwp / benchmark.gwp));
-    const hctScore = Math.max(0, 100 * (1 - impacts.hct / benchmark.hct));
-    const frsScore = Math.max(0, 100 * (1 - impacts.frs / benchmark.frs));
-
-    const sustainabilityScore = (gwpScore + hctScore + frsScore) / 3;
-    const circularityIndex = Math.min(1, Math.max(0, 1 - (impacts.frs / benchmark.frs)));
-    const resourceEfficiency = Math.min(100, Math.max(0, 100 * (1 - impacts.gwp / benchmark.gwp)));
-
-    return {
-      sustainabilityScore,
-      circularityIndex,
-      resourceEfficiency
-    };
-  };
-
-  const metrics = calculateMetrics();
+  const overallScore = metrics.reduce((acc, metric) => 
+    acc + (metric.value / metric.target) * 100, 0) / metrics.length;
 
   const getScoreColor = (score: number) => {
-    if (score >= 70) return 'rgb(34 197 94)'; // green-500
-    if (score >= 50) return 'rgb(234 179 8)'; // yellow-500
-    return 'rgb(239 68 68)'; // red-500
+    if (score >= 90) return 'text-emerald-600';
+    if (score >= 70) return 'text-blue-600';
+    return 'text-yellow-600';
   };
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Sustainability Assessment</CardTitle>
-        <Badge variant="outline" className="font-mono">
-          {processType.toUpperCase()}
-        </Badge>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="text-center space-y-4">
-                  <div className="relative h-32 w-32 mx-auto">
-                    <Progress
-                      value={Math.round(metrics.sustainabilityScore)}
-                      indicatorColor={getScoreColor(metrics.sustainabilityScore)}
-                      className="h-32 w-32 rounded-full"
-                    />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-3xl font-bold">
-                        {formatNumber(metrics.sustainabilityScore)}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        Score
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Overall sustainability score based on environmental impacts</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Circularity Index
-                        </p>
-                        <p className="text-2xl font-bold" style={{ color: getScoreColor(metrics.circularityIndex * 100) }}>
-                          {metrics.circularityIndex.toFixed(2)} / 1.0
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Measure of process circularity</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Resource Efficiency
-                        </p>
-                        <p className="text-2xl font-bold" style={{ color: getScoreColor(metrics.resourceEfficiency) }}>
-                          {formatNumber(metrics.resourceEfficiency)}%
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Resource utilization efficiency</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-
-          <div className="flex items-center gap-2 text-sm">
-            {metrics.sustainabilityScore >= 70 ? (
-              <CheckCircle className="h-4 w-4 text-emerald-500" />
-            ) : (
-              <AlertCircle className="h-4 w-4 text-yellow-500" />
-            )}
-            <span className="text-muted-foreground">
-              {metrics.sustainabilityScore >= 70
-                ? 'Process meets sustainability targets'
-                : metrics.sustainabilityScore >= 50
-                ? 'Process needs minor improvements'
-                : 'Significant improvements needed'}
-            </span>
-          </div>
+      <CardHeader>
+        <CardTitle>Sustainability Score</CardTitle>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Overall Performance</p>
+          <p className={`text-2xl font-bold ${getScoreColor(overallScore)}`}>
+            {overallScore.toFixed(1)}%
+          </p>
         </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {metrics.map((metric) => {
+          const performance = (metric.value / metric.target) * 100;
+          return (
+            <div key={metric.label} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className={`rounded-full p-2 ${
+                  performance >= 90 ? 'bg-emerald-100 text-emerald-700' :
+                  performance >= 70 ? 'bg-blue-100 text-blue-700' :
+                  'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {metric.icon}
+                </div>
+                <div>
+                  <p className="font-medium">{metric.label}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {metric.description}
+                  </p>
+                </div>
+                <div className="ml-auto text-right">
+                  <p className={`text-lg font-semibold ${
+                    performance >= 90 ? 'text-emerald-600' :
+                    performance >= 70 ? 'text-blue-600' :
+                    'text-yellow-600'
+                  }`}>
+                    {metric.value.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+              <Progress
+                value={performance}
+                className="h-2"
+              />
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );

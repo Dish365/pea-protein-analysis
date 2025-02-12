@@ -11,6 +11,7 @@ interface LoadingSpinnerProps {
   size?: 'sm' | 'default' | 'lg'
   fullscreen?: boolean
   className?: string
+  overlay?: boolean
 }
 
 export function LoadingSpinner({
@@ -19,6 +20,7 @@ export function LoadingSpinner({
   progress,
   size = 'default',
   fullscreen = false,
+  overlay = false,
   className,
 }: LoadingSpinnerProps) {
   const spinnerSize = {
@@ -33,13 +35,15 @@ export function LoadingSpinner({
     lg: 'text-lg'
   }[size]
 
+  const containerClasses = cn(
+    'flex flex-col items-center justify-center gap-4',
+    (fullscreen || overlay) && 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50',
+    !fullscreen && !overlay && 'p-8',
+    className
+  )
+
   return (
-    <div className={cn(
-      'flex flex-col items-center justify-center gap-4',
-      fullscreen && 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50',
-      !fullscreen && 'p-8',
-      className
-    )}>
+    <div className={containerClasses}>
       <Loader2 className={cn("animate-spin", spinnerSize)} />
       <p className={cn("font-semibold", textSize)}>
         {tip}

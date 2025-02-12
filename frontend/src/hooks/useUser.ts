@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { message } from "antd";
+import { useToast } from "@/hooks/useToast";
 
 interface User {
   id: string;
@@ -13,6 +13,7 @@ interface User {
 export function useUser() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchUser();
@@ -25,7 +26,11 @@ export function useUser() {
       const data = await response.json();
       setUser(data);
     } catch (error) {
-      message.error("Failed to fetch user data");
+      toast({
+        title: "Error",
+        description: "Failed to fetch user data",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -41,8 +46,17 @@ export function useUser() {
       });
       const data = await response.json();
       setUser(data);
+      toast({
+        title: "Success",
+        description: "User data updated successfully",
+      });
       return data;
     } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update user data",
+        variant: "destructive",
+      });
       throw new Error("Failed to update user data");
     }
   };

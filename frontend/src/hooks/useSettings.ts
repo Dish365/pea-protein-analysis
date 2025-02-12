@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { message } from "antd";
+import { useToast } from "@/hooks/useToast";
 
 interface Settings {
   defaultProcessType: string;
@@ -28,6 +28,7 @@ export function useSettings() {
     errorNotifications: true,
   });
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchSettings();
@@ -40,7 +41,11 @@ export function useSettings() {
       const data = await response.json();
       setSettings(data);
     } catch (error) {
-      message.error("Failed to fetch settings");
+      toast({
+        title: "Error",
+        description: "Failed to fetch settings",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -56,8 +61,17 @@ export function useSettings() {
       });
       const data = await response.json();
       setSettings(data);
+      toast({
+        title: "Success",
+        description: "Settings updated successfully",
+      });
       return data;
     } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update settings",
+        variant: "destructive",
+      });
       throw new Error("Failed to update settings");
     }
   };

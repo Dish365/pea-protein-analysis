@@ -1,13 +1,22 @@
 "use client";
 
 import React from 'react';
-import { Card, Statistic, Row, Col, Tooltip, Progress } from 'antd';
-import { 
-  ThunderboltOutlined, 
-  DropboxOutlined,
-  ExperimentOutlined
-} from '@ant-design/icons';
+import { Zap, Droplet, Snowflake } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
 interface ResourceConsumptionProps {
   consumptionMetrics: {
@@ -18,19 +27,21 @@ interface ResourceConsumptionProps {
   processType: string;
 }
 
-const ResourceConsumption: React.FC<ResourceConsumptionProps> = ({ 
+export function ResourceConsumption({ 
   consumptionMetrics,
   processType 
-}) => {
+}: ResourceConsumptionProps) {
   const metrics = [
     {
       key: 'electricity',
       title: 'Electricity Consumption',
       value: consumptionMetrics.electricity,
       suffix: 'kWh',
-      icon: <ThunderboltOutlined />,
+      icon: <Zap className="h-4 w-4" />,
       tooltip: 'Total electrical energy consumed',
-      color: '#1890ff',
+      color: 'rgb(59 130 246)', // blue-500
+      bgColor: 'bg-blue-100',
+      textColor: 'text-blue-700',
       visible: processType === 'rf'
     },
     {
@@ -38,9 +49,11 @@ const ResourceConsumption: React.FC<ResourceConsumptionProps> = ({
       title: 'Cooling Energy',
       value: consumptionMetrics.cooling,
       suffix: 'kWh',
-      icon: <ExperimentOutlined />,
+      icon: <Snowflake className="h-4 w-4" />,
       tooltip: 'Total cooling energy required',
-      color: '#13c2c2',
+      color: 'rgb(34 211 238)', // cyan-500
+      bgColor: 'bg-cyan-100',
+      textColor: 'text-cyan-700',
       visible: processType === 'ir'
     },
     {
@@ -48,55 +61,62 @@ const ResourceConsumption: React.FC<ResourceConsumptionProps> = ({
       title: 'Water Usage',
       value: consumptionMetrics.water,
       suffix: 'm³',
-      icon: <DropboxOutlined />,
+      icon: <Droplet className="h-4 w-4" />,
       tooltip: 'Total water consumption',
-      color: '#52c41a',
+      color: 'rgb(34 197 94)', // green-500
+      bgColor: 'bg-green-100',
+      textColor: 'text-green-700',
       visible: true
     }
   ].filter(metric => metric.visible);
 
   return (
-    <Card 
-      title="Resource Consumption" 
-      className="h-full"
-      extra={
-        <Tooltip title="Process specific consumption">
-          <span className="text-sm text-gray-500">{processType.toUpperCase()}</span>
-        </Tooltip>
-      }
-    >
-      <Row gutter={[16, 16]}>
-        {metrics.map(metric => (
-          <Col xs={24} sm={12} key={metric.key}>
-            <Tooltip title={metric.tooltip}>
-              <Card className="resource-metric-card">
-                <Statistic
-                  title={
-                    <span className="flex items-center">
-                      {metric.icon}
-                      <span className="ml-2">{metric.title}</span>
-                    </span>
-                  }
-                  value={metric.value !== null ? formatNumber(metric.value) : 'N/A'}
-                  suffix={metric.value !== null ? metric.suffix : ''}
-                  valueStyle={{ color: metric.color }}
-                />
-                {metric.value !== null && (
-                  <Progress 
-                    percent={75} // You can calculate this based on benchmarks
-                    strokeColor={metric.color}
-                    showInfo={false}
-                    size="small"
-                    className="mt-2"
-                  />
-                )}
-              </Card>
-            </Tooltip>
-          </Col>
-        ))}
-      </Row>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle>Resource Consumption</CardTitle>
+        <Badge variant="outline" className="font-mono">
+          {processType.toUpperCase()}
+        </Badge>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 md:grid-cols-2">
+          {metrics.map(metric => (
+            <TooltipProvider key={metric.key}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`rounded-full p-2 ${metric.bgColor} ${metric.textColor}`}>
+                              {metric.icon}
+                            </div>
+                            <span className="font-medium">{metric.title}</span>
+                          </div>
+                          <span className="font-medium">
+                            {metric.value !== null ? `${formatNumber(metric.value)} ${metric.suffix}` : 'N/A'}
+                          </span>
+                        </div>
+                        {metric.value !== null && (
+                          <Progress
+                            value={75} // You can calculate this based on benchmarks
+                            className={metric.bgColor}
+                            indicatorColor={metric.color}
+                          />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{metric.tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ))}
+        </div>
+      </CardContent>
     </Card>
   );
-};
-
-export default ResourceConsumption; 
+} 

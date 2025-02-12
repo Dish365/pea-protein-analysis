@@ -1,14 +1,22 @@
 "use client";
 
 import React from 'react';
-import { Card, Statistic, Row, Col, Progress, Tooltip } from 'antd';
-import { 
-  DollarOutlined, 
-  PercentageOutlined,
-  FieldTimeOutlined,
-  RiseOutlined 
-} from '@ant-design/icons';
+import { DollarSign, Percent, Clock, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
 interface ProfitabilityMetricsProps {
   metrics: {
@@ -21,22 +29,46 @@ interface ProfitabilityMetricsProps {
   annualCosts: number;
 }
 
-const ProfitabilityMetrics: React.FC<ProfitabilityMetricsProps> = ({ 
+export function ProfitabilityMetrics({ 
   metrics,
   totalInvestment,
   annualCosts
-}) => {
-  const getMetricStatus = (value: number, thresholds: { low: number; medium: number }) => {
-    if (value >= thresholds.medium) return { color: '#3f8600', status: 'success' as const };
-    if (value >= thresholds.low) return { color: '#faad14', status: 'normal' as const };
-    return { color: '#cf1322', status: 'exception' as const };
+}: ProfitabilityMetricsProps) {
+  const getMetricStatus = (value: number, thresholds: { low: number; medium: number }, inverse = false) => {
+    const effectiveValue = inverse ? -value : value;
+    const effectiveThresholds = inverse ? 
+      { low: -thresholds.medium, medium: -thresholds.low } :
+      thresholds;
+
+    if (effectiveValue >= effectiveThresholds.medium) {
+      return { 
+        color: 'text-emerald-600',
+        bgColor: 'bg-emerald-100',
+        textColor: 'text-emerald-700',
+        variant: 'success' as const
+      };
+    }
+    if (effectiveValue >= effectiveThresholds.low) {
+      return { 
+        color: 'text-yellow-600',
+        bgColor: 'bg-yellow-100',
+        textColor: 'text-yellow-700',
+        variant: 'warning' as const
+      };
+    }
+    return { 
+      color: 'text-destructive',
+      bgColor: 'bg-red-100',
+      textColor: 'text-red-700',
+      variant: 'destructive' as const
+    };
   };
 
   const metrics_config = [
     {
       title: 'Net Present Value',
       value: metrics.npv,
-      prefix: <DollarOutlined />,
+      icon: <DollarSign className="h-4 w-4" />,
       formatter: (value: number) => formatCurrency(value),
       tooltip: 'Present value of future cash flows minus initial investment',
       thresholds: { low: 0, medium: totalInvestment * 0.2 }
@@ -44,24 +76,27 @@ const ProfitabilityMetrics: React.FC<ProfitabilityMetricsProps> = ({
     {
       title: 'Return on Investment',
       value: metrics.roi,
-      prefix: <PercentageOutlined />,
+      icon: <Percent className="h-4 w-4" />,
       suffix: '%',
+      formatter: (value: number) => value.toFixed(1),
       tooltip: 'Percentage return on initial investment',
       thresholds: { low: 15, medium: 25 }
     },
     {
       title: 'Internal Rate of Return',
       value: metrics.irr,
-      prefix: <RiseOutlined />,
+      icon: <TrendingUp className="h-4 w-4" />,
       suffix: '%',
+      formatter: (value: number) => value.toFixed(1),
       tooltip: 'Discount rate that makes NPV zero',
       thresholds: { low: 10, medium: 20 }
     },
     {
       title: 'Payback Period',
       value: metrics.paybackPeriod,
-      prefix: <FieldTimeOutlined />,
+      icon: <Clock className="h-4 w-4" />,
       suffix: 'years',
+      formatter: (value: number) => value.toFixed(1),
       tooltip: 'Time required to recover the investment',
       thresholds: { low: 5, medium: 3 },
       inverse: true
@@ -69,47 +104,71 @@ const ProfitabilityMetrics: React.FC<ProfitabilityMetricsProps> = ({
   ];
 
   return (
-    <Card title="Profitability Analysis" className="h-full">
-      <Row gutter={[16, 16]}>
-        {metrics_config.map((metric, index) => {
-          const status = getMetricStatus(
-            metric.value,
-            metric.inverse ? 
-              { low: metric.thresholds.medium, medium: metric.thresholds.low } :
-              metric.thresholds
-          );
+    <Card>
+      <CardHeader>
+        <CardTitle>Profitability Analysis</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {metrics_config.map((metric, index) => {
+            const status = getMetricStatus(metric.value, metric.thresholds, metric.inverse);
+            const progressValue = metric.inverse ?
+              Math.max(0, 100 - (metric.value / metric.thresholds.low) * 100) :
+              Math.min(100, (metric.value / metric.thresholds.medium) * 100);
 
-          return (
-            <Col xs={24} sm={12} key={index}>
-              <Tooltip title={metric.tooltip}>
-                <Card className="metric-card">
-                  <Statistic
-                    title={metric.title}
-                    value={metric.value}
-                    precision={2}
-                    prefix={metric.prefix}
-                    suffix={metric.suffix}
-                    valueStyle={{ color: status.color }}
-                  />
-                  <Progress
-                    percent={
-                      metric.inverse ?
-                        Math.max(0, 100 - (metric.value / metric.thresholds.low) * 100) :
-                        Math.min(100, (metric.value / metric.thresholds.medium) * 100)
-                    }
-                    status={status.status}
-                    strokeColor={status.color}
-                    size="small"
-                    className="mt-2"
-                  />
-                </Card>
-              </Tooltip>
-            </Col>
-          );
-        })}
-      </Row>
+            return (
+              <TooltipProvider key={index}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="flex items-center gap-2">
+                          <div className={`rounded-full p-2 ${status.bgColor}`}>
+                            {metric.icon}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-muted-foreground">
+                              {metric.title}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className={`text-2xl font-bold ${status.color}`}>
+                                {metric.formatter(metric.value)}
+                              </p>
+                              {metric.suffix && (
+                                <span className={`text-sm ${status.color}`}>
+                                  {metric.suffix}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Badge variant={status.variant}>
+                            {status.variant === 'success' ? 'Good' :
+                             status.variant === 'warning' ? 'Fair' : 'Poor'}
+                          </Badge>
+                        </div>
+                        <div className="mt-4">
+                          <Progress
+                            value={progressValue}
+                            className={status.bgColor}
+                            indicatorColor={
+                              status.variant === 'success' ? 'rgb(16 185 129)' :  // emerald-500
+                              status.variant === 'warning' ? 'rgb(234 179 8)' :   // yellow-500
+                              'rgb(239 68 68)'  // red-500
+                            }
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{metric.tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          })}
+        </div>
+      </CardContent>
     </Card>
   );
-};
-
-export default ProfitabilityMetrics; 
+} 

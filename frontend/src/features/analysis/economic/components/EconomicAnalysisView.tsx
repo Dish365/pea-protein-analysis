@@ -1,54 +1,69 @@
 "use client";
 
 import React from 'react';
-import { Row, Col, Card, Statistic, Table, Progress, Tooltip } from 'antd';
-import { 
-  DollarOutlined, 
-  RiseOutlined, 
-  ClockCircleOutlined,
-  PercentageOutlined
-} from '@ant-design/icons';
-import { Area } from '@ant-design/plots';
+import { DollarSign, TrendingUp, Clock, Percent } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatters';
 import { EconomicAnalysisResult } from '@/types/economic';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 
 interface EconomicAnalysisViewProps {
   data: EconomicAnalysisResult;
 }
 
-const EconomicAnalysisView: React.FC<EconomicAnalysisViewProps> = ({ data }) => {
+export function EconomicAnalysisView({ data }: EconomicAnalysisViewProps) {
   // Key financial metrics
   const keyMetrics = [
     {
       title: 'Net Present Value',
       value: data.profitability_analysis.npv,
-      prefix: <DollarOutlined />,
+      icon: <DollarSign className="h-4 w-4" />,
       suffix: 'USD',
       precision: 0,
-      color: data.profitability_analysis.npv > 0 ? '#52c41a' : '#f5222d'
+      color: data.profitability_analysis.npv > 0 ? 'text-emerald-600' : 'text-destructive'
     },
     {
       title: 'Return on Investment',
       value: data.profitability_analysis.roi,
-      prefix: <PercentageOutlined />,
+      icon: <Percent className="h-4 w-4" />,
       suffix: '%',
       precision: 1,
-      color: data.profitability_analysis.roi > 15 ? '#52c41a' : '#faad14'
+      color: data.profitability_analysis.roi > 15 ? 'text-emerald-600' : 'text-yellow-600'
     },
     {
       title: 'Payback Period',
       value: data.profitability_analysis.payback_period,
-      prefix: <ClockCircleOutlined />,
+      icon: <Clock className="h-4 w-4" />,
       suffix: 'years',
       precision: 1,
-      color: data.profitability_analysis.payback_period < 5 ? '#52c41a' : '#faad14'
+      color: data.profitability_analysis.payback_period < 5 ? 'text-emerald-600' : 'text-yellow-600'
     },
     {
       title: 'IRR',
       value: data.profitability_analysis.irr,
-      prefix: <RiseOutlined />,
+      icon: <TrendingUp className="h-4 w-4" />,
       suffix: '%',
       precision: 1,
-      color: data.profitability_analysis.irr > 20 ? '#52c41a' : '#faad14'
+      color: data.profitability_analysis.irr > 20 ? 'text-emerald-600' : 'text-yellow-600'
     }
   ];
 
@@ -102,89 +117,99 @@ const EconomicAnalysisView: React.FC<EconomicAnalysisViewProps> = ({ data }) => 
     }
   ];
 
-  const columns = [
-    {
-      title: 'Category',
-      dataIndex: 'category',
-      key: 'category',
-    },
-    {
-      title: 'Amount (USD)',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (value: number) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-    },
-    {
-      title: 'Percentage',
-      dataIndex: 'percentage',
-      key: 'percentage',
-      render: (value: number) => (
-        <Tooltip title={`${value.toFixed(1)}%`}>
-          <Progress percent={value} size="small" showInfo={false} />
-        </Tooltip>
-      ),
-    },
-  ];
+  const renderMetricCard = (metric: typeof keyMetrics[0]) => (
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2">
+          <div className={`rounded-full p-2 ${metric.color.replace('text', 'bg')}/20`}>
+            {metric.icon}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">{metric.title}</p>
+            <p className={`text-2xl font-bold ${metric.color}`}>
+              {metric.suffix === 'USD' 
+                ? formatCurrency(metric.value)
+                : `${metric.value.toFixed(metric.precision)}${metric.suffix}`}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderCostTable = (data: typeof capexData | typeof opexData) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Category</TableHead>
+          <TableHead>Amount (USD)</TableHead>
+          <TableHead>Percentage</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((item) => (
+          <TableRow key={item.key}>
+            <TableCell>{item.category}</TableCell>
+            <TableCell>{formatCurrency(item.amount)}</TableCell>
+            <TableCell>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="w-full max-w-[200px]">
+                      <Progress 
+                        value={item.percentage} 
+                        className="h-2"
+                        indicatorColor={item.percentage > 50 ? 'rgb(59 130 246)' : 'rgb(99 102 241)'}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{item.percentage.toFixed(1)}%</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
 
   return (
-    <div className="economic-analysis">
-      <Row gutter={[16, 16]}>
-        {/* Key Financial Metrics */}
+    <div className="space-y-6">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {keyMetrics.map((metric, index) => (
-          <Col xs={24} sm={12} lg={6} key={index}>
-            <Card>
-              <Statistic
-                title={metric.title}
-                value={metric.value}
-                precision={metric.precision}
-                prefix={metric.prefix}
-                suffix={metric.suffix}
-                valueStyle={{ color: metric.color }}
-              />
-            </Card>
-          </Col>
+          <div key={index}>
+            {renderMetricCard(metric)}
+          </div>
         ))}
+      </div>
 
-        {/* CAPEX Analysis */}
-        <Col xs={24} lg={12}>
-          <Card title="Capital Expenditure (CAPEX) Breakdown" className="h-full">
-            <Statistic
-              title="Total CAPEX"
-              value={data.capex_analysis.total_capex}
-              prefix="$"
-              precision={0}
-              className="mb-4"
-            />
-            <Table
-              dataSource={capexData}
-              columns={columns}
-              pagination={false}
-              size="small"
-            />
-          </Card>
-        </Col>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Capital Expenditure (CAPEX) Breakdown</CardTitle>
+            <p className="text-2xl font-bold text-primary">
+              {formatCurrency(data.capex_analysis.total_capex)}
+            </p>
+          </CardHeader>
+          <CardContent>
+            {renderCostTable(capexData)}
+          </CardContent>
+        </Card>
 
-        {/* OPEX Analysis */}
-        <Col xs={24} lg={12}>
-          <Card title="Operating Expenditure (OPEX) Breakdown" className="h-full">
-            <Statistic
-              title="Total Annual OPEX"
-              value={data.opex_analysis.total_opex}
-              prefix="$"
-              precision={0}
-              className="mb-4"
-            />
-            <Table
-              dataSource={opexData}
-              columns={columns}
-              pagination={false}
-              size="small"
-            />
-          </Card>
-        </Col>
-      </Row>
+        <Card>
+          <CardHeader>
+            <CardTitle>Operating Expenditure (OPEX) Breakdown</CardTitle>
+            <p className="text-2xl font-bold text-primary">
+              {formatCurrency(data.opex_analysis.total_opex)}
+            </p>
+          </CardHeader>
+          <CardContent>
+            {renderCostTable(opexData)}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
-};
-
-export default EconomicAnalysisView;
+}

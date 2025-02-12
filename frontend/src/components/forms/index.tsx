@@ -1,5 +1,7 @@
+"use client"
+
 import React, { useState } from 'react';
-import { Form, Steps, Button, message, Card } from 'antd';
+import { Form } from 'antd';
 import { ProcessAnalysis, ProcessType } from '@/types/process';
 import { DEFAULT_PROCESS_ANALYSIS } from '@/config/constants';
 import TechnicalInputForm from './TechnicalInputForm';
@@ -8,8 +10,10 @@ import EnvironmentalInputForm from './EnvironmentalInputForm';
 import { PROCESS_ENDPOINTS, API_CONFIG } from '@/config/endpoints';
 import axios from 'axios';
 import { EnvironmentalParameters } from '@/types/environmental';
-
-const { Step } = Steps;
+import { Steps } from "@/components/ui/steps";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/useToast";
 
 interface ProcessInputFormProps {
   onSubmit?: (values: ProcessAnalysis) => void;
@@ -32,8 +36,9 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
   loading: externalLoading = false,
 }) => {
   const [form] = Form.useForm();
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   const steps: FormStep[] = [
     {
@@ -175,11 +180,18 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
         API_CONFIG
       );
 
-      message.success('Process analysis started successfully');
+      toast({
+        title: "Success",
+        description: "Process analysis started successfully",
+      });
       onSuccess?.(response.data);
       onSubmit?.(processData);
     } catch (error: any) {
-      message.error(error.response?.data?.message || error.message || 'Failed to start process analysis');
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || error.message || 'Failed to start process analysis',
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -187,11 +199,15 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
 
   const next = async () => {
     try {
-      await form.validateFields(steps[currentStep].validateFields);
+      await form.validateFields(steps[currentStep - 1].validateFields);
       setCurrentStep(currentStep + 1);
     } catch (error) {
       console.error('Validation failed:', error);
-      message.error('Please fill in all required fields correctly');
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields correctly",
+        variant: "destructive",
+      });
     }
   };
 
@@ -201,53 +217,52 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
 
   return (
     <Card className="max-w-4xl mx-auto">
-      <Steps current={currentStep} className="mb-8">
-        {steps.map(({ title, description }) => (
-          <Step key={title} title={title} description={description} />
-        ))}
-      </Steps>
+      <CardContent className="pt-6">
+        <Steps
+          steps={steps}
+          currentStep={currentStep}
+        />
 
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{ ...DEFAULT_PROCESS_ANALYSIS, ...initialValues }}
-        onFinish={handleSubmit}
-        className="process-form"
-      >
-        <div className="steps-content mb-8">
-          {steps[currentStep].component}
-        </div>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ ...DEFAULT_PROCESS_ANALYSIS, ...initialValues }}
+          onFinish={handleSubmit}
+          className="process-form mt-8"
+        >
+          <div className="steps-content mb-8">
+            {steps[currentStep - 1].component}
+          </div>
 
-        <div className="steps-action flex justify-between mt-8">
-          {currentStep > 0 && (
-            <Button
-              onClick={prev}
-              disabled={loading || externalLoading}
-            >
-              Previous
-            </Button>
-          )}
-          {currentStep < steps.length - 1 && (
-            <Button
-              type="primary"
-              onClick={next}
-              disabled={loading || externalLoading}
-            >
-              Next
-            </Button>
-          )}
-          {currentStep === steps.length - 1 && (
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading || externalLoading}
-              disabled={loading || externalLoading}
-            >
-              Start Analysis
-            </Button>
-          )}
-        </div>
-      </Form>
+          <div className="flex justify-between mt-8">
+            {currentStep > 1 && (
+              <Button
+                variant="outline"
+                onClick={prev}
+                disabled={loading || externalLoading}
+              >
+                Previous
+              </Button>
+            )}
+            {currentStep < steps.length && (
+              <Button
+                onClick={next}
+                disabled={loading || externalLoading}
+              >
+                Next
+              </Button>
+            )}
+            {currentStep === steps.length && (
+              <Button
+                type="submit"
+                disabled={loading || externalLoading}
+              >
+                {loading || externalLoading ? "Starting Analysis..." : "Start Analysis"}
+              </Button>
+            )}
+          </div>
+        </Form>
+      </CardContent>
     </Card>
   );
 };

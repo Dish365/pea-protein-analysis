@@ -1,11 +1,29 @@
 "use client";
 
 import React from 'react';
-import { Card, Table, Tag, Tooltip, Typography } from 'antd';
-import { InfoCircleOutlined } from '@ant-design/icons';
+import { Info } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
-
-const { Text } = Typography;
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface SensitivityParameter {
   parameter: string;
@@ -40,11 +58,11 @@ interface SensitivityAnalysisProps {
   };
 }
 
-const SensitivityAnalysis: React.FC<SensitivityAnalysisProps> = ({
+export function SensitivityAnalysis({
   capex,
   opex,
   profitability
-}) => {
+}: SensitivityAnalysisProps) {
   // Transform backend data into table format
   const sensitivityData: SensitivityParameter[] = React.useMemo(() => {
     if (!profitability.sensitivity_analysis) return [];
@@ -66,97 +84,109 @@ const SensitivityAnalysis: React.FC<SensitivityAnalysisProps> = ({
     });
   }, [profitability, capex, opex]);
 
-  const columns = [
-    {
-      title: 'Parameter',
-      dataIndex: 'parameter',
-      key: 'parameter',
-      render: (text: string) => (
-        <span className="flex items-center">
-          {text}
-          <Tooltip title={`Impact of changes in ${text.toLowerCase()} on profitability metrics`}>
-            <InfoCircleOutlined className="ml-2 text-gray-400" />
-          </Tooltip>
-        </span>
-      ),
-    },
-    {
-      title: 'Base Value',
-      dataIndex: 'baseValue',
-      key: 'baseValue',
-      render: (value: number, record: SensitivityParameter) => (
-        <Text>
-          {record.parameter.includes('Rate') ? 
-            `${(value * 100).toFixed(1)}%` : 
-            formatCurrency(value)
-          }
-        </Text>
-      ),
-    },
-    {
-      title: 'NPV Range',
-      key: 'npvRange',
-      render: (_: unknown, record: SensitivityParameter) => (
-        <Tooltip title="Potential NPV range based on parameter variation">
-          <span>
-            {formatCurrency(record.npvRange[0])} to {formatCurrency(record.npvRange[1])}
-          </span>
-        </Tooltip>
-      ),
-    },
-    {
-      title: 'Impact on NPV',
-      dataIndex: 'impact',
-      key: 'impact',
-      render: (impact: number) => (
-        <Text className={impact > 20 ? 'text-red-500' : impact > 10 ? 'text-orange-500' : 'text-green-500'}>
-          {impact >= 0 ? '+' : ''}{impact.toFixed(1)}%
-        </Text>
-      ),
-    },
-    {
-      title: 'Sensitivity',
-      dataIndex: 'sensitivity',
-      key: 'sensitivity',
-      render: (sensitivity: string) => {
-        const color = 
-          sensitivity === 'High' ? 'red' :
-          sensitivity === 'Medium' ? 'orange' : 'green';
-        return <Tag color={color}>{sensitivity}</Tag>;
-      },
-    },
-  ];
+  const getSensitivityColor = (sensitivity: string) => {
+    switch (sensitivity) {
+      case 'High':
+        return 'destructive';
+      case 'Medium':
+        return 'warning';
+      default:
+        return 'success';
+    }
+  };
+
+  const getImpactColor = (impact: number) => {
+    if (impact > 20) return 'text-destructive';
+    if (impact > 10) return 'text-yellow-600';
+    return 'text-emerald-600';
+  };
 
   return (
-    <Card 
-      title="Sensitivity Analysis" 
-      className="sensitivity-analysis-card"
-      extra={
-        <Tooltip title="Analysis of how changes in key parameters affect project profitability">
-          <InfoCircleOutlined className="text-gray-400" />
-        </Tooltip>
-      }
-    >
-      <Table 
-        columns={columns}
-        dataSource={sensitivityData}
-        pagination={false}
-        rowKey="parameter"
-        className="sensitivity-table"
-        summary={() => (
-          <Table.Summary>
-            <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={5}>
-                <Text type="secondary" className="text-sm">
-                  * Sensitivity ranges are calculated using ±{(profitability.sensitivity_analysis?.ranges?.discount_rate?.sensitivity === 'High' ? 20 : 10)}% variation in parameters
-                </Text>
-              </Table.Summary.Cell>
-            </Table.Summary.Row>
-          </Table.Summary>
-        )}
-      />
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle>Sensitivity Analysis</CardTitle>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Analysis of how changes in key parameters affect project profitability</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Parameter</TableHead>
+              <TableHead>Base Value</TableHead>
+              <TableHead>NPV Range</TableHead>
+              <TableHead>Impact on NPV</TableHead>
+              <TableHead>Sensitivity</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sensitivityData.map((record) => (
+              <TableRow key={record.parameter}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {record.parameter}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Impact of changes in {record.parameter.toLowerCase()} on profitability metrics</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {record.parameter.includes('Rate') ? 
+                    `${(record.baseValue * 100).toFixed(1)}%` : 
+                    formatCurrency(record.baseValue)
+                  }
+                </TableCell>
+                <TableCell>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          {formatCurrency(record.npvRange[0])} to {formatCurrency(record.npvRange[1])}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Potential NPV range based on parameter variation</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableCell>
+                <TableCell>
+                  <span className={getImpactColor(record.impact)}>
+                    {record.impact >= 0 ? '+' : ''}{record.impact.toFixed(1)}%
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={getSensitivityColor(record.sensitivity)}>
+                    {record.sensitivity}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <tfoot>
+            <TableRow>
+              <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                * Sensitivity ranges are calculated using ±{(profitability.sensitivity_analysis?.ranges?.discount_rate?.sensitivity === 'High' ? 20 : 10)}% variation in parameters
+              </TableCell>
+            </TableRow>
+          </tfoot>
+        </Table>
+      </CardContent>
     </Card>
   );
-};
-
-export default SensitivityAnalysis; 
+} 

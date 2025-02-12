@@ -1,9 +1,22 @@
 "use client";
 
 import React from 'react';
-import { Card, Table, Tooltip, Tag, Row, Col, Statistic } from 'antd';
-import { QuestionCircleOutlined, DotChartOutlined, ColumnHeightOutlined, BarChartOutlined } from '@ant-design/icons';
-import { ColumnsType } from 'antd/es/table';
+import { HelpCircle, Activity } from 'lucide-react';
+import { DataTable } from "@/components/ui/data-table";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { type Row } from "@tanstack/react-table";
 
 interface ParticleSizeDisplayProps {
   d10: number;
@@ -23,12 +36,12 @@ interface DataType {
   };
 }
 
-const ParticleSizeDisplay: React.FC<ParticleSizeDisplayProps> = ({
+export function ParticleSizeDisplay({
   d10,
   d50,
   d90,
   span,
-}) => {
+}: ParticleSizeDisplayProps) {
   const getDistributionQuality = (span: number) => {
     if (span <= 1.5) return { text: 'Excellent', color: 'success' };
     if (span <= 2.0) return { text: 'Good', color: 'processing' };
@@ -46,39 +59,6 @@ const ParticleSizeDisplay: React.FC<ParticleSizeDisplayProps> = ({
 
   const quality = getDistributionQuality(span);
   const range = getParticleRange(d10, d90);
-
-  const columns: ColumnsType<DataType> = [
-    {
-      title: 'Metric',
-      dataIndex: 'metric',
-      key: 'metric',
-      render: (text: string, record) => (
-        <span>
-          {text}
-          <Tooltip title={record.tooltip}>
-            <QuestionCircleOutlined style={{ marginLeft: 8 }} />
-          </Tooltip>
-        </span>
-      ),
-    },
-    {
-      title: 'Value',
-      dataIndex: 'value',
-      key: 'value',
-      align: 'right',
-      render: (value: number) => `${value.toFixed(1)} μm`,
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      align: 'center',
-      render: (status?: { text: string; color: string }) => {
-        if (!status) return null;
-        return <Tag color={status.color}>{status.text}</Tag>;
-      },
-    },
-  ];
 
   const data: DataType[] = [
     {
@@ -108,70 +88,161 @@ const ParticleSizeDisplay: React.FC<ParticleSizeDisplayProps> = ({
     },
   ];
 
+  const columns = [
+    {
+      accessorKey: 'metric',
+      header: 'Metric',
+      cell: ({ row }: { row: Row<DataType> }) => (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2">
+                {row.original.metric}
+                <HelpCircle className="h-4 w-4" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{row.original.tooltip}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ),
+    },
+    {
+      accessorKey: 'value',
+      header: 'Value',
+      cell: ({ row }: { row: Row<DataType> }) => `${row.original.value.toFixed(1)} μm`,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }: { row: Row<DataType> }) => {
+        const status = row.original.status;
+        if (!status) return null;
+        return (
+          <Badge
+            variant={
+              status.color === 'success' ? 'success' :
+              status.color === 'processing' ? 'default' :
+              status.color === 'warning' ? 'warning' : 'destructive'
+            }
+          >
+            {status.text}
+          </Badge>
+        );
+      },
+    },
+  ];
+
   return (
-    <Card 
-      title="Particle Size Distribution" 
-      className="particle-size-card"
-      extra={
-        <Row gutter={16} align="middle">
-          <Col>
-            <Tooltip title="Distribution quality">
-              <Tag color={quality.color} icon={<BarChartOutlined />}>
-                {quality.text} Distribution
-              </Tag>
-            </Tooltip>
-          </Col>
-          <Col>
-            <Tooltip title="Size range">
-              <Tag color={range.color} icon={<ColumnHeightOutlined />}>
-                {range.text} Range
-              </Tag>
-            </Tooltip>
-          </Col>
-        </Row>
-      }
-    >
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={16}>
-          <Table 
-            columns={columns} 
-            dataSource={data} 
-            pagination={false}
-            size="small"
-            className="particle-size-table"
-          />
-        </Col>
-        <Col xs={24} lg={8}>
-          <Card className="summary-card">
-            <Statistic
-              title={
-                <span>
-                  Size Distribution Score
-                  <Tooltip title="Overall quality score based on span and range">
-                    <QuestionCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
-              }
-              value={Math.max(0, 100 - (span * 20))}
-              suffix="%"
-              prefix={<DotChartOutlined />}
-              valueStyle={{ 
-                color: quality.color === 'success' ? '#3f8600' : 
-                       quality.color === 'processing' ? '#1890ff' :
-                       quality.color === 'warning' ? '#faad14' : '#cf1322',
-                fontSize: '1.5rem'
-              }}
-            />
-            <div className="mt-4">
-              <Tooltip title="Ideal range: D90-D10 < 100μm">
-                <Tag color={range.color}>Range: {(d90 - d10).toFixed(1)} μm</Tag>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Particle Size Distribution</CardTitle>
+          <div className="flex gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant={
+                      quality.color === 'success' ? 'success' :
+                      quality.color === 'processing' ? 'default' :
+                      quality.color === 'warning' ? 'warning' : 'destructive'
+                    }
+                  >
+                    {quality.text} Distribution
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Distribution quality</p>
+                </TooltipContent>
               </Tooltip>
-            </div>
-          </Card>
-        </Col>
-      </Row>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant={
+                      range.color === 'success' ? 'success' :
+                      range.color === 'processing' ? 'default' :
+                      range.color === 'warning' ? 'warning' : 'destructive'
+                    }
+                  >
+                    {range.text} Range
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Size range</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-6 md:grid-cols-5">
+          <div className="md:col-span-3">
+            <DataTable
+              columns={columns}
+              data={data}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Size Distribution Score</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-center gap-2 mt-2">
+                          <Activity className="h-5 w-5" />
+                          <span
+                            className="text-3xl font-bold"
+                            style={{
+                              color:
+                                quality.color === 'success' ? 'rgb(34 197 94)' :
+                                quality.color === 'processing' ? 'rgb(59 130 246)' :
+                                quality.color === 'warning' ? 'rgb(234 179 8)' : 'rgb(239 68 68)',
+                            }}
+                          >
+                            {Math.max(0, 100 - (span * 20))}%
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Overall quality score based on span and range</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                <div className="mt-4 text-center">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant={
+                            range.color === 'success' ? 'success' :
+                            range.color === 'processing' ? 'default' :
+                            range.color === 'warning' ? 'warning' : 'destructive'
+                          }
+                        >
+                          Range: {(d90 - d10).toFixed(1)} μm
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Ideal range: D90-D10 less than 100μm</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
-};
-
-export default ParticleSizeDisplay; 
+} 

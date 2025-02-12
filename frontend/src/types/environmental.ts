@@ -50,6 +50,7 @@ export interface ResourceConsumption {
   electricity: number;
   naturalGas: number;
   compressedAir: number;
+  cooling: number | null;
 }
 
 export interface EnvironmentalResults {
@@ -59,6 +60,16 @@ export interface EnvironmentalResults {
   emissionsBreakdown: EmissionsBreakdown;
   resourceConsumption: ResourceConsumption;
   wasteRecyclingRate: number;
+  toxicityScore: number;
+  resourceDepletion: number;
+  processType: string;
+  allocationMethod: string;
+  allocationFactors: Record<string, number>;
+  allocatedImpacts: Record<string, {
+    gwp: number;
+    hct: number;
+    frs: number;
+  }>;
 }
 
 export interface EnvironmentalAnalysis {

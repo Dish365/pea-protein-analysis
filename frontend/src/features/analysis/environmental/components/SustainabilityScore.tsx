@@ -1,9 +1,22 @@
 "use client";
 
 import React from 'react';
-import { Card, Progress, Row, Col, Tooltip, Statistic } from 'antd';
-import { CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
 interface SustainabilityScoreProps {
   impacts: {
@@ -14,11 +27,7 @@ interface SustainabilityScoreProps {
   processType: string;
 }
 
-const SustainabilityScore: React.FC<SustainabilityScoreProps> = ({ 
-  impacts,
-  processType 
-}) => {
-  // Calculate sustainability metrics based on impacts
+export function SustainabilityScore({ impacts, processType }: SustainabilityScoreProps) {
   const calculateMetrics = () => {
     const benchmarks = {
       baseline: { gwp: 100, hct: 0.1, frs: 50 },
@@ -28,18 +37,12 @@ const SustainabilityScore: React.FC<SustainabilityScoreProps> = ({
 
     const benchmark = benchmarks[processType as keyof typeof benchmarks] || benchmarks.baseline;
     
-    // Calculate relative scores (0-100)
     const gwpScore = Math.max(0, 100 * (1 - impacts.gwp / benchmark.gwp));
     const hctScore = Math.max(0, 100 * (1 - impacts.hct / benchmark.hct));
     const frsScore = Math.max(0, 100 * (1 - impacts.frs / benchmark.frs));
 
-    // Calculate overall sustainability score
     const sustainabilityScore = (gwpScore + hctScore + frsScore) / 3;
-
-    // Calculate circularity based on resource efficiency
     const circularityIndex = Math.min(1, Math.max(0, 1 - (impacts.frs / benchmark.frs)));
-
-    // Calculate resource efficiency
     const resourceEfficiency = Math.min(100, Math.max(0, 100 * (1 - impacts.gwp / benchmark.gwp)));
 
     return {
@@ -52,86 +55,110 @@ const SustainabilityScore: React.FC<SustainabilityScoreProps> = ({
   const metrics = calculateMetrics();
 
   const getScoreColor = (score: number) => {
-    if (score >= 70) return '#52c41a';
-    if (score >= 50) return '#faad14';
-    return '#f5222d';
+    if (score >= 70) return 'rgb(34 197 94)'; // green-500
+    if (score >= 50) return 'rgb(234 179 8)'; // yellow-500
+    return 'rgb(239 68 68)'; // red-500
   };
 
   return (
-    <Card 
-      title="Sustainability Assessment" 
-      className="h-full"
-      extra={
-        <Tooltip title="Process type">
-          <span className="text-sm text-gray-500">{processType.toUpperCase()}</span>
-        </Tooltip>
-      }
-    >
-      <div className="text-center mb-6">
-        <Tooltip title="Overall sustainability score based on environmental impacts">
-          <div className="mb-4">
-            <Progress
-              type="dashboard"
-              percent={Math.round(metrics.sustainabilityScore)}
-              strokeColor={getScoreColor(metrics.sustainabilityScore)}
-              format={percent => (
-                <div>
-                  <div className="text-2xl">{formatNumber(percent || 0)}</div>
-                  <div className="text-xs">Sustainability Score</div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle>Sustainability Assessment</CardTitle>
+        <Badge variant="outline" className="font-mono">
+          {processType.toUpperCase()}
+        </Badge>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-center space-y-4">
+                  <div className="relative h-32 w-32 mx-auto">
+                    <Progress
+                      value={Math.round(metrics.sustainabilityScore)}
+                      indicatorColor={getScoreColor(metrics.sustainabilityScore)}
+                      className="h-32 w-32 rounded-full"
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-bold">
+                        {formatNumber(metrics.sustainabilityScore)}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        Score
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
-            />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Overall sustainability score based on environmental impacts</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Circularity Index
+                        </p>
+                        <p className="text-2xl font-bold" style={{ color: getScoreColor(metrics.circularityIndex * 100) }}>
+                          {metrics.circularityIndex.toFixed(2)} / 1.0
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Measure of process circularity</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Resource Efficiency
+                        </p>
+                        <p className="text-2xl font-bold" style={{ color: getScoreColor(metrics.resourceEfficiency) }}>
+                          {formatNumber(metrics.resourceEfficiency)}%
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Resource utilization efficiency</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-        </Tooltip>
-      </div>
 
-      <Row gutter={[16, 16]}>
-        <Col span={12}>
-          <Tooltip title="Measure of process circularity">
-            <Card className="text-center">
-              <Statistic
-                title="Circularity Index"
-                value={metrics.circularityIndex}
-                precision={2}
-                valueStyle={{ color: getScoreColor(metrics.circularityIndex * 100) }}
-                suffix="/ 1.0"
-              />
-            </Card>
-          </Tooltip>
-        </Col>
-        <Col span={12}>
-          <Tooltip title="Resource utilization efficiency">
-            <Card className="text-center">
-              <Statistic
-                title="Resource Efficiency"
-                value={metrics.resourceEfficiency}
-                precision={1}
-                valueStyle={{ color: getScoreColor(metrics.resourceEfficiency) }}
-                suffix="%"
-              />
-            </Card>
-          </Tooltip>
-        </Col>
-      </Row>
-
-      <div className="mt-6">
-        <div className="flex items-center mb-2">
-          {metrics.sustainabilityScore >= 70 ? (
-            <CheckCircleOutlined className="text-success mr-2" />
-          ) : (
-            <WarningOutlined className="text-warning mr-2" />
-          )}
-          <span>
-            {metrics.sustainabilityScore >= 70
-              ? 'Process meets sustainability targets'
-              : metrics.sustainabilityScore >= 50
-              ? 'Process needs minor improvements'
-              : 'Significant improvements needed'}
-          </span>
+          <div className="flex items-center gap-2 text-sm">
+            {metrics.sustainabilityScore >= 70 ? (
+              <CheckCircle className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <AlertCircle className="h-4 w-4 text-yellow-500" />
+            )}
+            <span className="text-muted-foreground">
+              {metrics.sustainabilityScore >= 70
+                ? 'Process meets sustainability targets'
+                : metrics.sustainabilityScore >= 50
+                ? 'Process needs minor improvements'
+                : 'Significant improvements needed'}
+            </span>
+          </div>
         </div>
-      </div>
+      </CardContent>
     </Card>
   );
-};
-
-export default SustainabilityScore; 
+} 

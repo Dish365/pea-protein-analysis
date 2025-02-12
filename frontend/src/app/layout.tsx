@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
-import Providers from "@/components/providers/Providers";
+import "@/styles/globals.css";
+import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PEA Protein Analysis",
-  description: "Process analysis dashboard for pea protein production",
+  title: "Process Analysis",
+  description: "Analyze and optimize your processes",
 };
 
 export default function RootLayout({
@@ -18,7 +18,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        {children}
+        <Toaster />
       </body>
     </html>
   );

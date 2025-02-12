@@ -1,92 +1,80 @@
 "use client";
 
 import React from "react";
-import { Form, Input, Button, Card, message } from "antd";
-import { MailOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/useToast";
 
 export default function ForgotPasswordPage() {
   const { resetPassword } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
-  const [sent, setSent] = React.useState(false);
 
-  const onFinish = async (values: { email: string }) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+
     try {
       setLoading(true);
-      await resetPassword(values.email);
-      setSent(true);
-      message.success("Password reset instructions sent to your email");
+      await resetPassword(email);
+      toast({
+        title: "Success",
+        description: "Password reset instructions have been sent to your email",
+      });
     } catch (error: any) {
-      message.error(error.message || "Failed to send reset instructions");
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send reset instructions",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-md w-full">
-        <div className="text-center mb-6">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
           <h2 className="text-3xl font-bold">Reset Password</h2>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-muted-foreground">
             Enter your email to receive reset instructions
           </p>
         </div>
 
-        {!sent ? (
-          <Form
-            name="forgot-password"
-            onFinish={onFinish}
-            layout="vertical"
-            requiredMark={false}
-          >
-            <Form.Item
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <Input
+              id="email"
               name="email"
-              rules={[
-                { required: true, message: "Please input your email" },
-                { type: "email", message: "Please enter a valid email" },
-              ]}
-            >
-              <Input
-                prefix={<MailOutlined />}
-                placeholder="Email"
-                size="large"
-              />
-            </Form.Item>
-
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="large"
-                block
-                loading={loading}
-              >
-                Send Reset Instructions
-              </Button>
-            </Form.Item>
-          </Form>
-        ) : (
-          <div className="text-center">
-            <p className="text-green-600 mb-4">
-              Check your email for password reset instructions
-            </p>
-            <Button type="link" onClick={() => setSent(false)}>
-              Try another email
-            </Button>
+              type="email"
+              autoComplete="email"
+              required
+              placeholder="Email address"
+            />
           </div>
-        )}
 
-        <div className="text-center mt-4">
-          <Link
-            href="/signin"
-            className="text-blue-600 hover:text-blue-800"
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading}
           >
-            Back to Sign In
-          </Link>
-        </div>
-      </Card>
+            {loading ? "Sending instructions..." : "Reset password"}
+          </Button>
+
+          <div className="text-center text-sm">
+            <Link
+              href="/signin"
+              className="text-primary hover:text-primary/90"
+            >
+              Back to sign in
+            </Link>
+          </div>
+        </form>
+      </div>
     </div>
   );
 } 

@@ -1,128 +1,108 @@
 "use client";
 
 import React from "react";
-import { Form, Input, Button, Card, message } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/useToast";
 
 export default function SignUpPage() {
   const router = useRouter();
   const { signUp } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
 
-  const onFinish = async (values: { name: string; email: string; password: string }) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
     try {
       setLoading(true);
-      await signUp(values);
-      message.success("Successfully signed up");
+      await signUp({ name, email, password });
+      toast({
+        title: "Success",
+        description: "Account created successfully",
+      });
       router.push("/dashboard");
     } catch (error: any) {
-      message.error(error.message || "Failed to sign up");
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create account",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-md w-full">
-        <div className="text-center mb-6">
-          <h2 className="text-3xl font-bold">Create Account</h2>
-          <p className="mt-2 text-gray-600">Join Process Analysis today</p>
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold">Create an Account</h2>
+          <p className="mt-2 text-muted-foreground">
+            Join Process Analysis to get started
+          </p>
         </div>
 
-        <Form
-          name="signup"
-          onFinish={onFinish}
-          layout="vertical"
-          requiredMark={false}
-        >
-          <Form.Item
-            name="name"
-            rules={[{ required: true, message: "Please input your name" }]}
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                required
+                placeholder="Full Name"
+              />
+            </div>
+            <div>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                placeholder="Email address"
+              />
+            </div>
+            <div>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                placeholder="Password"
+              />
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading}
           >
-            <Input
-              prefix={<UserOutlined />}
-              placeholder="Full Name"
-              size="large"
-            />
-          </Form.Item>
+            {loading ? "Creating account..." : "Sign up"}
+          </Button>
 
-          <Form.Item
-            name="email"
-            rules={[
-              { required: true, message: "Please input your email" },
-              { type: "email", message: "Please enter a valid email" },
-            ]}
-          >
-            <Input
-              prefix={<MailOutlined />}
-              placeholder="Email"
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="password"
-            rules={[
-              { required: true, message: "Please input your password" },
-              { min: 8, message: "Password must be at least 8 characters" },
-            ]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Password"
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="confirmPassword"
-            dependencies={["password"]}
-            rules={[
-              { required: true, message: "Please confirm your password" },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue("password") === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject("Passwords do not match");
-                },
-              }),
-            ]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Confirm Password"
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={loading}
-            >
-              Sign Up
-            </Button>
-          </Form.Item>
-
-          <div className="text-center">
-            <span className="text-gray-600">Already have an account? </span>
+          <div className="text-center text-sm">
+            <span className="text-muted-foreground">Already have an account? </span>
             <Link
               href="/signin"
-              className="text-blue-600 hover:text-blue-800"
+              className="text-primary hover:text-primary/90"
             >
               Sign in
             </Link>
           </div>
-        </Form>
-      </Card>
+        </form>
+      </div>
     </div>
   );
 } 

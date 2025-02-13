@@ -1,112 +1,140 @@
 "use client";
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent } from "@/components/ui/card";
-import { Steps } from "@/components/ui/steps";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Card } from "@/components/ui/card";
+import { useAnalysisFlow } from '@/hooks/useAnalysisFlow';
+import TechnicalAnalysisView from '@/features/analysis/technical/components/TechnicalAnalysisView';
+import { EconomicAnalysisView } from '@/features/analysis/economic/components/EconomicAnalysisView';
+import { EnvironmentalAnalysisView } from '@/features/analysis/environmental/components/EnvironmentalAnalysisView';
 import TechnicalInputForm from '@/components/forms/TechnicalInputForm';
 import EconomicInputForm from '@/components/forms/EconomicInputForm';
 import EnvironmentalInputForm from '@/components/forms/EnvironmentalInputForm';
-import { useAnalysisFlow } from '@/hooks/useAnalysisFlow';
+import { TechnicalResults } from '@/types/technical';
+import { EconomicResults } from '@/types/economic';
+import { EnvironmentalResults, EnvironmentalParameters } from '@/types/environmental';
+import { Beaker, Building2, Leaf } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 
-const steps = [
+export const analysisSteps = [
   {
-    title: 'Technical Parameters',
-    description: 'Configure process specifications',
+    title: 'Technical Analysis',
+    description: 'Configure technical parameters',
+    icon: Beaker,
+    color: 'text-blue-500'
   },
   {
-    title: 'Economic Parameters',
-    description: 'Define cost and revenue factors',
+    title: 'Economic Analysis',
+    description: 'Configure economic parameters',
+    icon: Building2,
+    color: 'text-green-500'
   },
   {
-    title: 'Environmental Parameters',
-    description: 'Specify environmental impacts',
+    title: 'Environmental Analysis',
+    description: 'Configure environmental parameters',
+    icon: Leaf,
+    color: 'text-emerald-500'
   }
 ];
 
 export default function AnalysisPage() {
-  const router = useRouter();
   const {
-    state,
-    isLoading,
+    step,
+    data,
+    errors,
+    isSubmitting,
     handleTechnicalSubmit,
     handleEconomicSubmit,
     handleEnvironmentalSubmit
   } = useAnalysisFlow();
 
-  // Get current step index
-  const getCurrentStepIndex = () => {
-    switch (state.step) {
+  const currentStepIndex = ['technical', 'economic', 'environmental'].indexOf(step);
+  const currentStep = analysisSteps[currentStepIndex];
+  const progress = ((currentStepIndex + (data[step] ? 1 : 0)) / analysisSteps.length) * 100;
+
+  const handleStepChange = async (stepData: any) => {
+    switch (step) {
       case 'technical':
-        return 0;
+        await handleTechnicalSubmit(stepData);
+        break;
       case 'economic':
-        return 1;
+        await handleEconomicSubmit(stepData);
+        break;
       case 'environmental':
-        return 2;
-      case 'complete':
-        return 3;
-      default:
-        return 0;
-    }
-  };
-
-  // Redirect to results when complete
-  React.useEffect(() => {
-    if (state.step === 'complete' && state.id) {
-      router.push(`/dashboard/analysis/results/${state.id}`);
-    }
-  }, [state.step, state.id, router]);
-
-  // Render current step form
-  const renderStepContent = () => {
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center p-8">
-          <LoadingSpinner />
-        </div>
-      );
-    }
-
-    switch (state.step) {
-      case 'technical':
-        return (
-          <TechnicalInputForm
-            onSubmit={handleTechnicalSubmit}
-            isSubmitting={isLoading}
-          />
-        );
-      case 'economic':
-        return (
-          <EconomicInputForm
-            onSubmit={handleEconomicSubmit}
-            isSubmitting={isLoading}
-          />
-        );
-      case 'environmental':
-        return (
-          <EnvironmentalInputForm
-            onSubmit={handleEnvironmentalSubmit}
-            isSubmitting={isLoading}
-          />
-        );
-      default:
-        return null;
+        await handleEnvironmentalSubmit(stepData);
+        break;
     }
   };
 
   return (
-    <div className="container mx-auto py-6 max-w-4xl">
-      <Card>
-        <CardContent className="pt-6">
-          <Steps
-            steps={steps}
-            currentStep={getCurrentStepIndex() + 1}
+    <div className="p-6">
+      <Card className="p-6">
+        {errors.length > 0 && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{errors.join(', ')}</AlertDescription>
+          </Alert>
+        )}
+        
+        {step === 'technical' && (
+          <TechnicalInputForm 
+            onSubmit={handleStepChange}
+            isSubmitting={isSubmitting}
+            initialData={data.technical}
           />
-          <div className="mt-8">
-            {renderStepContent()}
+        )}
+
+        {step === 'economic' && data.technical && (
+          <EconomicInputForm 
+            onSubmit={handleStepChange}
+            isSubmitting={isSubmitting}
+            initialData={data.economic}
+          />
+        )}
+
+        {step === 'environmental' && data.economic && (
+          <EnvironmentalInputForm 
+            onSubmit={handleStepChange}
+            isSubmitting={isSubmitting}
+            initialData={data.environmental ? {
+              ...data.environmental,
+              production_volume: data.economic.production_volume,
+              hybrid_weights: data.environmental.hybrid_weights || {}
+            } as EnvironmentalParameters : undefined}
+          />
+        )}
+
+        {data.technical && step !== 'technical' && (
+          <TechnicalAnalysisView 
+            data={data.technical as unknown as TechnicalResults} 
+            isLoading={isSubmitting} 
+          />
+        )}
+
+        {data.economic && step !== 'economic' && (
+          <EconomicAnalysisView 
+            data={data.economic as unknown as EconomicResults} 
+            isLoading={isSubmitting} 
+          />
+        )}
+
+        {data.environmental && step !== 'environmental' && (
+          <EnvironmentalAnalysisView 
+            data={data.environmental as unknown as EnvironmentalResults} 
+            isLoading={isSubmitting} 
+          />
+        )}
+
+        <div className="mt-6 border-t pt-6">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-muted-foreground">
+              Step {currentStepIndex + 1} of {analysisSteps.length}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {currentStep?.title}
+            </div>
           </div>
-        </CardContent>
+          <Progress value={progress} className="mt-2" />
+        </div>
       </Card>
     </div>
   );

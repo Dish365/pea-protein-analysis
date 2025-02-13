@@ -10,16 +10,21 @@ export interface CostBreakdown {
 }
 
 export interface EconomicParameters {
-  process_type: ProcessTypeValues;
   production_volume: number;
   operating_hours: number;
+  
+  // Equipment and Costs
   equipment_cost: number;
+  installation_factor: number;
+  indirect_costs_factor: number;
+  maintenance_factor: number;
+  
+  // Operating Costs
   utility_cost: number;
   raw_material_cost: number;
   labor_cost: number;
-  maintenance_factor: number;
-  indirect_costs_factor: number;
-  installation_factor: number;
+  
+  // Financial Parameters
   project_duration: number;
   discount_rate: number;
   revenue_per_year: number;

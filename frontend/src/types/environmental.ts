@@ -8,14 +8,17 @@ export interface EmissionFactors {
 }
 
 export interface EnvironmentalParameters {
-  process_type: ProcessTypeValues;
   production_volume: number;
+  
+  // Resource Consumption
   electricity_consumption: number;
-  water_consumption: number;
   cooling_consumption: number;
+  water_consumption: number;
   transport_consumption: number;
   equipment_mass: number;
   thermal_ratio: number;
+  
+  // Allocation Configuration
   allocation_method: 'economic' | 'physical' | 'hybrid';
   hybrid_weights: Record<string, number>;
 }

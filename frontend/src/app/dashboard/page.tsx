@@ -1,211 +1,146 @@
 "use client";
 
-import React from "react";
-import { Activity, DollarSign, Leaf, Loader2 } from "lucide-react";
-import { AnalysisCard } from "@/components/dashboard/AnalysisCard";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { useRecentAnalyses } from "@/hooks/useRecentAnalyses";
-import { ProcessStatus, ProcessType } from "@/types/process";
-import { format } from "date-fns";
-import { useRouter } from "next/navigation";
+import React from 'react';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import { RecentAnalyses } from '@/components/dashboard/RecentAnalyses';
+import { AnalysisCard } from '@/components/dashboard/AnalysisCard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Activity, ArrowRight, BarChart3, DollarSign, FileText, Leaf } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const { data: recentAnalyses, isLoading } = useRecentAnalyses(1, 10);
-
-  // Calculate metrics for each process type
-  const getProcessMetrics = (processType: ProcessType) => {
-    if (!recentAnalyses?.items) return { completed: 0, inProgress: 0, trend: 0 };
-
-    const processAnalyses = recentAnalyses.items.filter(
-      (analysis) => analysis.process_type === processType
-    );
-
-    const completed = processAnalyses.filter(
-      (a) => a.status === ProcessStatus.COMPLETED
-    ).length;
-    const inProgress = processAnalyses.filter(
-      (a) => a.status === ProcessStatus.PROCESSING || a.status === ProcessStatus.PENDING
-    ).length;
-
-    // Calculate trend (comparing with previous period)
-    const recentCompleted = processAnalyses
-      .filter((a) => {
-        const date = new Date(a.timestamp);
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        return date >= oneWeekAgo && a.status === ProcessStatus.COMPLETED;
-      }).length;
-
-    const olderCompleted = processAnalyses
-      .filter((a) => {
-        const date = new Date(a.timestamp);
-        const twoWeeksAgo = new Date();
-        const oneWeekAgo = new Date();
-        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        return date >= twoWeeksAgo && date < oneWeekAgo && a.status === ProcessStatus.COMPLETED;
-      }).length;
-
-    const trend = olderCompleted === 0 
-      ? recentCompleted * 100 
-      : Math.round(((recentCompleted - olderCompleted) / olderCompleted) * 100);
-
-    return { completed, inProgress, trend };
-  };
-
-  const analysisOverviews = [
-    {
-      title: "Baseline Analysis",
-      description: "Standard pea protein extraction process",
-      icon: <Activity className="h-6 w-6" />,
-      color: "#1e40af",
-      variant: "default" as const,
-      metrics: getProcessMetrics(ProcessType.BASELINE),
-      onClick: () => router.push("/dashboard/analysis"),
-    },
-    {
-      title: "RF Analysis",
-      description: "Radio frequency assisted extraction",
-      icon: <DollarSign className="h-6 w-6" />,
-      color: "#15803d",
-      variant: "success" as const,
-      metrics: getProcessMetrics(ProcessType.RF),
-      onClick: () => router.push("/dashboard/analysis"),
-    },
-    {
-      title: "IR Analysis",
-      description: "Infrared assisted extraction",
-      icon: <Leaf className="h-6 w-6" />,
-      color: "#7e22ce",
-      variant: "warning" as const,
-      metrics: getProcessMetrics(ProcessType.IR),
-      onClick: () => router.push("/dashboard/analysis"),
-    },
-  ];
-
-  const getStatusColor = (status: ProcessStatus) => {
-    switch (status) {
-      case ProcessStatus.COMPLETED:
-        return "success";
-      case ProcessStatus.PROCESSING:
-        return "default";
-      case ProcessStatus.FAILED:
-        return "destructive";
-      default:
-        return "secondary";
-    }
-  };
-
-  const getProcessTypeIcon = (type: ProcessType) => {
-    switch (type) {
-      case ProcessType.BASELINE:
-        return <Activity className="h-4 w-4" />;
-      case ProcessType.RF:
-        return <DollarSign className="h-4 w-4" />;
-      case ProcessType.IR:
-        return <Leaf className="h-4 w-4" />;
-    }
-  };
-
-  const getProcessTypeColor = (type: ProcessType) => {
-    switch (type) {
-      case ProcessType.BASELINE:
-        return { bg: "#1e40af20", text: "#1e40af" };
-      case ProcessType.RF:
-        return { bg: "#15803d20", text: "#15803d" };
-      case ProcessType.IR:
-        return { bg: "#7e22ce20", text: "#7e22ce" };
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Analysis Overview Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {analysisOverviews.map((analysis) => (
-          <AnalysisCard key={analysis.title} {...analysis} />
-        ))}
+  const content = (
+    <div className="flex flex-col gap-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Overview of your process analysis activities
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/dashboard/analysis" className="gap-2">
+            New Analysis
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
       </div>
 
-      {/* Recent Analyses */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recently Performed Analyses</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : recentAnalyses?.items && recentAnalyses.items.length > 0 ? (
-            <div className="space-y-4">
-              {recentAnalyses.items.map((analysis) => (
-                <div
-                  key={analysis.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                  onClick={() => router.push(`/dashboard/analysis/results/${analysis.id}`)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="p-2 rounded-full"
-                      style={{
-                        backgroundColor: getProcessTypeColor(analysis.process_type).bg,
-                        color: getProcessTypeColor(analysis.process_type).text,
-                      }}
-                    >
-                      {getProcessTypeIcon(analysis.process_type)}
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        {analysis.process_type.toUpperCase()} Analysis
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(analysis.timestamp), 'PPp')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-32">
-                      <Progress
-                        value={analysis.progress}
-                        className={
-                          analysis.status === ProcessStatus.COMPLETED
-                            ? "bg-emerald-100"
-                            : analysis.status === ProcessStatus.FAILED
-                            ? "bg-red-100"
-                            : "bg-blue-100"
-                        }
-                        indicatorColor={
-                          analysis.status === ProcessStatus.COMPLETED
-                            ? "rgb(16 185 129)"
-                            : analysis.status === ProcessStatus.FAILED
-                            ? "rgb(239 68 68)"
-                            : "rgb(59 130 246)"
-                        }
-                      />
-                    </div>
-                    <Badge variant={getStatusColor(analysis.status)}>
-                      {analysis.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center p-8 text-muted-foreground">
-              No analyses performed yet
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Quick Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-medium">Total Analyses</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">128</div>
+            <p className="text-xs text-muted-foreground">
+              +14% from last month
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">92.6%</div>
+            <p className="text-xs text-muted-foreground">
+              +2.1% from last month
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">12</div>
+            <p className="text-xs text-muted-foreground">
+              3 pending review
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Performance Overview</TabsTrigger>
+          <TabsTrigger value="analyses">Recent Analyses</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <AnalysisCard
+              title="Technical Performance"
+              description="Process efficiency metrics"
+              icon={<Activity className="h-5 w-5 text-blue-500" />}
+              variant="default"
+              metrics={{
+                completed: 85,
+                inProgress: 5,
+                trend: 2.5
+              }}
+              onClick={() => {}}
+            />
+            <AnalysisCard
+              title="Economic Metrics"
+              description="Cost and profitability analysis"
+              icon={<DollarSign className="h-5 w-5 text-green-500" />}
+              variant="success"
+              metrics={{
+                completed: 92,
+                inProgress: 8,
+                trend: 4.2
+              }}
+              onClick={() => {}}
+            />
+            <AnalysisCard
+              title="Environmental Impact"
+              description="Sustainability indicators"
+              icon={<Leaf className="h-5 w-5 text-emerald-500" />}
+              variant="success"
+              metrics={{
+                completed: 88,
+                inProgress: 12,
+                trend: -12
+              }}
+              onClick={() => {}}
+            />
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Analysis Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                Chart placeholder
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analyses">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Analyses</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RecentAnalyses />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
+
+  return <DashboardLayout>{content}</DashboardLayout>;
 } 

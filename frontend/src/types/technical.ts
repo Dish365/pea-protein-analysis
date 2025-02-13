@@ -13,31 +13,40 @@ export interface ParticleSizeDistribution {
 }
 
 export interface TechnicalParameters {
-  processType: ProcessTypeValues;
-  airFlow: number;
-  classifierSpeed: number;
+  // Process Parameters
+  process_type: ProcessTypeValues;
+  air_flow: number;
+  classifier_speed: number;
   
   // Mass Balance
-  inputMass: number;
-  outputMass: number;
+  input_mass: number;
+  output_mass: number;
   
   // Content Analysis
-  initialProteinContent: number;
-  finalProteinContent: number;
-  initialMoistureContent: number;
-  finalMoistureContent: number;
+  initial_protein_content: number;
+  final_protein_content: number;
+  initial_moisture_content: number;
+  final_moisture_content: number;
   
   // Particle Size Analysis
-  d10ParticleSize: number;
-  d50ParticleSize: number;
-  d90ParticleSize: number;
+  d10_particle_size: number;
+  d50_particle_size: number;
+  d90_particle_size: number;
+
+  // Process-specific parameters (optional based on process type)
+  electricity_consumption?: number;
+  cooling_consumption?: number;
+  water_consumption?: number;
+  transport_consumption?: number;
+  equipment_mass?: number;
+  thermal_ratio?: number;
 }
 
 export interface TechnicalResults {
-  proteinRecovery: ProteinRecovery;
-  separationEfficiency: number;
-  processEfficiency: number;
-  particleSizeDistribution: ParticleSizeDistribution;
+  protein_recovery: ProteinRecovery;
+  separation_efficiency: number;
+  process_efficiency: number;
+  particle_size_distribution: ParticleSizeDistribution;
 }
 
 export interface TechnicalAnalysis {

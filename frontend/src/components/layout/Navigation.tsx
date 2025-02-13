@@ -4,119 +4,81 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
-  BarChart2,
-  Activity,
-  DollarSign,
-  Leaf,
+  BarChart3,
+  FileText,
   History,
+  Home,
   Settings,
-  FlaskConical,
-  LucideIcon,
 } from "lucide-react";
 
-interface MenuItem {
-  key: string;
-  icon: LucideIcon;
-  label: string;
-  description?: string;
+interface NavigationProps {
+  className?: string;
 }
 
-interface MenuDivider {
-  type: 'divider';
-}
-
-type MenuItemOrDivider = MenuItem | MenuDivider;
-
-const menuItems: MenuItemOrDivider[] = [
+const navigationItems = [
   {
-    key: "/dashboard",
-    icon: BarChart2,
-    label: "Dashboard",
+    title: "Overview",
+    href: "/dashboard",
+    icon: Home,
   },
   {
-    key: "/analysis/new",
-    icon: FlaskConical,
-    label: "New Analysis",
+    title: "New Analysis",
+    href: "/dashboard/analysis",
+    icon: FileText,
   },
   {
-    key: "/analysis/history",
+    title: "History",
+    href: "/dashboard/history",
     icon: History,
-    label: "Analysis History",
   },
   {
-    type: "divider",
+    title: "Reports",
+    href: "/dashboard/reports",
+    icon: BarChart3,
   },
   {
-    key: "/analysis/technical",
-    icon: Activity,
-    label: "Technical Analysis",
-    description: "Process efficiency metrics",
-  },
-  {
-    key: "/analysis/economic",
-    icon: DollarSign,
-    label: "Economic Analysis",
-    description: "Cost and profitability analysis",
-  },
-  {
-    key: "/analysis/environmental",
-    icon: Leaf,
-    label: "Environmental Analysis",
-    description: "Environmental impact assessment",
-  },
-  {
-    type: "divider",
-  },
-  {
-    key: "/settings",
+    title: "Settings",
+    href: "/dashboard/settings",
     icon: Settings,
-    label: "Settings",
   },
 ];
 
-export function Navigation() {
+export function Navigation({ className }: NavigationProps) {
   const pathname = usePathname();
 
-  const isActiveLink = (path: string) => {
-    if (path === "/dashboard") {
-      return pathname === path;
-    }
-    return pathname.startsWith(path);
-  };
-
-  const navigationItems = menuItems.filter((item): item is MenuItem => !('type' in item));
-
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center justify-between">
-        <Link href="/dashboard" className="flex items-center space-x-2">
-          <span className="text-xl font-bold">PEA Protein Analysis</span>
-        </Link>
-
-        <nav className="flex items-center space-x-6">
+    <nav className={cn("py-4", className)}>
+      <div className="px-3 py-2">
+        <div className="space-y-1">
           {navigationItems.map((item) => {
-            const isActive = isActiveLink(item.key);
-            const Icon = item.icon;
-            
+            const isActive = pathname === item.href;
             return (
-              <Link
-                key={item.key}
-                href={item.key}
-                className={cn(
-                  "flex items-center space-x-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-primary"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                <span>{item.label}</span>
+              <Link key={item.href} href={item.href}>
+                <Button
+                  variant={isActive ? "secondary" : "ghost"}
+                  className={cn(
+                    "w-full justify-start gap-3",
+                    isActive ? "bg-primary/10 hover:bg-primary/20" : "hover:bg-muted"
+                  )}
+                >
+                  <item.icon className={cn(
+                    "h-4 w-4",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )} />
+                  <span className={cn(
+                    "text-sm font-medium",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {item.title}
+                  </span>
+                </Button>
               </Link>
             );
           })}
-        </nav>
+        </div>
       </div>
-    </header>
+    </nav>
   );
 }

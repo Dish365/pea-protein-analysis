@@ -15,9 +15,12 @@ if project_root not in sys.path:
 # Import using relative path from tests directory
 from tests.api.process_analysis.conftest import ProcessAnalysisTester
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with Unicode support
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S'))
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 logging.getLogger("httpx").setLevel(logging.DEBUG)
 
 @pytest.fixture(scope="session")

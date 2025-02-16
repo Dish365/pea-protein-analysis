@@ -38,26 +38,41 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Email backend for development
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-# Cache settings for development (using Redis for consistency with production)
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://localhost:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "SOCKET_CONNECT_TIMEOUT": 5,
-            "SOCKET_TIMEOUT": 5,
-            "RETRY_ON_TIMEOUT": True,
-        },
-        "KEY_PREFIX": "nrc_dev",
+# Cache settings for development
+try:
+    import redis
+    redis_client = redis.Redis(host='localhost', port=6379, db=1, socket_connect_timeout=1)
+    redis_client.ping()
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://localhost:6379/1",
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "SOCKET_CONNECT_TIMEOUT": 5,
+                "SOCKET_TIMEOUT": 5,
+                "RETRY_ON_TIMEOUT": True,
+                "CONNECTION_POOL_KWARGS": {"max_retries": 2},
+                "IGNORE_EXCEPTIONS": True,  # Ignore Redis connection errors
+            },
+            "KEY_PREFIX": "nrc_dev",
+        }
     }
-}
+except (redis.ConnectionError, redis.TimeoutError):
+    # Fallback to dummy cache if Redis is not available
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        }
+    }
 
 # Debug Toolbar configuration
 DEBUG_TOOLBAR_CONFIG = {
     'SHOW_TOOLBAR_CALLBACK': lambda request: True,
     'DISABLE_PANELS': {
         'debug_toolbar.panels.redirects.RedirectsPanel',
+        'debug_toolbar.panels.sql.SQLPanel',  # Disable SQL panel
+        'debug_toolbar.panels.request.RequestPanel',  # Disable Request panel
     },
     'SHOW_TEMPLATE_CONTEXT': True,
     'RENDER_PANELS': True,

@@ -14,167 +14,133 @@ import EnvironmentalInputForm from './EnvironmentalInputForm';
 import { Steps } from "@/components/ui/steps";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/useToast";
-import { ProcessTypeEnum, technicalSchema, economicSchema, environmentalSchema } from '@/types/process';
+import {
+  ProcessTypeEnum,
+  processValidationSchema,
+  TechnicalValidationData,
+  EconomicValidationData,
+  EnvironmentalValidationData,
+  validateProcessData
+} from '@/types/process';
 
-const processSchema = z.object({
-  type: z.enum(["technical", "economic", "environmental"] as const),
-  parameters: z.object({
-    // Technical parameters
-    process_type: z.nativeEnum(ProcessTypeEnum),
-    air_flow: z.number().min(0).max(1000),
-    classifier_speed: z.number().min(0),
-    input_mass: z.number().min(0).max(10000),
-    output_mass: z.number().min(0).max(10000),
-    initial_protein_content: z.number().min(0).max(100),
-    final_protein_content: z.number().min(0).max(100),
-    initial_moisture_content: z.number().min(0).max(100),
-    final_moisture_content: z.number().min(0).max(100),
-    d10_particle_size: z.number().min(0),
-    d50_particle_size: z.number().min(0),
-    d90_particle_size: z.number().min(0),
-    
-    // Process-specific parameters
-    electricity_consumption: z.number().min(0).optional(),
-    cooling_consumption: z.number().min(0).optional(),
-    water_consumption: z.number().min(0).optional(),
-    
-    // Economic parameters
-    production_volume: z.number().min(0),
-    operating_hours: z.number().min(0).max(8760),
-    equipment_cost: z.number().min(0),
-    utility_cost: z.number().min(0),
-    raw_material_cost: z.number().min(0),
-    labor_cost: z.number().min(0),
-    maintenance_factor: z.number().min(0).max(1),
-    indirect_costs_factor: z.number().min(0).max(1),
-    installation_factor: z.number().min(0).max(1),
-    project_duration: z.number().min(0),
-    discount_rate: z.number().min(0).max(1),
-    revenue_per_year: z.number().min(0),
-    
-    // Environmental parameters
-    transport_consumption: z.number().min(0).optional(),
-    equipment_mass: z.number().min(0).optional(),
-    thermal_ratio: z.number().min(0).max(1).optional(),
-    allocation_method: z.enum(['economic', 'physical', 'hybrid'] as const),
-    hybrid_weights: z.record(z.string(), z.number().min(0).max(1)).optional()
-  }).superRefine((data, ctx) => {
-    // Technical validation
-    if (data.output_mass > data.input_mass) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Output mass cannot exceed input mass",
-        path: ["output_mass"]
-      });
-    }
-    
-    if (data.final_moisture_content > data.initial_moisture_content) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Final moisture content cannot be higher than initial moisture content",
-        path: ["final_moisture_content"]
-      });
-    }
-    
-    if (data.d50_particle_size < data.d10_particle_size) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "D50 must be greater than or equal to D10",
-        path: ["d50_particle_size"]
-      });
-    }
-    
-    if (data.d90_particle_size < data.d50_particle_size) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "D90 must be greater than or equal to D50",
-        path: ["d90_particle_size"]
-      });
-    }
-    
-    // Process type specific validation
-    if (data.process_type === ProcessTypeEnum.RF) {
-      if (!data.electricity_consumption || data.electricity_consumption <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Electricity consumption is required for RF process",
-          path: ["electricity_consumption"]
-        });
-      }
-      if (!data.water_consumption || data.water_consumption <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Water consumption is required for RF process",
-          path: ["water_consumption"]
-        });
-      }
-    }
-    
-    if (data.process_type === ProcessTypeEnum.IR) {
-      if (!data.cooling_consumption || data.cooling_consumption <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Cooling consumption is required for IR process",
-          path: ["cooling_consumption"]
-        });
-      }
-      if (!data.water_consumption || data.water_consumption <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Water consumption is required for IR process",
-          path: ["water_consumption"]
-        });
-      }
-    }
-  })
-});
-
-export type ProcessAnalysis = z.infer<typeof processSchema>;
+// Define the form's data structure to match our validation schema
+interface ProcessFormData {
+  technical: TechnicalValidationData;
+  economic: EconomicValidationData;
+  environmental: EnvironmentalValidationData;
+}
 
 interface ProcessInputFormProps {
-  onSubmit?: (values: ProcessAnalysis) => void;
+  onSubmit?: (values: ProcessFormData) => void;
   onSuccess?: (response: any) => void;
-  initialValues?: Partial<ProcessAnalysis>;
+  initialValues?: Partial<ProcessFormData>;
   loading?: boolean;
 }
 
 interface FormStep {
   title: string;
   description: string;
-  validateFields: string[];
   component: React.ReactNode;
 }
 
-const DEFAULT_FORM_VALUES = {
-  type: "technical" as const,
-  parameters: {
-    process_type: ProcessTypeEnum.BASELINE,
-    air_flow: 0,
-    classifier_speed: 0,
-    input_mass: 0,
-    output_mass: 0,
-    initial_protein_content: 0,
-    final_protein_content: 0,
-    initial_moisture_content: 0,
-    final_moisture_content: 0,
-    d10_particle_size: 0,
-    d50_particle_size: 0,
-    d90_particle_size: 0,
-    production_volume: 0,
-    operating_hours: 0,
-    equipment_cost: 0,
-    utility_cost: 0,
-    raw_material_cost: 0,
-    labor_cost: 0,
-    maintenance_factor: 0,
-    indirect_costs_factor: 0,
-    installation_factor: 0,
-    project_duration: 0,
-    discount_rate: 0,
-    revenue_per_year: 0,
-    allocation_method: 'economic' as const
+export const DEFAULT_TECHNICAL_VALUES = {
+  process_type: ProcessTypeEnum.BASELINE,
+  air_flow: 100,
+  classifier_speed: 1000,
+  input_mass: 1000,
+  output_mass: 800,
+  initial_protein_content: 80,
+  final_protein_content: 45,
+  initial_moisture_content: 12,
+  final_moisture_content: 8,
+  d10_particle_size: 10,
+  d50_particle_size: 50,
+  d90_particle_size: 90,
+  electricity_consumption: 0.5,
+  cooling_consumption: 0.3,
+  water_consumption: 0.2,
+  transport_consumption: 0.4,
+  equipment_mass: 1000,
+  thermal_ratio: 0.3
+} as const;
+
+export const DEFAULT_ECONOMIC_VALUES: EconomicValidationData = {
+  // Production Parameters
+  production_volume: 1000,
+  operating_hours: 2000,
+
+  // Equipment Configuration
+  equipment: [{
+    name: "main_equipment",
+    cost: 50000,
+    efficiency: 0.85,
+    maintenance_cost: 2500,
+    energy_consumption: 100,
+    processing_capacity: 1000
+  }],
+  equipment_cost: 50000,
+  maintenance_cost: 2500,
+  installation_factor: 0.2,
+  indirect_costs_factor: 0.15,
+  maintenance_factor: 0.05,
+  indirect_factors: [{
+    name: "engineering",
+    cost: 50000,
+    percentage: 0.15
+  }],
+
+  // Resource Configuration
+  utilities: [{
+    name: "electricity",
+    consumption: 100,
+    unit_price: 0.15,
+    unit: "kWh"
+  }],
+  raw_materials: [{
+    name: "feed_material",
+    quantity: 1000,
+    unit_price: 2.5,
+    unit: "kg"
+  }],
+  labor_config: {
+    hourly_wage: 25,
+    hours_per_week: 40,
+    weeks_per_year: 52,
+    num_workers: 1
+  },
+
+  // Operating Costs
+  utility_cost: 0.15,
+  raw_material_cost: 2.5,
+  labor_cost: 25,
+
+  // Financial Parameters
+  project_duration: 10,
+  discount_rate: 0.1,
+  revenue_per_year: 100000,
+  cash_flows: []
+};
+
+export const DEFAULT_ENVIRONMENTAL_VALUES: EnvironmentalValidationData = {
+  production_volume: 1000,
+  electricity_consumption: 0.5,
+  water_consumption: 0.2,
+  cooling_consumption: 0.3,
+  transport_consumption: 0.4,
+  equipment_mass: 1000,
+  thermal_ratio: 0.3,
+  allocation_method: "hybrid",
+  hybrid_weights: {
+    economic: 0.5,
+    physical: 0.5
   }
-} satisfies z.infer<typeof processSchema>;
+};
+
+const DEFAULT_FORM_VALUES: ProcessFormData = {
+  technical: DEFAULT_TECHNICAL_VALUES,
+  economic: DEFAULT_ECONOMIC_VALUES,
+  environmental: DEFAULT_ENVIRONMENTAL_VALUES
+};
 
 const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
   onSubmit,
@@ -182,13 +148,11 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
   initialValues = DEFAULT_FORM_VALUES,
   loading: externalLoading = false,
 }) => {
-  const form = useForm<ProcessAnalysis>({
-    resolver: zodResolver(processSchema),
-    defaultValues: {
-      type: initialValues?.type || "technical",
-      parameters: initialValues?.parameters || {},
-    },
+  const form = useForm<ProcessFormData>({
+    resolver: zodResolver(processValidationSchema),
+    defaultValues: initialValues,
   });
+  
   const [currentStep, setCurrentStep] = useState(1);
   const { toast } = useToast();
 
@@ -196,171 +160,65 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
     {
       title: 'Technical Parameters',
       description: 'Configure process specifications',
-      validateFields: [
-        'parameters.process_type',
-        'parameters.air_flow',
-        'parameters.classifier_speed',
-        'parameters.input_mass',
-        'parameters.output_mass',
-        'parameters.initial_protein_content',
-        'parameters.final_protein_content',
-        'parameters.initial_moisture_content',
-        'parameters.final_moisture_content',
-        'parameters.d10_particle_size',
-        'parameters.d50_particle_size',
-        'parameters.d90_particle_size',
-      ],
       component: (
         <TechnicalInputForm 
           onSubmit={async (technicalValues) => {
-            form.setValue('parameters', { ...form.getValues().parameters, ...technicalValues });
-            const isValid = await form.trigger(steps[currentStep - 1].validateFields as any[]);
+            form.setValue('technical', technicalValues);
+            const isValid = await form.trigger('technical');
             if (isValid) next();
           }}
           isSubmitting={form.formState.isSubmitting}
+          initialData={form.getValues().technical}
         />
       ),
     },
     {
       title: 'Economic Parameters',
       description: 'Define cost and revenue factors',
-      validateFields: [
-        'parameters.production_volume',
-        'parameters.operating_hours',
-        'parameters.equipment_cost',
-        'parameters.utility_cost',
-        'parameters.raw_material_cost',
-        'parameters.labor_cost',
-        'parameters.maintenance_factor',
-        'parameters.indirect_costs_factor',
-        'parameters.installation_factor',
-        'parameters.project_duration',
-        'parameters.discount_rate',
-        'parameters.revenue_per_year',
-      ],
       component: (
         <EconomicInputForm 
           onSubmit={async (economicValues) => {
-            form.setValue('parameters', { ...form.getValues().parameters, ...economicValues });
-            const isValid = await form.trigger(steps[currentStep - 1].validateFields as any[]);
+            form.setValue('economic', economicValues);
+            const isValid = await form.trigger('economic');
             if (isValid) next();
           }}
           isSubmitting={form.formState.isSubmitting}
+          initialData={form.getValues().economic}
         />
       ),
     },
     {
       title: 'Environmental Parameters',
       description: 'Specify environmental impacts',
-      validateFields: [
-        'parameters.electricity_consumption',
-        'parameters.cooling_consumption',
-        'parameters.water_consumption',
-        'parameters.transport_consumption',
-        'parameters.equipment_mass',
-        'parameters.thermal_ratio',
-        'parameters.allocation_method',
-        'parameters.hybrid_weights',
-      ],
       component: (
         <EnvironmentalInputForm 
           onSubmit={async (environmentalValues) => {
-            form.setValue('parameters', { ...form.getValues().parameters, ...environmentalValues });
-            const isValid = await form.trigger(steps[currentStep - 1].validateFields as any[]);
+            form.setValue('environmental', environmentalValues);
+            const isValid = await form.trigger('environmental');
             if (isValid) handleSubmit(form.getValues());
           }}
           isSubmitting={form.formState.isSubmitting}
+          initialData={form.getValues().environmental}
         />
       ),
     },
   ];
 
-  const handleSubmit = async (values: ProcessAnalysis) => {
+  const handleSubmit = async (values: ProcessFormData) => {
     try {
       // Only submit when all steps are completed
       if (currentStep === steps.length) {
-        const params = values.parameters;
-        
-        // Validate technical parameters
-        const technicalFields = [
-          'process_type', 'air_flow', 'classifier_speed', 'input_mass', 'output_mass',
-          'initial_protein_content', 'final_protein_content', 'initial_moisture_content',
-          'final_moisture_content', 'd10_particle_size', 'd50_particle_size', 'd90_particle_size'
-        ];
-        
-        const missingTechnical = technicalFields.filter(field => !params[field as keyof typeof params]);
-        if (missingTechnical.length > 0) {
-          toast({
-            title: "Technical Validation Error",
-            description: `Missing required technical parameters: ${missingTechnical.join(', ')}`,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Validate process-specific requirements
-        if (params.process_type === ProcessTypeEnum.RF && (!params.electricity_consumption || !params.water_consumption)) {
-          toast({
-            title: "Technical Validation Error",
-            description: "RF process requires electricity and water consumption parameters",
-            variant: "destructive",
-          });
-          return;
-        }
-        if (params.process_type === ProcessTypeEnum.IR && (!params.cooling_consumption || !params.water_consumption)) {
-          toast({
-            title: "Technical Validation Error",
-            description: "IR process requires cooling and water consumption parameters",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Validate economic parameters
-        const economicFields = [
-          'production_volume', 'operating_hours', 'equipment_cost', 'utility_cost',
-          'raw_material_cost', 'labor_cost', 'maintenance_factor', 'indirect_costs_factor',
-          'installation_factor', 'project_duration', 'discount_rate', 'revenue_per_year'
-        ];
-        
-        const missingEconomic = economicFields.filter(field => !params[field as keyof typeof params]);
-        if (missingEconomic.length > 0) {
-          toast({
-            title: "Economic Validation Error",
-            description: `Missing required economic parameters: ${missingEconomic.join(', ')}`,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Validate environmental parameters
-        const environmentalFields = [
-          'electricity_consumption', 'water_consumption', 'equipment_mass',
-          'thermal_ratio', 'allocation_method'
-        ];
-        
-        const missingEnvironmental = environmentalFields.filter(field => !params[field as keyof typeof params]);
-        if (missingEnvironmental.length > 0) {
-          toast({
-            title: "Environmental Validation Error",
-            description: `Missing required environmental parameters: ${missingEnvironmental.join(', ')}`,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Validate hybrid allocation if selected
-        if (params.allocation_method === 'hybrid') {
-          const weights = params.hybrid_weights || {};
-          if (!weights.economic || !weights.physical || 
-              Math.abs((weights.economic + weights.physical) - 1) > 0.001) {
+        // Validate complete process data
+        const errors = validateProcessData(values);
+        if (errors.length > 0) {
+          errors.forEach(error => {
             toast({
-              title: "Environmental Validation Error",
-              description: "Hybrid allocation weights must be provided and sum to 1",
+              title: "Validation Error",
+              description: error,
               variant: "destructive",
             });
-            return;
-          }
+          });
+          return;
         }
 
         // If all validations pass, submit the data
@@ -383,9 +241,9 @@ const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
 
   const next = async () => {
     try {
-      const isValid = await form.trigger(steps[currentStep - 1].validateFields as any[]);
+      const currentStepName = ['technical', 'economic', 'environmental'][currentStep - 1];
+      const isValid = await form.trigger(currentStepName as keyof ProcessFormData);
       if (isValid) {
-        // Just move to next step without submitting
         setCurrentStep(currentStep + 1);
       } else {
         toast({

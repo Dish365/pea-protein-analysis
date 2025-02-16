@@ -103,63 +103,91 @@ class EconomicIntegrator:
             # Extract equipment data from the correct location in process_data
             equipment_list = process_data.get('equipment', [])
             
-            # Extract equipment data with proper validation
+            # Format equipment data with proper validation
             if equipment_list and isinstance(equipment_list[0], dict):
-                # Use first equipment item if available
-                first_equipment = equipment_list[0]
-                equipment = {
-                    "name": "main_equipment",
-                    "cost": first_equipment.get('cost', 50000.0),  # Use reasonable defaults
-                    "efficiency": first_equipment.get('efficiency', 0.85),
-                    "maintenance_cost": first_equipment.get('maintenance_cost', 5000.0),
-                    "energy_consumption": first_equipment.get('energy_consumption', 100.0),
-                    "processing_capacity": first_equipment.get('processing_capacity', 1000.0)
-                }
+                formatted_equipment = []
+                for equip in equipment_list:
+                    formatted_equipment.append({
+                        "name": str(equip.get('name', 'equipment')),
+                        "cost": float(equip.get('cost', process_data.get('equipment_cost', 50000.0))),
+                        "efficiency": float(equip.get('efficiency', 0.85)),
+                        "maintenance_cost": float(equip.get('maintenance_cost', process_data.get('maintenance_cost', 5000.0))),
+                        "energy_consumption": float(equip.get('energy_consumption', process_data.get('electricity_consumption', 100.0))),
+                        "processing_capacity": float(equip.get('processing_capacity', process_data.get('production_volume', 1000.0)))
+                    })
             else:
                 # Fallback to process_data fields with reasonable defaults
-                equipment = {
+                formatted_equipment = [{
                     "name": "main_equipment",
-                    "cost": process_data.get('capex', {}).get('equipment_cost', 50000.0),
-                    "efficiency": process_data.get('equipment_efficiency', 0.85),
-                    "maintenance_cost": process_data.get('maintenance_cost', 5000.0),
-                    "energy_consumption": process_data.get('electricity_consumption', 100.0),
-                    "processing_capacity": process_data.get('production_volume', 1000.0)
-                }
+                    "cost": float(process_data.get('equipment_cost', 50000.0)),
+                    "efficiency": float(process_data.get('equipment_efficiency', 0.85)),
+                    "maintenance_cost": float(process_data.get('maintenance_cost', 5000.0)),
+                    "energy_consumption": float(process_data.get('electricity_consumption', 100.0)),
+                    "processing_capacity": float(process_data.get('production_volume', 1000.0))
+                }]
             
             # Format economic factors to match EconomicFactors model
             economic_factors = {
-                "installation_factor": process_data.get('installation_factor', 0.2),
-                "indirect_costs_factor": process_data.get('indirect_costs_factor', 0.15),
-                "maintenance_factor": process_data.get('maintenance_factor', 0.05),
-                "project_duration": process_data.get('project_duration', 10),
-                "discount_rate": process_data.get('discount_rate', 0.1),
-                "production_volume": process_data.get('production_volume', 1000.0)
+                "installation_factor": float(process_data.get('installation_factor', 0.2)),
+                "indirect_costs_factor": float(process_data.get('indirect_costs_factor', 0.15)),
+                "maintenance_factor": float(process_data.get('maintenance_factor', 0.05)),
+                "project_duration": int(process_data.get('project_duration', 10)),
+                "discount_rate": float(process_data.get('discount_rate', 0.1)),
+                "production_volume": float(process_data.get('production_volume', 1000.0))
             }
             
-            # Prepare request payload
+            # Format indirect factors
+            base_cost = sum(equip["cost"] for equip in formatted_equipment)
+            indirect_factors = process_data.get('indirect_factors', [
+                {
+                    "name": "engineering",
+                    "cost": base_cost,
+                    "percentage": 0.15
+                },
+                {
+                    "name": "contingency",
+                    "cost": base_cost,
+                    "percentage": 0.10
+                },
+                {
+                    "name": "construction",
+                    "cost": base_cost,
+                    "percentage": 0.20
+                }
+            ])
+            
+            # Prepare payload for CAPEX endpoint
             payload = {
-                'equipment_list': [equipment],
-                'economic_factors': economic_factors,
-                'indirect_factors': process_data.get('indirect_factors', []),
-                'process_type': process_data.get('process_type', 'baseline')
+                "equipment_list": formatted_equipment,
+                "economic_factors": economic_factors,
+                "indirect_factors": indirect_factors,
+                "process_type": process_data.get('process_type', 'baseline')
             }
             
-            logger.debug(f"CAPEX API payload: {json.dumps(payload)}")
-            
+            # Make API call
             response = await self.client.post(
                 f"{self.base_url}/api/v1/economic/capex/calculate",
                 json=payload
             )
             
             if response.status_code != 200:
-                logger.error(f"CAPEX API call failed with status {response.status_code}: {response.text}")
-                raise RuntimeError(f"CAPEX API call failed: {response.text}")
+                error_detail = response.json().get("detail", response.text)
+                raise RuntimeError(f"CAPEX calculation failed: {error_detail}")
                 
             result = response.json()
             
-            factors_info = result.get('indirect_factors', {})
-            logger.info(f"CAPEX calculation used {factors_info.get('source', 'unknown')} indirect factors")
+            # Extract and validate the capex_summary
+            capex_summary = result.get('capex_summary')
+            if not capex_summary or not isinstance(capex_summary, dict):
+                raise RuntimeError("Invalid CAPEX response: missing or invalid capex_summary")
             
+            # Ensure all required fields are present and are numeric
+            required_fields = ['total_capex', 'equipment_costs', 'installation_costs', 'indirect_costs']
+            for field in required_fields:
+                if field not in capex_summary or not isinstance(capex_summary[field], (int, float)):
+                    raise RuntimeError(f"Invalid CAPEX response: missing or invalid {field}")
+            
+            logger.info(f"CAPEX calculation successful: {capex_summary}")
             return result
             
         except Exception as e:

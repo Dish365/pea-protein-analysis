@@ -65,3 +65,15 @@ class RelativeEfficiencyCalculator:
     def get_efficiency_metrics(self) -> Dict[str, float]:
         """Get all efficiency metrics"""
         return self.efficiency_metrics 
+
+    def set_environmental_efficiency(self, efficiency: float) -> None:
+        """Store environmental efficiency metric"""
+        self.efficiency_metrics['environmental_efficiency'] = efficiency
+        
+    def set_resource_efficiency(self, efficiency: Dict[str, float]) -> None:
+        """Store resource efficiency metrics"""
+        self.efficiency_metrics.update(efficiency)
+        
+    def set_quality_efficiency(self, efficiency: float) -> None:
+        """Store quality efficiency metric"""
+        self.efficiency_metrics['quality_efficiency'] = efficiency 

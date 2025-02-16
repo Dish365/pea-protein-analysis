@@ -216,10 +216,12 @@ LOGGING = {
         "verbose": {
             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
             "style": "{",
+            "encoding": "utf-8",
         },
         "simple": {
             "format": "{levelname} {message}",
             "style": "{",
+            "encoding": "utf-8",
         },
     },
     "handlers": {
@@ -228,17 +230,20 @@ LOGGING = {
             "class": "logging.FileHandler",
             "filename": str(BASE_DIR / "logs" / "debug.log"),
             "formatter": "verbose",
+            "encoding": "utf-8",
         },
         "console": {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "simple",
+            "stream": "ext://sys.stdout",
         },
         "process_file": {
             "level": "INFO",
             "class": "logging.FileHandler",
             "filename": str(BASE_DIR / "logs" / "process.log"),
             "formatter": "verbose",
+            "encoding": "utf-8",
         },
     },
     "loggers": {

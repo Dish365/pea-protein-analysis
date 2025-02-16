@@ -16,11 +16,10 @@ router = APIRouter(tags=["eco-efficiency"])
 class EconomicMetrics(BaseModel):
     capex: Dict[str, float] = Field(..., description="Capital expenditure breakdown including equipment_cost, installation_cost, indirect_cost, total_capex")
     opex: Dict[str, float] = Field(..., description="Operational expenditure breakdown including utilities_cost, materials_cost, labor_cost, maintenance_cost, total_opex")
-    npv: float = Field(..., description="Net Present Value in USD")
-    roi: float = Field(..., description="Return on Investment in %")
-    payback_period: float = Field(..., description="Payback period in years")
-    profitability_index: float = Field(..., description="Profitability index")
-    sensitivity_analysis: Optional[Dict[str, Any]] = Field(None, description="Sensitivity analysis results")
+    production_volume: float = Field(..., description="Total annual production capacity in kg/year")
+    product_prices: Dict[str, float] = Field(..., description="Product prices by stream type (main_product, waste_product) in USD/kg")
+    production_volumes: Dict[str, float] = Field(..., description="Production volumes by stream type (main_product, waste_product) in kg/year")
+    raw_material_cost: float = Field(..., description="Raw material cost in USD/kg")
 
 class QualityMetrics(BaseModel):
     protein_recovery: float = Field(..., description="Protein recovery rate in %")
@@ -58,7 +57,7 @@ class EcoEfficiencyRequest(BaseModel):
     @field_validator('*')
     @classmethod
     def validate_non_negative(cls, v: Any, field: Field) -> Any:
-        if isinstance(v, (int, float)) and field.name not in ['roi', 'profitability_index']:
+        if isinstance(v, (int, float)):
             if v < 0:
                 raise ValueError(f"{field.name} cannot be negative")
         return v
@@ -74,20 +73,34 @@ async def calculate_eco_efficiency(request: EcoEfficiencyRequest):
     try:
         logger.debug(f"Received eco-efficiency calculation request for process: {request.process_type}")
         
-        # Calculate base efficiency metrics using Python implementation
-        base_metrics = efficiency_calculator.calculate_efficiency_metrics(
-            economic_data=request.economic_data.dict(),
-            quality_data=request.quality_metrics.dict(),
-            environmental_impacts=request.environmental_impacts.dict(),
-            resource_inputs=request.resource_inputs.dict()
-        )
+        # Calculate efficiency metrics
+        efficiency_metrics = {
+            "economic_efficiency": calculate_economic_efficiency(
+                capex=float(request.economic_data.capex.get('total_capex', 0.0)),
+                opex=float(request.economic_data.opex.get('total_annual_cost', 0.0)),
+                production_volume=float(request.economic_data.production_volume),
+                product_price=float(request.economic_data.product_prices.get('main_product', 0.0))
+            ),
+            "environmental_efficiency": calculate_environmental_efficiency(
+                gwp=float(request.environmental_impacts.gwp),
+                hct=float(request.environmental_impacts.hct),
+                frs=float(request.environmental_impacts.frs),
+                water=float(request.environmental_impacts.water_consumption),
+                production_volume=float(request.economic_data.production_volume)
+            ),
+            "technical_efficiency": calculate_technical_efficiency(
+                protein_recovery=float(request.quality_metrics.protein_recovery),
+                separation_efficiency=float(request.quality_metrics.separation_efficiency),
+                process_efficiency=float(request.quality_metrics.process_efficiency)
+            )
+        }
         
         # Use Rust for performance-critical calculations
         try:
             # Calculate eco-efficiency matrix using Rust
             economic_values = [
-                request.economic_data.npv,
-                request.economic_data.roi
+                request.economic_data.capex.get('total_capex', 0.0),
+                request.economic_data.opex.get('total_annual_cost', 0.0)
             ]
             environmental_impacts = [
                 request.environmental_impacts.gwp,
@@ -111,17 +124,13 @@ async def calculate_eco_efficiency(request: EcoEfficiencyRequest):
         response_data = {
             "status": "success",
             "process_type": request.process_type,
-            "efficiency_metrics": {
-                "economic_indicators": base_metrics["economic_indicators"],
-                "quality_indicators": base_metrics["quality_indicators"],
-                "efficiency_metrics": base_metrics["efficiency_metrics"]
-            },
+            "efficiency_metrics": efficiency_metrics,
             "performance_indicators": {
                 "eco_efficiency_index": calculate_eco_efficiency_index(
-                    base_metrics, request.process_type
+                    efficiency_metrics, request.process_type
                 ),
                 "relative_performance": calculate_relative_performance(
-                    base_metrics, request.process_type
+                    efficiency_metrics, request.process_type
                 )
             }
         }
@@ -200,9 +209,9 @@ def calculate_eco_efficiency_index(metrics: Dict, process_type: str) -> float:
         'quality': 0.2
     }
     
-    economic_score = sum(metrics["economic_indicators"].values()) / len(metrics["economic_indicators"])
-    quality_score = sum(metrics["quality_indicators"].values()) / len(metrics["quality_indicators"])
-    efficiency_score = sum(metrics["efficiency_metrics"].values()) / len(metrics["efficiency_metrics"])
+    economic_score = sum(metrics["economic_efficiency"].values()) / len(metrics["economic_efficiency"])
+    quality_score = sum(metrics["technical_efficiency"].values()) / len(metrics["technical_efficiency"])
+    efficiency_score = sum(metrics["environmental_efficiency"].values()) / len(metrics["environmental_efficiency"])
     
     return (
         weights['economic'] * economic_score +
@@ -257,4 +266,61 @@ def get_quality_reference(process_type: str) -> Dict[str, float]:
         'RF': {'protein_recovery': 0.80, 'separation_efficiency': 0.90},
         'IR': {'protein_recovery': 0.78, 'separation_efficiency': 0.88}
     }
-    return references[process_type] 
+    return references[process_type]
+
+def calculate_economic_efficiency(capex: float, opex: float, production_volume: float, product_price: float) -> Dict[str, float]:
+    """Calculate economic efficiency metrics"""
+    if production_volume <= 0:
+        return {"cost_efficiency": 0.0, "revenue_efficiency": 0.0}
+        
+    # Calculate cost per unit of production
+    total_cost = capex + opex
+    cost_per_unit = total_cost / production_volume
+    cost_efficiency = 1.0 / (1.0 + cost_per_unit)  # Normalize to 0-1 range
+    
+    # Calculate revenue efficiency
+    revenue = production_volume * product_price
+    revenue_efficiency = revenue / total_cost if total_cost > 0 else 0.0
+    
+    return {
+        "cost_efficiency": cost_efficiency,
+        "revenue_efficiency": min(1.0, revenue_efficiency)  # Cap at 1.0
+    }
+
+def calculate_environmental_efficiency(gwp: float, hct: float, frs: float, water: float, production_volume: float) -> Dict[str, float]:
+    """Calculate environmental efficiency metrics"""
+    if production_volume <= 0:
+        return {
+            "carbon_efficiency": 0.0,
+            "water_efficiency": 0.0,
+            "resource_efficiency": 0.0
+        }
+    
+    # Calculate per unit impacts
+    carbon_per_unit = gwp / production_volume
+    water_per_unit = water / production_volume
+    resource_impact = (hct + frs) / production_volume
+    
+    # Convert to efficiency scores (lower impact = higher efficiency)
+    carbon_efficiency = 1.0 / (1.0 + carbon_per_unit)
+    water_efficiency = 1.0 / (1.0 + water_per_unit)
+    resource_efficiency = 1.0 / (1.0 + resource_impact)
+    
+    return {
+        "carbon_efficiency": carbon_efficiency,
+        "water_efficiency": water_efficiency,
+        "resource_efficiency": resource_efficiency
+    }
+
+def calculate_technical_efficiency(protein_recovery: float, separation_efficiency: float, process_efficiency: float) -> Dict[str, float]:
+    """Calculate technical efficiency metrics"""
+    # Normalize all values to 0-1 range
+    protein_score = protein_recovery / 100.0 if protein_recovery <= 100.0 else 1.0
+    separation_score = separation_efficiency / 100.0 if separation_efficiency <= 100.0 else 1.0
+    process_score = process_efficiency / 100.0 if process_efficiency <= 100.0 else 1.0
+    
+    return {
+        "protein_recovery_efficiency": protein_score,
+        "separation_efficiency": separation_score,
+        "process_efficiency": process_score
+    } 

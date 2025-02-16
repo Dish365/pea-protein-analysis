@@ -113,10 +113,20 @@ export function EnvironmentalAnalysisView({
   } = data;
 
   const hasValidData = impact_assessment &&
+    typeof impact_assessment.gwp === 'number' &&
+    typeof impact_assessment.hct === 'number' &&
+    typeof impact_assessment.frs === 'number' &&
     consumption_metrics &&
+    typeof consumption_metrics.electricity === 'number' &&
+    typeof consumption_metrics.cooling === 'number' &&
+    typeof consumption_metrics.water === 'number' &&
     typeof energy_efficiency === 'number' &&
     typeof resource_depletion === 'number' &&
-    typeof waste_recycling_rate === 'number';
+    typeof waste_recycling_rate === 'number' &&
+    allocated_impacts &&
+    Object.values(allocated_impacts).every(impact => 
+      typeof impact === 'number' || impact === null
+    );
 
   if (!hasValidData) {
     return (

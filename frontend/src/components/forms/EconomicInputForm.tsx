@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { EconomicParameters } from "@/types/economic";
-import { ProcessTypeValues } from "@/types/process";
+import { ProcessTypeValues, economicValidationSchema, EconomicValidationData } from "@/types/process";
 import { FormSection } from "./shared/FormSection";
 import { FormNumberInput } from "./shared/FormNumberInput";
 import { FormSelect } from "./shared/FormSelect";
@@ -14,23 +14,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { DEFAULT_ECONOMIC_VALUES } from './index';
 
-const economicSchema = z.object({
-  production_volume: z.number().min(0),
-  operating_hours: z.number().min(0).max(8760), // Max hours in a year
-  equipment_cost: z.number().min(0),
-  utility_cost: z.number().min(0),
-  raw_material_cost: z.number().min(0),
-  labor_cost: z.number().min(0),
-  maintenance_factor: z.number().min(0).max(1),
-  indirect_costs_factor: z.number().min(0).max(1),
-  installation_factor: z.number().min(0).max(1),
-  project_duration: z.number().min(1).max(50),
-  discount_rate: z.number().min(0).max(1),
-  revenue_per_year: z.number().min(0)
-});
-
-type EconomicFormValues = z.infer<typeof economicSchema>;
+type EconomicFormValues = EconomicValidationData;
 
 interface EconomicInputFormProps {
   onSubmit: (values: EconomicParameters) => void;
@@ -44,21 +30,8 @@ export default function EconomicInputForm({
   initialData
 }: EconomicInputFormProps) {
   const form = useForm<EconomicFormValues>({
-    resolver: zodResolver(economicSchema),
-    defaultValues: initialData || {
-      production_volume: undefined,
-      operating_hours: undefined,
-      equipment_cost: undefined,
-      utility_cost: undefined,
-      raw_material_cost: undefined,
-      labor_cost: undefined,
-      maintenance_factor: 0.05,
-      indirect_costs_factor: 0.15,
-      installation_factor: 0.2,
-      project_duration: undefined,
-      discount_rate: 0.1,
-      revenue_per_year: undefined
-    },
+    resolver: zodResolver(economicValidationSchema),
+    defaultValues: initialData || DEFAULT_ECONOMIC_VALUES,
     mode: "onChange"
   });
 
@@ -191,7 +164,7 @@ export default function EconomicInputForm({
             <Progress value={progress} className="h-2" />
           </div>
 
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
+          <form id="economic-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
             <div className="grid gap-6">
               <Card className="p-6">
                 <FormSection 
@@ -222,37 +195,51 @@ export default function EconomicInputForm({
 
               <Card className="p-6">
                 <FormSection 
-                  title="Capital Costs" 
-                  tooltip="Specify the capital expenditure parameters"
+                  title="Equipment Configuration" 
+                  tooltip="Configure equipment details and costs"
                 >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormNumberInput
-                      name="equipment_cost"
+                      name="equipment.0.cost"
                       label="Equipment Cost"
                       unit="$"
                       min={0}
                       required
-                      tooltip="Total cost of process equipment"
+                      tooltip="Base cost of main equipment"
                     />
                     <FormNumberInput
-                      name="installation_factor"
-                      label="Installation Factor"
+                      name="equipment.0.efficiency"
+                      label="Equipment Efficiency"
                       unit="ratio"
                       min={0}
                       max={1}
                       step={0.01}
                       required
-                      tooltip="Factor for installation costs (typically 0.2-0.5)"
+                      tooltip="Operating efficiency of equipment"
                     />
                     <FormNumberInput
-                      name="indirect_costs_factor"
-                      label="Indirect Costs Factor"
-                      unit="ratio"
+                      name="equipment.0.maintenance_cost"
+                      label="Maintenance Cost"
+                      unit="$/year"
                       min={0}
-                      max={1}
-                      step={0.01}
                       required
-                      tooltip="Factor for indirect costs (typically 0.1-0.3)"
+                      tooltip="Annual maintenance cost"
+                    />
+                    <FormNumberInput
+                      name="equipment.0.energy_consumption"
+                      label="Energy Consumption"
+                      unit="kWh"
+                      min={0}
+                      required
+                      tooltip="Energy consumption of equipment"
+                    />
+                    <FormNumberInput
+                      name="equipment.0.processing_capacity"
+                      label="Processing Capacity"
+                      unit="kg/h"
+                      min={0}
+                      required
+                      tooltip="Processing capacity of equipment"
                     />
                   </div>
                 </FormSection>
@@ -260,46 +247,89 @@ export default function EconomicInputForm({
 
               <Card className="p-6">
                 <FormSection 
-                  title="Operating Costs" 
-                  tooltip="Input the operational expenditure parameters"
+                  title="Resource Configuration" 
+                  tooltip="Configure utilities, materials, and labor"
                 >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormNumberInput
-                      name="utility_cost"
-                      label="Utility Cost"
-                      unit="$/kWh"
+                      name="utilities.0.consumption"
+                      label="Utility Consumption"
+                      unit="kWh"
                       min={0}
-                      step={0.001}
                       required
-                      tooltip="Cost of utilities (electricity, water, etc.)"
+                      tooltip="Utility consumption rate"
                     />
                     <FormNumberInput
-                      name="raw_material_cost"
-                      label="Raw Material Cost"
+                      name="utilities.0.unit_price"
+                      label="Utility Unit Price"
+                      unit="$/kWh"
+                      min={0}
+                      step={0.01}
+                      required
+                      tooltip="Price per unit of utility"
+                    />
+                    <FormNumberInput
+                      name="raw_materials.0.quantity"
+                      label="Raw Material Quantity"
+                      unit="kg"
+                      min={0}
+                      required
+                      tooltip="Quantity of raw materials"
+                    />
+                    <FormNumberInput
+                      name="raw_materials.0.unit_price"
+                      label="Raw Material Unit Price"
                       unit="$/kg"
                       min={0}
                       step={0.01}
                       required
-                      tooltip="Cost of raw materials per kg"
+                      tooltip="Price per unit of raw material"
                     />
+                  </div>
+                </FormSection>
+              </Card>
+
+              <Card className="p-6">
+                <FormSection 
+                  title="Labor Configuration" 
+                  tooltip="Configure labor parameters"
+                >
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <FormNumberInput
-                      name="labor_cost"
-                      label="Labor Cost"
+                      name="labor_config.hourly_wage"
+                      label="Hourly Wage"
                       unit="$/h"
                       min={0}
                       step={0.01}
                       required
-                      tooltip="Hourly labor cost"
+                      tooltip="Hourly wage rate"
                     />
                     <FormNumberInput
-                      name="maintenance_factor"
-                      label="Maintenance Factor"
-                      unit="ratio"
+                      name="labor_config.hours_per_week"
+                      label="Hours per Week"
+                      unit="h"
                       min={0}
-                      max={1}
-                      step={0.01}
+                      max={168}
                       required
-                      tooltip="Annual maintenance cost as fraction of equipment cost"
+                      tooltip="Working hours per week"
+                    />
+                    <FormNumberInput
+                      name="labor_config.weeks_per_year"
+                      label="Weeks per Year"
+                      unit="weeks"
+                      min={0}
+                      max={52}
+                      required
+                      tooltip="Working weeks per year"
+                    />
+                    <FormNumberInput
+                      name="labor_config.num_workers"
+                      label="Number of Workers"
+                      unit="workers"
+                      min={1}
+                      step={1}
+                      required
+                      tooltip="Number of workers required"
                     />
                   </div>
                 </FormSection>
@@ -342,26 +372,6 @@ export default function EconomicInputForm({
                   </div>
                 </FormSection>
               </Card>
-            </div>
-
-            <div className="flex justify-end pt-6 border-t">
-              <Button 
-                type="submit" 
-                disabled={isSubmitting || !form.formState.isDirty || !form.formState.isValid}
-                className="w-full sm:w-auto"
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Processing...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    Continue
-                    <ArrowRight className="h-4 w-4" />
-                  </span>
-                )}
-              </Button>
             </div>
           </form>
         </div>

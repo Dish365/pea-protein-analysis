@@ -17,7 +17,7 @@ class TechnicalIntegrator:
     high performance through optimized Python calculations.
     """
     
-    def __init__(self, api_base_url: str = "http://localhost:8001/api/v1/technical/protein-analysis"):
+    def __init__(self, api_base_url: str = "http://localhost:8001/api/v1/protein/protein-analysis"):
         """
         Initialize the technical integrator with API components.
         
@@ -375,12 +375,9 @@ class TechnicalIntegrator:
         
         return {
             "technical_results": {
-                "protein_recovery": recovery_results.get("protein_recovery", 0),
+                "protein_recovery": recovery_results.get("recovery_rate", 0),
                 "separation_efficiency": separation_metrics,
-                "process_efficiency": (
-                    recovery_results.get("protein_recovery", 0) * 
-                    separation_metrics["separation_efficiency"] / 100
-                ),
+                "process_efficiency": recovery_results.get("process_efficiency", 0),
                 "particle_metrics": {
                     "d10": particle_results.get("D10", 0),
                     "d50": particle_results.get("D50", 0),

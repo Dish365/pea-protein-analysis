@@ -5,21 +5,28 @@ import {
   ProcessTypeEnum,
   ProcessStatus,
   ProcessAnalysis,
-  TechnicalData,
-  EconomicData,
-  EnvironmentalData,
-  ProcessData,
+  TechnicalValidationData,
+  EconomicValidationData,
+  EnvironmentalValidationData,
+  ProcessValidationData,
+  technicalValidationSchema,
+  economicValidationSchema,
+  environmentalValidationSchema,
+  processValidationSchema,
   validateProcessData,
-  technicalSchema,
-  economicSchema,
-  environmentalSchema
+  ProcessType
 } from '@/types/process';
+import { DEFAULT_TECHNICAL_VALUES, DEFAULT_ECONOMIC_VALUES, DEFAULT_ENVIRONMENTAL_VALUES } from '@/components/forms';
 
-export type AnalysisStep = 'technical' | 'economic' | 'environmental';
+export type AnalysisStep = 'technical' | 'economic' | 'environmental' | 'preview';
 
 interface AnalysisState {
   step: AnalysisStep;
-  data: Partial<ProcessData>;
+  data: {
+    technical?: Partial<TechnicalValidationData> & { process_type: ProcessType };
+    economic?: EconomicValidationData;
+    environmental?: EnvironmentalValidationData;
+  };
   isSubmitting: boolean;
   errors: string[];
 }
@@ -28,20 +35,9 @@ export function useAnalysisFlow() {
   const [state, setState] = useState<AnalysisState>({
     step: 'technical',
     data: {
-      technical: {
-        process_type: ProcessTypeEnum.BASELINE,
-        air_flow: 0,
-        classifier_speed: 0,
-        input_mass: 0,
-        output_mass: 0,
-        initial_protein_content: 0,
-        final_protein_content: 0,
-        initial_moisture_content: 0,
-        final_moisture_content: 0,
-        d10_particle_size: 0,
-        d50_particle_size: 0,
-        d90_particle_size: 0
-      }
+      technical: { ...DEFAULT_TECHNICAL_VALUES },
+      economic: { ...DEFAULT_ECONOMIC_VALUES },
+      environmental: { ...DEFAULT_ENVIRONMENTAL_VALUES }
     },
     isSubmitting: false,
     errors: []
@@ -55,13 +51,17 @@ export function useAnalysisFlow() {
     try {
       switch (step) {
         case 'technical':
-          await technicalSchema.parseAsync(data);
+          await technicalValidationSchema.parseAsync(data);
           break;
         case 'economic':
-          await economicSchema.parseAsync(data);
+          await economicValidationSchema.parseAsync(data);
           break;
         case 'environmental':
-          await environmentalSchema.parseAsync(data);
+          await environmentalValidationSchema.parseAsync(data);
+          break;
+        case 'preview':
+          // Validate complete process data
+          await processValidationSchema.parseAsync(data);
           break;
       }
     } catch (error: any) {
@@ -73,7 +73,11 @@ export function useAnalysisFlow() {
     return errors;
   };
 
-  const handleTechnicalSubmit = async (technicalData: TechnicalData) => {
+  const goToStep = (step: AnalysisStep) => {
+    setState(prev => ({ ...prev, step, errors: [] }));
+  };
+
+  const handleTechnicalSubmit = async (technicalData: TechnicalValidationData) => {
     const errors = await validateStep('technical', technicalData);
     if (errors.length > 0) {
       setState(prev => ({ ...prev, errors }));
@@ -88,7 +92,7 @@ export function useAnalysisFlow() {
     }));
   };
 
-  const handleEconomicSubmit = async (economicData: EconomicData) => {
+  const handleEconomicSubmit = async (economicData: EconomicValidationData) => {
     const errors = await validateStep('economic', economicData);
     if (errors.length > 0) {
       setState(prev => ({ ...prev, errors }));
@@ -103,7 +107,7 @@ export function useAnalysisFlow() {
     }));
   };
 
-  const handleEnvironmentalSubmit = async (environmentalData: EnvironmentalData) => {
+  const handleEnvironmentalSubmit = async (environmentalData: EnvironmentalValidationData) => {
     const errors = await validateStep('environmental', environmentalData);
     if (errors.length > 0) {
       setState(prev => ({ ...prev, errors }));
@@ -112,60 +116,77 @@ export function useAnalysisFlow() {
 
     setState(prev => ({
       ...prev,
+      step: 'preview',
       data: { ...prev.data, environmental: environmentalData },
       errors: []
     }));
+  };
 
-    // Prepare submission data
-    const { process_type, ...technicalData } = state.data.technical!;
-    const submissionData: ProcessAnalysis = {
-      id: '', // Will be assigned by backend
-      process_type,
-      timestamp: new Date().toISOString(),
-      status: ProcessStatus.PENDING,
-      progress: 0,
-      
-      // Technical parameters
-      ...technicalData,
-      
-      // Economic parameters
-      ...state.data.economic!,
-      
-      // Environmental parameters
-      ...environmentalData,
-      
-      // Default values for backend-populated fields
-      equipment: [],
-      maintenance_cost: 0,
-      indirect_factors: [],
-      utilities: [],
-      raw_materials: [],
-      labor_config: {
-        hourly_wage: state.data.economic!.labor_cost,
-        hours_per_week: state.data.economic!.operating_hours / 52,
-        weeks_per_year: 52,
-        num_workers: 1
-      },
-      cash_flows: [],
-      energy_consumption: {},
-      production_data: {},
-      product_values: {},
-      hybrid_weights: environmentalData.hybrid_weights || {},
-      sensitivity_range: 0.1,
-      steps: 10,
-      technical_results: undefined,
-      economic_results: undefined,
-      environmental_results: undefined,
-      efficiency_results: undefined
-    };
+  const handleSubmitAnalysis = async () => {
+    // Validate complete process data before submission
+    const processData = state.data as ProcessValidationData;
+    const processErrors = validateProcessData(processData);
+    if (processErrors.length > 0) {
+      setState(prev => ({ ...prev, errors: processErrors }));
+      return;
+    }
+
+    // Ensure all required data is present
+    if (!state.data.technical || !state.data.economic || !state.data.environmental) {
+      setState(prev => ({
+        ...prev,
+        errors: ["Missing required data. Please complete all steps."]
+      }));
+      return;
+    }
 
     try {
       setState(prev => ({ ...prev, isSubmitting: true }));
-      await submitAnalysis(submissionData);
+      
+      // Prepare submission data
+      const { process_type, ...technicalData } = state.data.technical;
+      const submissionData = {
+        id: '', // Will be assigned by backend
+        process_type,
+        timestamp: new Date().toISOString(),
+        status: ProcessStatus.PENDING,
+        progress: 0,
+        
+        // Technical parameters
+        ...technicalData,
+        
+        // Economic parameters
+        ...state.data.economic,
+        
+        // Environmental parameters
+        ...state.data.environmental,
+        
+        // Default values for backend-populated fields
+        labor_config: {
+          hourly_wage: state.data.economic.labor_cost,
+          hours_per_week: state.data.economic.operating_hours / 52,
+          weeks_per_year: 52,
+          num_workers: 1
+        },
+        cash_flows: [],
+        energy_consumption: {},
+        production_data: {},
+        product_values: {},
+        hybrid_weights: state.data.environmental.hybrid_weights || {},
+        sensitivity_range: 0.1,
+        steps: 10,
+        technical_results: undefined,
+        economic_results: undefined,
+        environmental_results: undefined,
+        efficiency_results: undefined
+      } as ProcessAnalysis;
+
+      const result = await submitAnalysis(submissionData);
       toast({
         title: "Success",
         description: "Analysis submitted successfully",
       });
+      return result.id;
     } catch (error: any) {
       setState(prev => ({
         ...prev,
@@ -186,8 +207,10 @@ export function useAnalysisFlow() {
     data: state.data,
     errors: state.errors,
     isSubmitting: state.isSubmitting,
+    goToStep,
     handleTechnicalSubmit,
     handleEconomicSubmit,
-    handleEnvironmentalSubmit
+    handleEnvironmentalSubmit,
+    handleSubmitAnalysis
   };
 } 

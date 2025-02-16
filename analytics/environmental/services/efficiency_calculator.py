@@ -25,45 +25,85 @@ class EfficiencyCalculator:
             environmental_impacts: Environmental impact data
             resource_inputs: Resource consumption data
         """
-        # Calculate economic indicators
+        # Ensure production volume is not zero
+        production_volume = economic_data.get('production_volume', 0.0)
+        if production_volume <= 0:
+            raise ValueError("Production volume must be greater than 0")
+            
+        # Calculate economic indicators with validation
+        total_capex = economic_data.get('capex', {}).get('total_capex', 0.0)
+        total_opex = economic_data.get('opex', {}).get('total_annual_cost', 0.0)
+        
         production_cost = self.economic_indicators.calculate_production_cost(
-            economic_data['capex'],
-            economic_data['opex'],
-            economic_data['production_volume']
+            total_capex,
+            total_opex,
+            production_volume
         )
         
+        # Calculate value added with validation
+        product_prices = economic_data.get('product_prices', {})
+        production_volumes = economic_data.get('production_volumes', {'main_product': production_volume})
+        raw_material_cost = economic_data.get('raw_material_cost', 0.0)
+        
+        if not product_prices or not any(production_volumes.values()):
+            raise ValueError("Product prices and production volumes must be provided and non-zero")
+            
         value_added = self.economic_indicators.calculate_value_added(
-            economic_data['product_prices'],
-            economic_data['production_volumes'],
-            economic_data['raw_material_cost']
+            product_prices,
+            production_volumes,
+            raw_material_cost
         )
         
-        # Calculate quality indicators
+        # Calculate quality indicators with validation
+        recovered_protein = quality_data.get('recovered_protein', 0.0)
+        initial_protein = quality_data.get('initial_protein', 100.0)
+        
+        if initial_protein <= 0:
+            raise ValueError("Initial protein content must be greater than 0")
+            
         protein_recovery = self.quality_indicators.calculate_protein_recovery(
-            quality_data['recovered_protein'],
-            quality_data['initial_protein']
+            recovered_protein,
+            initial_protein
         )
         
+        protein_content = quality_data.get('protein_content', 0.0)
+        total_mass = quality_data.get('total_mass', 1.0)
+        
+        if total_mass <= 0:
+            raise ValueError("Total mass must be greater than 0")
+            
         protein_purity = self.quality_indicators.calculate_protein_purity(
-            quality_data['protein_content'],
-            quality_data['total_mass']
+            protein_content,
+            total_mass
         )
         
-        # Calculate relative efficiency metrics
+        # Calculate relative efficiency metrics with validation
+        if not any(environmental_impacts.values()):
+            raise ValueError("Environmental impacts must be provided")
+            
         environmental_efficiency = self.relative_calculator.calculate_environmental_efficiency(
             value_added,
             environmental_impacts
         )
+        self.relative_calculator.set_environmental_efficiency(environmental_efficiency)
         
+        if not any(resource_inputs.values()):
+            raise ValueError("Resource inputs must be provided")
+            
         resource_efficiency = self.relative_calculator.calculate_resource_efficiency(
-            economic_data['production_volume'],
+            production_volume,
             resource_inputs
         )
+        self.relative_calculator.set_resource_efficiency(resource_efficiency)
         
+        if production_cost <= 0:
+            raise ValueError("Production cost must be greater than 0")
+            
         quality_efficiency = self.relative_calculator.calculate_quality_efficiency(
             protein_purity,
             production_cost
         )
+        self.relative_calculator.set_quality_efficiency(quality_efficiency)
         
         # Compile results
         self.efficiency_results = {

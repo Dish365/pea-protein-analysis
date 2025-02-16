@@ -12,14 +12,15 @@ interface AnalysisPageLayoutProps {
 export default function AnalysisPageLayout({ children }: AnalysisPageLayoutProps) {
   const { step, data, errors, isSubmitting } = useAnalysisFlow();
   
-  // Calculate current step based on both step and data validity
+  // Calculate current step based on completed steps
   const currentStepIndex = ['technical', 'economic', 'environmental'].indexOf(step);
-  const isCurrentStepValid = data[step] !== undefined;
+  const previousStep = currentStepIndex > 0 ? ['technical', 'economic', 'environmental'][currentStepIndex - 1] as keyof typeof data : null;
+  const isPreviousStepValid = previousStep ? data[previousStep] !== undefined : true;
   
   return (
     <AnalysisLayout
       title="Process Analysis"
-      currentStep={isCurrentStepValid ? currentStepIndex : Math.max(0, currentStepIndex - 1)}
+      currentStep={currentStepIndex}
       steps={analysisSteps}
       loading={isSubmitting}
       loadingText="Processing analysis..."

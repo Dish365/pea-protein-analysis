@@ -1,6 +1,7 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import sys
 from contextlib import asynccontextmanager
 from fastapi import HTTPException
 
@@ -14,9 +15,12 @@ from backend.fastapi_app.process_analysis import (
     protein_endpoints
 )
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
+# Configure logging with Unicode support
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S'))
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 
 @asynccontextmanager

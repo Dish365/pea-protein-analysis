@@ -3,8 +3,6 @@
 import React from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
 import { EnvironmentalParameters } from "@/types/environmental";
 import { FormSection } from "./shared/FormSection";
 import { FormNumberInput } from "./shared/FormNumberInput";
@@ -13,6 +11,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { environmentalValidationSchema, EnvironmentalValidationData } from '@/types/process';
+import { DEFAULT_ENVIRONMENTAL_VALUES } from './index';
 
 const allocationMethodOptions = [
   { value: 'economic', label: 'Economic Allocation' },
@@ -20,19 +20,7 @@ const allocationMethodOptions = [
   { value: 'hybrid', label: 'Hybrid Allocation' }
 ];
 
-const environmentalSchema = z.object({
-  production_volume: z.number().min(0),
-  electricity_consumption: z.number().min(0),
-  water_consumption: z.number().min(0),
-  cooling_consumption: z.number().min(0),
-  transport_consumption: z.number().min(0),
-  equipment_mass: z.number().min(0),
-  thermal_ratio: z.number().min(0).max(1),
-  allocation_method: z.enum(['economic', 'physical', 'hybrid'] as const),
-  hybrid_weights: z.record(z.string(), z.number().min(0).max(1))
-});
-
-type EnvironmentalFormValues = z.infer<typeof environmentalSchema>;
+type EnvironmentalFormValues = EnvironmentalValidationData;
 
 interface EnvironmentalInputFormProps {
   onSubmit: (values: EnvironmentalParameters) => void;
@@ -46,21 +34,8 @@ export default function EnvironmentalInputForm({
   initialData
 }: EnvironmentalInputFormProps) {
   const form = useForm<EnvironmentalFormValues>({
-    resolver: zodResolver(environmentalSchema),
-    defaultValues: initialData || {
-      production_volume: undefined,
-      electricity_consumption: undefined,
-      water_consumption: undefined,
-      cooling_consumption: undefined,
-      transport_consumption: undefined,
-      equipment_mass: undefined,
-      thermal_ratio: 0.3,
-      allocation_method: "hybrid",
-      hybrid_weights: {
-        economic: 0.5,
-        physical: 0.5
-      }
-    },
+    resolver: zodResolver(environmentalValidationSchema),
+    defaultValues: initialData || DEFAULT_ENVIRONMENTAL_VALUES,
     mode: "onChange"
   });
 
@@ -194,7 +169,7 @@ export default function EnvironmentalInputForm({
             <Progress value={progress} className="h-2" />
           </div>
 
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
+          <form id="environmental-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
             <div className="grid gap-6">
               <Card className="p-6">
                 <FormSection 
@@ -240,11 +215,10 @@ export default function EnvironmentalInputForm({
                     <FormNumberInput
                       name="water_consumption"
                       label="Water Consumption"
-                      unit="m³/kg"
+                      unit="kg"
                       min={0}
-                      step={0.001}
                       required
-                      tooltip="Specific water consumption per kg of product"
+                      tooltip="Total water consumption"
                     />
                     <FormNumberInput
                       name="cooling_consumption"
@@ -257,12 +231,11 @@ export default function EnvironmentalInputForm({
                     />
                     <FormNumberInput
                       name="transport_consumption"
-                      label="Transport Consumption"
-                      unit="tkm/kg"
+                      label="Transport Energy"
+                      unit="MJ"
                       min={0}
-                      step={0.01}
                       required
-                      tooltip="Transport requirements in tonne-kilometers per kg of product"
+                      tooltip="Transport energy consumption"
                     />
                   </div>
                 </FormSection>
@@ -328,26 +301,6 @@ export default function EnvironmentalInputForm({
                   </div>
                 </FormSection>
               </Card>
-            </div>
-
-            <div className="flex justify-end pt-6 border-t">
-              <Button 
-                type="submit" 
-                disabled={isSubmitting || !form.formState.isDirty}
-                className="w-full sm:w-auto"
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Processing...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    Continue
-                    <ArrowRight className="h-4 w-4" />
-                  </span>
-                )}
-              </Button>
             </div>
           </form>
         </div>

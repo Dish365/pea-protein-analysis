@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { TechnicalParameters } from "@/types/technical";
-import { ProcessTypeEnum, ProcessType } from '@/types/process';
+import { ProcessTypeEnum, ProcessType, technicalValidationSchema, TechnicalValidationData } from '@/types/process';
 import { FormSection } from "./shared/FormSection";
 import { FormNumberInput } from "./shared/FormNumberInput";
 import { FormSelect } from "./shared/FormSelect";
@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { DEFAULT_TECHNICAL_VALUES } from './index';
 
 const processTypeOptions = [
   { value: ProcessTypeEnum.BASELINE, label: 'Baseline' },
@@ -29,86 +30,7 @@ const processTypeOptions = [
   { value: ProcessTypeEnum.IR, label: 'IR' }
 ];
 
-const technicalSchema = z.object({
-  // Process Parameters
-  process_type: z.enum([ProcessTypeEnum.BASELINE, ProcessTypeEnum.RF, ProcessTypeEnum.IR] as const),
-  air_flow: z.number().min(0).max(1000)
-    .describe("The volumetric flow rate of air through the system"),
-  classifier_speed: z.number().min(0)
-    .describe("The rotational speed of the classifier wheel"),
-  
-  // Mass Balance
-  input_mass: z.number().min(0).max(10000)
-    .describe("Total mass of feed material entering the process"),
-  output_mass: z.number().min(0).max(10000)
-    .describe("Total mass of product material after processing"),
-  
-  // Content Analysis
-  initial_protein_content: z.number().min(0).max(100)
-    .describe("Protein content in the feed material"),
-  final_protein_content: z.number().min(0).max(100)
-    .describe("Protein content in the product material"),
-  initial_moisture_content: z.number().min(0).max(100)
-    .describe("Moisture content in the feed material"),
-  final_moisture_content: z.number().min(0).max(100)
-    .describe("Moisture content in the product material"),
-  
-  // Particle Size Analysis
-  d10_particle_size: z.number().min(0)
-    .describe("Particle size at which 10% of the sample is comprised of smaller particles"),
-  d50_particle_size: z.number().min(0)
-    .describe("Median particle size (50% of particles are smaller)"),
-  d90_particle_size: z.number().min(0)
-    .describe("Particle size at which 90% of the sample is comprised of smaller particles"),
-    
-  // Process-specific parameters
-  electricity_consumption: z.number().min(0).optional(),
-  cooling_consumption: z.number().min(0).optional(),
-  water_consumption: z.number().min(0).optional(),
-  transport_consumption: z.number().min(0).optional(),
-  equipment_mass: z.number().min(0).optional(),
-  thermal_ratio: z.number().min(0).max(1).optional()
-}).refine(
-  (data) => data.output_mass <= data.input_mass,
-  {
-    message: "Output mass cannot exceed input mass",
-    path: ["output_mass"]
-  }
-).refine(
-  (data) => data.final_moisture_content <= data.initial_moisture_content,
-  {
-    message: "Final moisture content cannot be higher than initial moisture content",
-    path: ["final_moisture_content"]
-  }
-).refine(
-  (data) => data.d50_particle_size >= data.d10_particle_size,
-  {
-    message: "D50 must be greater than or equal to D10",
-    path: ["d50_particle_size"]
-  }
-).refine(
-  (data) => data.d90_particle_size >= data.d50_particle_size,
-  {
-    message: "D90 must be greater than or equal to D50",
-    path: ["d90_particle_size"]
-  }
-).refine(
-  (data) => {
-    if (data.process_type === ProcessTypeEnum.RF) {
-      return data.electricity_consumption !== undefined && data.electricity_consumption > 0;
-    }
-    if (data.process_type === ProcessTypeEnum.IR) {
-      return data.cooling_consumption !== undefined && data.cooling_consumption > 0;
-    }
-    return true;
-  },
-  {
-    message: "Process type specific requirements not met",
-    path: ["process_type"]
-  }
-);
-
-type TechnicalFormValues = z.infer<typeof technicalSchema>;
+type TechnicalFormValues = TechnicalValidationData;
 
 interface TechnicalInputFormProps {
   onSubmit: (values: TechnicalParameters) => void;
@@ -123,37 +45,36 @@ export default function TechnicalInputForm({
 }: TechnicalInputFormProps) {
   const [showProcessDialog, setShowProcessDialog] = React.useState(false);
   const form = useForm<TechnicalFormValues>({
-    resolver: zodResolver(technicalSchema),
-    defaultValues: initialData || {
-      process_type: ProcessTypeEnum.BASELINE,
-      air_flow: undefined,
-      classifier_speed: undefined,
-      input_mass: undefined,
-      output_mass: undefined,
-      initial_protein_content: undefined,
-      final_protein_content: undefined,
-      initial_moisture_content: undefined,
-      final_moisture_content: undefined,
-      d10_particle_size: undefined,
-      d50_particle_size: undefined,
-      d90_particle_size: undefined,
-      electricity_consumption: undefined,
-      cooling_consumption: undefined,
-      water_consumption: undefined,
-      transport_consumption: undefined,
-      equipment_mass: undefined,
-      thermal_ratio: undefined
-    },
+    resolver: zodResolver(technicalValidationSchema),
+    defaultValues: initialData || DEFAULT_TECHNICAL_VALUES,
     mode: "onChange"
   });
 
   const processType = form.watch('process_type');
 
+  // Show process dialog for RF/IR selection
   useEffect(() => {
     if (processType !== ProcessTypeEnum.BASELINE && !initialData) {
       setShowProcessDialog(true);
     }
   }, [processType, initialData]);
+
+  // Set process-specific parameters when process type changes
+  useEffect(() => {
+    if (processType === ProcessTypeEnum.BASELINE) {
+      form.setValue('electricity_consumption', undefined);
+      form.setValue('cooling_consumption', undefined);
+      form.setValue('water_consumption', 0.2);
+    } else if (processType === ProcessTypeEnum.RF) {
+      form.setValue('cooling_consumption', undefined);
+      form.setValue('electricity_consumption', 0.75);
+      form.setValue('water_consumption', 0.15);
+    } else if (processType === ProcessTypeEnum.IR) {
+      form.setValue('electricity_consumption', undefined);
+      form.setValue('cooling_consumption', 0.45);
+      form.setValue('water_consumption', 0.25);
+    }
+  }, [processType, form]);
 
   const getRequiredFields = () => {
     const fields = [
@@ -285,7 +206,7 @@ export default function TechnicalInputForm({
             <Progress value={progress} className="h-2" />
           </div>
 
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
+          <form id="technical-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
             <div className="grid gap-6">
               <Card className="p-6">
                 <FormSection 
@@ -509,26 +430,6 @@ export default function TechnicalInputForm({
                   </div>
                 </FormSection>
               </Card>
-            </div>
-
-            <div className="flex justify-end pt-6 border-t">
-              <Button 
-                type="submit" 
-                disabled={isSubmitting || !form.formState.isDirty}
-                className="w-full sm:w-auto"
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Processing...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    Continue
-                    <ArrowRight className="h-4 w-4" />
-                  </span>
-                )}
-              </Button>
             </div>
           </form>
         </div>

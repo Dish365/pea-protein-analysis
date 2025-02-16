@@ -114,8 +114,19 @@ export function EconomicAnalysisView({
   } = data;
 
   const hasValidData = capex_analysis &&
+    typeof capex_analysis.total_capex === 'number' &&
+    typeof capex_analysis.equipment_cost === 'number' &&
+    typeof capex_analysis.installation_cost === 'number' &&
+    typeof capex_analysis.indirect_cost === 'number' &&
     opex_analysis &&
+    typeof opex_analysis.total_opex === 'number' &&
+    typeof opex_analysis.utilities_cost === 'number' &&
+    typeof opex_analysis.materials_cost === 'number' &&
+    typeof opex_analysis.labor_cost === 'number' &&
+    typeof opex_analysis.maintenance_cost === 'number' &&
     profitability_analysis &&
+    typeof profitability_analysis.npv === 'number' &&
+    typeof profitability_analysis.roi === 'number' &&
     cost_breakdown &&
     typeof unit_production_cost === 'number';
 

@@ -1,5 +1,5 @@
 import httpx
-from typing import Dict, Any
+from typing import Dict, Any, Tuple, List
 import logging
 import asyncio
 from django.conf import settings
@@ -68,18 +68,107 @@ class FastAPIService:
             technical_results, economic_results, environmental_results = results
             
             # Prepare data for eco-efficiency analysis
+            production_volume = data.get('production_volume', 1000.0)  # Get production volume once
+            input_mass = data.get('input_mass', production_volume)
+            output_mass = data.get('output_mass', input_mass * 0.8)  # Assume 80% yield if not specified
+            
+            # Calculate product streams based on mass balance
+            main_product_volume = max(0.1, output_mass)  # Ensure non-zero main product volume
+            waste_volume = max(0.0, input_mass - output_mass)  # Ensure non-negative waste volume
+            
+            # Get economic values with validation and logging
+            economic_defaults, economic_values = self._validate_and_extract_metrics(economic_results, 'economic')
+            
+            # Get technical values with validation and logging
+            technical_defaults, technical_values = self._validate_and_extract_metrics(technical_results, 'technical')
+            
+            # Get environmental values with validation and logging
+            environmental_defaults, env_values = self._validate_and_extract_metrics(environmental_results, 'environmental')
+            
+            # Log warnings for default usage
+            if economic_defaults:
+                logger.warning(f"Using default values for economic metrics: {', '.join(economic_defaults)}")
+            if technical_defaults:
+                logger.warning(f"Using default values for technical metrics: {', '.join(technical_defaults)}")
+            if environmental_defaults:
+                logger.warning(f"Using default values for environmental metrics: {', '.join(environmental_defaults)}")
+            
+            # Log actual calculated values
+            logger.info(
+                f"Using calculated economic values - CAPEX: {economic_values['total_capex']}, "
+                f"OPEX: {economic_values['total_opex']}, MCSP: {economic_values['mcsp']}"
+            )
+            logger.info(
+                f"Using calculated technical values - Recovery: {technical_values['protein_recovery']}, "
+                f"Efficiency: {technical_values['separation_efficiency']}, "
+                f"Process: {technical_values['process_efficiency']}"
+            )
+            logger.info(
+                f"Using calculated environmental values - "
+                f"GWP: {env_values['gwp']}, HCT: {env_values['hct']}, "
+                f"FRS: {env_values['frs']}, Water: {env_values['water_consumption']}"
+            )
+            
+            # Extract CAPEX values from economic results
+            capex_summary = economic_results.get('capex_analysis', {}).get('capex_summary', {})
+            total_capex = economic_values['total_capex']
+            
+            # Extract OPEX values
+            opex_summary = economic_results.get('opex_analysis', {}).get('opex_summary', {})
+            total_opex = economic_values['total_opex']
+            
+            # Extract MCSP and raw material costs
+            mcsp = economic_values['mcsp']
+            raw_material_cost = economic_values['raw_material_cost']
+            
+            # Prepare efficiency data with validated values
             efficiency_data = {
                 "economic_data": {
-                    "capex": economic_results.get('capex_analysis', {}),
-                    "opex": economic_results.get('opex_analysis', {}),
-                    "profitability": economic_results.get('profitability_analysis', {})
+                    "capex": {
+                        "total_capex": total_capex,
+                        "equipment_cost": capex_summary.get('equipment_costs', total_capex * 0.7),
+                        "installation_cost": capex_summary.get('installation_costs', total_capex * 0.2),
+                        "indirect_cost": capex_summary.get('indirect_costs', total_capex * 0.1)
+                    },
+                    "opex": {
+                        "total_annual_cost": total_opex,
+                        "utilities_cost": opex_summary.get('utility_costs', total_opex * 0.3),
+                        "materials_cost": raw_material_cost,
+                        "labor_cost": opex_summary.get('labor_costs', total_opex * 0.2),
+                        "maintenance_cost": opex_summary.get('maintenance_costs', total_opex * 0.1)
+                    },
+                    "production_volume": production_volume,
+                    "product_prices": {
+                        "main_product": mcsp,
+                        "waste_product": 0.1
+                    },
+                    "production_volumes": {
+                        "main_product": main_product_volume,
+                        "waste_product": waste_volume
+                    },
+                    "raw_material_cost": raw_material_cost
                 },
-                "quality_metrics": technical_results.get('technical_results', {}),
-                "environmental_impacts": environmental_results.get('environmental_results', {}),
+                "quality_metrics": {
+                    "protein_recovery": technical_values['protein_recovery'],
+                    "separation_efficiency": technical_values['separation_efficiency'],
+                    "process_efficiency": technical_values['process_efficiency'],
+                    "particle_size_distribution": {
+                        "d10": data.get('d10_particle_size', 0.0),
+                        "d50": data.get('d50_particle_size', 0.0),
+                        "d90": data.get('d90_particle_size', 0.0)
+                    }
+                },
+                "environmental_impacts": {
+                    "gwp": env_values['gwp'],
+                    "hct": env_values['hct'],
+                    "frs": env_values['frs'],
+                    "water_consumption": env_values['water_consumption'],
+                    "allocated_impacts": environmental_results.get('impact_assessment', {})
+                },
                 "resource_inputs": {
-                    "energy_consumption": data.get('electricity_consumption', 0) + data.get('cooling_consumption', 0),
-                    "water_usage": data.get('water_consumption', 0),
-                    "raw_material_input": data.get('input_mass', 0)
+                    "energy_consumption": data.get('electricity_consumption', 0.0) + data.get('cooling_consumption', 0.0),
+                    "water_usage": data.get('water_consumption', 0.0),
+                    "raw_material_input": data.get('input_mass', 0.0)
                 },
                 "process_type": data.get('process_type', 'baseline')
             }
@@ -93,18 +182,24 @@ class FastAPIService:
             
             # Compile final results
             final_results = {
-                'technical_results': technical_results.get('technical_results', {}),
+                'technical_results': {
+                    'protein_recovery': technical_values['protein_recovery'],
+                    'separation_efficiency': technical_values['separation_efficiency'],
+                    'process_efficiency': technical_values['process_efficiency'],
+                    'particle_size_distribution': technical_results.get('particle_size_distribution', {})
+                },
                 'economic_analysis': economic_results,
                 'environmental_results': {
-                    'impact_assessment': environmental_results.get('impact_assessment', {
-                        'gwp': 0.0,
-                        'hct': 0.0,
-                        'frs': 0.0
-                    }),
+                    'impact_assessment': {
+                        'gwp': env_values['gwp'],
+                        'hct': env_values['hct'],
+                        'frs': env_values['frs'],
+                        'water_consumption': env_values['water_consumption']
+                    },
                     'consumption_metrics': {
                         'electricity': data.get('electricity_consumption') if data.get('process_type') == 'rf' else None,
                         'cooling': data.get('cooling_consumption') if data.get('process_type') == 'ir' else None,
-                        'water': None
+                        'water': data.get('water_consumption')
                     }
                 },
                 'efficiency_results': efficiency_results,
@@ -356,9 +451,44 @@ class FastAPIService:
     async def _analyze_efficiency(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Send request to eco-efficiency analysis endpoint"""
         try:
+            # Structure the request data according to EcoEfficiencyRequest model
+            request_data = {
+                "economic_data": {
+                    "capex": data.get("economic_data", {}).get("capex", {}),
+                    "opex": data.get("economic_data", {}).get("opex", {}),
+                    "production_volume": data.get("economic_data", {}).get("production_volume", 0.0),
+                    "product_prices": data.get("economic_data", {}).get("product_prices", {}),
+                    "production_volumes": data.get("economic_data", {}).get("production_volumes", {}),
+                    "raw_material_cost": data.get("economic_data", {}).get("raw_material_cost", 0.0)
+                },
+                "quality_metrics": {
+                    "protein_recovery": data.get("quality_metrics", {}).get("protein_recovery", 0.0),
+                    "separation_efficiency": data.get("quality_metrics", {}).get("separation_efficiency", 0.0),
+                    "process_efficiency": data.get("quality_metrics", {}).get("process_efficiency", 0.0),
+                    "particle_size_distribution": {
+                        "d10": data.get("quality_metrics", {}).get("particle_size_distribution", {}).get("d10", 0.0),
+                        "d50": data.get("quality_metrics", {}).get("particle_size_distribution", {}).get("d50", 0.0),
+                        "d90": data.get("quality_metrics", {}).get("particle_size_distribution", {}).get("d90", 0.0)
+                    }
+                },
+                "environmental_impacts": {
+                    "gwp": data.get("environmental_impacts", {}).get("gwp", 0.0),
+                    "hct": data.get("environmental_impacts", {}).get("hct", 0.0),
+                    "frs": data.get("environmental_impacts", {}).get("frs", 0.0),
+                    "water_consumption": data.get("environmental_impacts", {}).get("water_consumption", 0.0),
+                    "allocated_impacts": data.get("environmental_impacts", {}).get("allocated_impacts", {})
+                },
+                "resource_inputs": {
+                    "energy_consumption": data.get("resource_inputs", {}).get("energy_consumption", 0.0),
+                    "water_usage": data.get("resource_inputs", {}).get("water_usage", 0.0),
+                    "raw_material_input": data.get("resource_inputs", {}).get("raw_material_input", 0.0)
+                },
+                "process_type": data.get("process_type", "baseline")
+            }
+
             response = await self.client.post(
-                f"{self.base_url}/api/v1/environmental/eco-efficiency/calculate",
-                json=data,
+                f"{self.base_url}/environmental/eco-efficiency/calculate",
+                json=request_data,
                 timeout=settings.PROCESS_ANALYSIS.get('EFFICIENCY_TIMEOUT', self.timeout)
             )
             response.raise_for_status()
@@ -410,4 +540,113 @@ class FastAPIService:
         await ProcessAnalysis.objects.filter(id=process_id).aupdate(
             status=status,
             progress=progress
-        ) 
+        )
+    
+    def _validate_and_extract_metrics(self, results: Dict[str, Any], metric_type: str) -> Tuple[List[str], Dict[str, float]]:
+        """
+        Extract and validate metrics with proper error handling and logging
+        
+        Args:
+            results: Raw results dictionary
+            metric_type: Metric type ('economic', 'technical', or 'environmental')
+            
+        Returns:
+            Tuple of (defaults_used, extracted_values)
+        """
+        defaults_used = []
+        extracted_values = {}
+        
+        def extract_nested_value(data: Dict[str, Any], path: List[str], default: float = 0.0) -> Tuple[float, bool]:
+            """Extract value from nested dict and determine if it's a calculated value"""
+            current = data
+            for key in path[:-1]:  # Navigate to parent
+                if not isinstance(current, dict):
+                    return default, False
+                current = current.get(key, {})
+            
+            if not isinstance(current, dict):
+                return default, False
+                
+            value = current.get(path[-1])
+            if value is None:
+                return default, False
+            try:
+                return float(value), True
+            except (TypeError, ValueError):
+                return default, False
+
+        # Define metric paths and their default values
+        metric_paths = {
+            'economic': {
+                'total_capex': (['capex_analysis', 'summary', 'total_capex'], 1000.0),
+                'total_opex': (['opex_analysis', 'summary', 'total_opex'], 500.0),
+                'mcsp': (['profitability_analysis', 'metrics', 'mcsp', 'mcsp'], 1.0),
+                'raw_material_cost': (['opex_analysis', 'summary', 'raw_material_costs'], 0.5)
+            },
+             'technical': {
+                'protein_recovery': (['technical_results', 'protein_recovery'], 0.0),
+                'separation_efficiency': (['technical_results', 'separation_efficiency', 'separation_efficiency'], 0.0),
+                'process_efficiency': (['technical_results', 'process_efficiency'], 0.0)
+            },
+            'environmental': {
+                'gwp': (['gwp'], 0.0),
+                'hct': (['hct'], 0.0),
+                'frs': (['frs'], 0.0),
+                'water_consumption': (['water_consumption'], 0.0)
+            }
+        }
+
+        paths = metric_paths.get(metric_type, {})
+        for metric_name, (path, default) in paths.items():
+            value = None
+            is_calculated = False
+            
+            # Try direct path first
+            value, is_calculated = extract_nested_value(results, path, default)
+            
+            # If not found, try alternative paths based on metric type
+            if not is_calculated:
+                if metric_type == 'technical':
+                    if metric_name == 'protein_recovery':
+                        # Get from technical_results structure
+                        value, is_calculated = extract_nested_value(results, ['technical_results', 'protein_recovery'], default)
+                            
+                    elif metric_name == 'separation_efficiency':
+                        # Get from technical_results structure
+                        value, is_calculated = extract_nested_value(results, ['technical_results', 'separation_efficiency', 'separation_efficiency'], default)
+                    
+                    elif metric_name == 'process_efficiency':
+                        # Get from technical_results structure
+                        value, is_calculated = extract_nested_value(results, ['technical_results', 'process_efficiency'], default)
+                
+                elif metric_type == 'environmental':
+                    # Try direct access first (from impact calculation endpoint)
+                    if not is_calculated:
+                        value, is_calculated = extract_nested_value(results, [metric_name], default)
+                    
+                    # Try under environmental_results (from compiled results)
+                    if not is_calculated:
+                        value, is_calculated = extract_nested_value(results, ['environmental_results', metric_name], default)
+                    
+                    # Try under impact_assessment (from stored results)
+                    if not is_calculated:
+                        value, is_calculated = extract_nested_value(results, ['impact_assessment', metric_name], default)
+                    
+                    # Finally try under environmental_results.impact_assessment
+                    if not is_calculated:
+                        value, is_calculated = extract_nested_value(results, ['environmental_results', 'impact_assessment', metric_name], default)
+            
+            # Only mark as default if we don't have a calculated value
+            if not is_calculated:
+                defaults_used.append(metric_name)
+                value = default
+            
+            # Ensure non-negative values
+            value = max(0.0, value)
+            if metric_name in ['total_capex', 'total_opex', 'mcsp', 'raw_material_cost']:
+                value = max(0.1, value)  # Ensure minimum positive values for economic metrics
+                
+            extracted_values[metric_name] = value
+            logger.debug(f"Extracted {metric_type} metric {metric_name}: {value} (calculated: {is_calculated})")
+
+        return defaults_used, extracted_values 

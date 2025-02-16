@@ -92,9 +92,15 @@ export function TechnicalAnalysisView({
   } = data;
 
   const hasValidData = proteinRecovery && 
+    typeof proteinRecovery.mass === 'number' &&
+    typeof proteinRecovery.content === 'number' &&
+    typeof proteinRecovery.yield === 'number' &&
     typeof separationEfficiency === 'number' && 
     typeof processEfficiency === 'number' && 
-    particleSizeDistribution;
+    particleSizeDistribution &&
+    typeof particleSizeDistribution.d10 === 'number' &&
+    typeof particleSizeDistribution.d50 === 'number' &&
+    typeof particleSizeDistribution.d90 === 'number';
 
   if (!hasValidData) {
     return (

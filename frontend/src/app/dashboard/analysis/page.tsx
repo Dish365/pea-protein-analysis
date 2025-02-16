@@ -3,18 +3,17 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
 import { useAnalysisFlow } from '@/hooks/useAnalysisFlow';
-import TechnicalAnalysisView from '@/features/analysis/technical/components/TechnicalAnalysisView';
-import { EconomicAnalysisView } from '@/features/analysis/economic/components/EconomicAnalysisView';
-import { EnvironmentalAnalysisView } from '@/features/analysis/environmental/components/EnvironmentalAnalysisView';
 import TechnicalInputForm from '@/components/forms/TechnicalInputForm';
 import EconomicInputForm from '@/components/forms/EconomicInputForm';
 import EnvironmentalInputForm from '@/components/forms/EnvironmentalInputForm';
-import { TechnicalResults } from '@/types/technical';
-import { EconomicResults } from '@/types/economic';
-import { EnvironmentalResults, EnvironmentalParameters } from '@/types/environmental';
-import { Beaker, Building2, Leaf } from "lucide-react";
+import { AnalysisPreview } from '@/components/forms/AnalysisPreview';
+import { TechnicalParameters } from "@/types/technical";
+import { EconomicParameters } from "@/types/economic";
+import { EnvironmentalParameters } from "@/types/environmental";
+import { Beaker, Building2, Leaf, ClipboardCheck } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 
 export const analysisSteps = [
   {
@@ -25,15 +24,21 @@ export const analysisSteps = [
   },
   {
     title: 'Economic Analysis',
-    description: 'Configure economic parameters',
+    description: 'Define economic parameters',
     icon: Building2,
-    color: 'text-green-500'
+    color: 'text-amber-500'
   },
   {
     title: 'Environmental Analysis',
-    description: 'Configure environmental parameters',
+    description: 'Set environmental parameters',
     icon: Leaf,
     color: 'text-emerald-500'
+  },
+  {
+    title: 'Review & Submit',
+    description: 'Review and submit analysis',
+    icon: ClipboardCheck,
+    color: 'text-purple-500'
   }
 ];
 
@@ -43,14 +48,16 @@ export default function AnalysisPage() {
     data,
     errors,
     isSubmitting,
+    goToStep,
     handleTechnicalSubmit,
     handleEconomicSubmit,
-    handleEnvironmentalSubmit
+    handleEnvironmentalSubmit,
+    handleSubmitAnalysis
   } = useAnalysisFlow();
 
-  const currentStepIndex = ['technical', 'economic', 'environmental'].indexOf(step);
+  const currentStepIndex = ['technical', 'economic', 'environmental', 'preview'].indexOf(step);
   const currentStep = analysisSteps[currentStepIndex];
-  const progress = ((currentStepIndex + (data[step] ? 1 : 0)) / analysisSteps.length) * 100;
+  const progress = ((currentStepIndex + (step !== 'preview' && data[step] ? 1 : 0)) / analysisSteps.length) * 100;
 
   const handleStepChange = async (stepData: any) => {
     switch (step) {
@@ -66,6 +73,106 @@ export default function AnalysisPage() {
     }
   };
 
+  const renderCurrentStep = () => {
+    switch (step) {
+      case 'technical':
+        return (
+          <div>
+            <TechnicalInputForm 
+              onSubmit={handleStepChange}
+              isSubmitting={isSubmitting}
+              initialData={data.technical as TechnicalParameters}
+            />
+            <div className="mt-6 flex justify-end">
+              <Button
+                type="submit"
+                form="technical-form"
+                disabled={isSubmitting}
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        );
+      
+      case 'economic':
+        return (
+          <div>
+            <EconomicInputForm 
+              onSubmit={handleStepChange}
+              isSubmitting={isSubmitting}
+              initialData={data.economic as EconomicParameters}
+            />
+            <div className="mt-6 flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => goToStep('technical')}
+                disabled={isSubmitting}
+              >
+                Previous
+              </Button>
+              <Button
+                type="submit"
+                form="economic-form"
+                disabled={isSubmitting}
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        );
+      
+      case 'environmental':
+        return (
+          <div>
+            <EnvironmentalInputForm 
+              onSubmit={handleStepChange}
+              isSubmitting={isSubmitting}
+              initialData={data.environmental ? {
+                ...data.environmental,
+                production_volume: data.economic?.production_volume || 0,
+                hybrid_weights: data.environmental?.hybrid_weights || {}
+              } as EnvironmentalParameters : undefined}
+            />
+            <div className="mt-6 flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => goToStep('economic')}
+                disabled={isSubmitting}
+              >
+                Previous
+              </Button>
+              <Button
+                type="submit"
+                form="environmental-form"
+                disabled={isSubmitting}
+              >
+                Review
+              </Button>
+            </div>
+          </div>
+        );
+      
+      case 'preview':
+        return (
+          <AnalysisPreview
+            data={data as any}
+            onBack={() => goToStep('environmental')}
+            onSubmit={async () => {
+              const analysisId = await handleSubmitAnalysis();
+              if (analysisId) {
+                window.location.href = `/dashboard/analysis/results/${analysisId}`;
+              }
+            }}
+            isSubmitting={isSubmitting}
+          />
+        );
+      
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="p-6">
       <Card className="p-6">
@@ -75,55 +182,13 @@ export default function AnalysisPage() {
           </Alert>
         )}
         
-        {step === 'technical' && (
-          <TechnicalInputForm 
-            onSubmit={handleStepChange}
-            isSubmitting={isSubmitting}
-            initialData={data.technical}
-          />
-        )}
+        {/* Current Step Form */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-6">{currentStep?.title}</h2>
+          {renderCurrentStep()}
+        </div>
 
-        {step === 'economic' && data.technical && (
-          <EconomicInputForm 
-            onSubmit={handleStepChange}
-            isSubmitting={isSubmitting}
-            initialData={data.economic}
-          />
-        )}
-
-        {step === 'environmental' && data.economic && (
-          <EnvironmentalInputForm 
-            onSubmit={handleStepChange}
-            isSubmitting={isSubmitting}
-            initialData={data.environmental ? {
-              ...data.environmental,
-              production_volume: data.economic.production_volume,
-              hybrid_weights: data.environmental.hybrid_weights || {}
-            } as EnvironmentalParameters : undefined}
-          />
-        )}
-
-        {data.technical && step !== 'technical' && (
-          <TechnicalAnalysisView 
-            data={data.technical as unknown as TechnicalResults} 
-            isLoading={isSubmitting} 
-          />
-        )}
-
-        {data.economic && step !== 'economic' && (
-          <EconomicAnalysisView 
-            data={data.economic as unknown as EconomicResults} 
-            isLoading={isSubmitting} 
-          />
-        )}
-
-        {data.environmental && step !== 'environmental' && (
-          <EnvironmentalAnalysisView 
-            data={data.environmental as unknown as EnvironmentalResults} 
-            isLoading={isSubmitting} 
-          />
-        )}
-
+        {/* Progress Indicator */}
         <div className="mt-6 border-t pt-6">
           <div className="flex justify-between items-center">
             <div className="text-sm text-muted-foreground">

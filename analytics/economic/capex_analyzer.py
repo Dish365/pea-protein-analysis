@@ -27,8 +27,8 @@ class CapitalExpenditureAnalysis:
         indirect_costs_factor: float,
         indirect_factors: List[Dict[str, Any]]) -> Dict[str, float]:
         """Calculate total capital expenditure including all factors"""
-        if not indirect_factors:
-            raise ValueError("Indirect factors list cannot be empty")
+        if not self.equipment_list:
+            raise ValueError("Equipment list cannot be empty")
         
         # Calculate equipment costs
         equipment_costs = calculate_equipment_costs(self.equipment_list)
@@ -37,6 +37,27 @@ class CapitalExpenditureAnalysis:
         installation_costs = calculate_installation_costs(
             equipment_costs, installation_factor, indirect_costs_factor
         )
+
+        # Use provided indirect factors or create default ones
+        if not indirect_factors:
+            base_cost = equipment_costs
+            indirect_factors = [
+                {
+                    "name": "engineering",
+                    "cost": base_cost,
+                    "percentage": 0.15
+                },
+                {
+                    "name": "contingency",
+                    "cost": base_cost,
+                    "percentage": 0.10
+                },
+                {
+                    "name": "construction",
+                    "cost": base_cost,
+                    "percentage": 0.20
+                }
+            ]
 
         # Calculate indirect costs
         indirect_costs = calculate_indirect_costs(indirect_factors)

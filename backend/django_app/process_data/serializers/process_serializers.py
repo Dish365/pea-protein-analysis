@@ -272,8 +272,8 @@ class ProcessInputSerializer(serializers.Serializer):
     project_duration = serializers.IntegerField(min_value=1)
     discount_rate = serializers.FloatField(min_value=0, max_value=1)
     production_volume = serializers.FloatField(min_value=0)
-    revenue_per_year = serializers.FloatField(min_value=0)
-    cash_flows = serializers.JSONField()
+    revenue_data = serializers.DictField(child=serializers.FloatField())
+    economic_factors = serializers.DictField()
     
     # Risk Analysis
     sensitivity_range = serializers.FloatField(min_value=0, max_value=1, default=0.2)

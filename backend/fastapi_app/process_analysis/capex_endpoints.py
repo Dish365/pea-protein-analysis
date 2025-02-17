@@ -3,7 +3,9 @@ from typing import List, Dict, Any
 import logging
 
 from analytics.economic.capex_analyzer import CapitalExpenditureAnalysis
-from backend.fastapi_app.models.economic_analysis import CapexInput, EconomicFactors, IndirectFactor
+from backend.fastapi_app.models.economic_analysis import (
+    CapexInput, EconomicFactors, IndirectFactor
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,93 +42,61 @@ def validate_indirect_factor(factor: Dict[str, Any]) -> bool:
         return False
 
 @router.post("/calculate")
-async def calculate_capex(input_data: CapexInput):
+async def calculate_capex(input_data: CapexInput) -> Dict[str, Any]:
     """Calculate total capital expenditure and its components"""
     try:
-        # Ensure we have equipment data and it's properly formatted
-        if not input_data.equipment_list:
-            raise ValueError("Equipment list cannot be empty")
-        
-        # Validate equipment data
-        for equipment in input_data.equipment_list:
-            if not isinstance(equipment.cost, (int, float)) or equipment.cost <= 0:
-                raise ValueError(f"Invalid cost for equipment {equipment.name}: {equipment.cost}")
-            if not isinstance(equipment.efficiency, (int, float)) or not 0 < equipment.efficiency <= 1:
-                raise ValueError(f"Invalid efficiency for equipment {equipment.name}: {equipment.efficiency}")
-            if not isinstance(equipment.processing_capacity, (int, float)) or equipment.processing_capacity <= 0:
-                raise ValueError(f"Invalid processing capacity for equipment {equipment.name}: {equipment.processing_capacity}")
-            
-        # Get equipment cost
-        equipment_cost = sum(eq.cost for eq in input_data.equipment_list)
-        
-        # Track source of factors used
-        factors_source = "default"
-        
-        # Always start with default factors
-        valid_factors = get_default_indirect_factors(equipment_cost)
-        
-        # Override with valid user-provided factors if any exist
-        if input_data.indirect_factors:
-            user_factors = [
-                factor.dict() for factor in input_data.indirect_factors 
-                if validate_indirect_factor(factor.dict())
-            ]
-            if user_factors:
-                valid_factors = user_factors
-                factors_source = "user"
-                logger.info("Using user-provided indirect factors")
-            else:
-                logger.info("Invalid user factors provided, using defaults")
+        logger.info(f"Received CAPEX calculation request for process type: {input_data.process_type}")
         
         # Initialize CAPEX analysis
         capex_analysis = CapitalExpenditureAnalysis()
-
-        # Add equipment - ensure we convert Pydantic models to dicts with proper types
+        
+        # Add equipment
         for equipment in input_data.equipment_list:
-            capex_analysis.add_equipment({
-                "name": str(equipment.name),
-                "cost": float(equipment.cost),
-                "efficiency": float(equipment.efficiency),
-                "maintenance_cost": float(equipment.maintenance_cost),
-                "energy_consumption": float(equipment.energy_consumption),
-                "processing_capacity": float(equipment.processing_capacity)
-            })
-
+            capex_analysis.add_equipment(equipment.model_dump())
+        logger.debug(f"Added {len(input_data.equipment_list)} equipment items")
+        
+        # Handle indirect factors
+        factors_source = "default"
+        equipment_cost = sum(eq.base_cost for eq in input_data.equipment_list)
+        indirect_factors = get_default_indirect_factors(equipment_cost)
+        
+        if input_data.indirect_factors:
+            indirect_factors = [factor.model_dump() for factor in input_data.indirect_factors]
+            factors_source = "user"
+            logger.info("Using user-provided indirect factors")
+        
         # Calculate total CAPEX
         capex_result = capex_analysis.calculate_total_capex(
-            installation_factor=float(input_data.economic_factors.installation_factor),
-            indirect_costs_factor=float(input_data.economic_factors.indirect_costs_factor),
-            indirect_factors=valid_factors
+            installation_factor=input_data.economic_factors.installation_factor,
+            indirect_costs_factor=input_data.economic_factors.indirect_costs_factor,
+            indirect_factors=indirect_factors
         )
-
-        # Get detailed breakdowns
-        equipment_breakdown = capex_analysis.get_equipment_breakdown()
-
-        # Format the response
+        
+        # Format response
         response = {
             "capex_summary": {
-                "total_capex": float(capex_result["total_capex"]),
-                "equipment_costs": float(capex_result["equipment_costs"]),
-                "installation_costs": float(capex_result["installation_costs"]),
-                "indirect_costs": float(capex_result["indirect_costs"])
+                "total_capex": capex_result["total_capex"],
+                "equipment_costs": capex_result["equipment_costs"],
+                "installation_costs": capex_result["installation_costs"],
+                "indirect_costs": capex_result["indirect_costs"]
             },
-            "equipment_breakdown": equipment_breakdown,
+            "equipment_breakdown": capex_result["equipment_breakdown"],
             "process_type": input_data.process_type,
-            "production_volume": float(input_data.economic_factors.production_volume),
+            "production_volume": input_data.economic_factors.production_volume,
             "indirect_factors": {
                 "source": factors_source,
-                "factors": valid_factors
+                "factors": capex_result["indirect_factors"]
             }
         }
-
-        logger.info(f"CAPEX calculation successful: {response}")
+        
+        logger.info(f"CAPEX calculation successful for {input_data.process_type}")
         return response
 
     except ValueError as ve:
         logger.error(f"Validation error in CAPEX calculation: {str(ve)}")
         raise HTTPException(status_code=422, detail=str(ve))
     except Exception as e:
-        logger.error(f"Error in CAPEX calculation: {str(e)}")
+        logger.error(f"Error in CAPEX calculation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/factors")

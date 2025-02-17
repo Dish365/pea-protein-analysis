@@ -117,9 +117,18 @@ export const DEFAULT_ECONOMIC_VALUES: EconomicValidationData = {
   // Financial Parameters
   project_duration: 10,
   discount_rate: 0.1,
+  revenue_data: {
+    year_0: 100000,
+    year_1: 110000,
+    // ...
+  },
+  economic_factors: {
+    discount_rate: 0.1,
+    project_duration: 10,
+    production_volume: 1000
+  },
   revenue_per_year: 100000,
-  cash_flows: []
-};
+}
 
 export const DEFAULT_ENVIRONMENTAL_VALUES: EnvironmentalValidationData = {
   production_volume: 1000,

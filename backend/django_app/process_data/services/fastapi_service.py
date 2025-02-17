@@ -422,7 +422,7 @@ class FastAPIService:
                 "monte_carlo_iterations": data.get("monte_carlo_iterations", 1000),
                 "uncertainty": data.get("uncertainty", 0.1),
                 "revenue": data.get("revenue", []),
-                "cash_flows": []  # Will be calculated by profitability analyzer
+                "cash_flows": None  # Will be calculated by profitability analyzer
             }
 
         except Exception as e:

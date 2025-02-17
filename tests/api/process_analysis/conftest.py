@@ -8,6 +8,8 @@ import asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional
 from datetime import datetime
+from fastapi.testclient import TestClient
+from backend.fastapi_app.main import app
 
 logger = logging.getLogger(__name__)
 
@@ -107,4 +109,34 @@ async def test_server(event_loop_instance):
                         "Server is not running. Please start the server with:\n"
                         "uvicorn backend.fastapi_app.main:app --port 8001 --reload"
                     )
-                await asyncio.sleep(1) 
+                await asyncio.sleep(1)
+
+@pytest.fixture
+def client():
+    """Create a test client"""
+    return TestClient(app)
+
+@pytest.fixture
+def sample_equipment():
+    """Sample equipment data for testing"""
+    return {
+        "name": "Centrifuge",
+        "base_cost": 50000.0,
+        "efficiency_factor": 0.85,
+        "installation_complexity": 1.2,
+        "maintenance_cost": 2500.0,
+        "energy_consumption": 15.0,
+        "processing_capacity": 1000.0
+    }
+
+@pytest.fixture
+def sample_economic_factors():
+    """Sample economic factors for testing"""
+    return {
+        "installation_factor": 0.2,
+        "indirect_costs_factor": 0.15,
+        "maintenance_factor": 0.05,
+        "project_duration": 10,
+        "discount_rate": 0.1,
+        "production_volume": 1000.0
+    } 

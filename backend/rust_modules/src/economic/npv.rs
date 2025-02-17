@@ -6,20 +6,33 @@ pub extern "C" fn calculate_npv(
     len: usize,
     discount_rate: c_double
 ) -> c_double {
-    let flows = unsafe { std::slice::from_raw_parts(cash_flows, len) };
+    // Safety check for null pointer
+    if cash_flows.is_null() || len == 0 {
+        return 0.0;
+    }
+
+    let cash_flows_slice = unsafe {
+        std::slice::from_raw_parts(cash_flows, len)
+    };
     
-    flows.iter().enumerate()
-        .map(|(i, &flow)| {
-            flow / (1.0 + discount_rate).powi(i as i32)
-        })
-        .sum()
+    // Calculate NPV using the helper function
+    calculate_npv_from_slice(cash_flows_slice, discount_rate)
 }
 
-// Add a helper function for internal use
+// Helper function for internal use that handles the actual NPV calculation
 pub(crate) fn calculate_npv_from_slice(flows: &[f64], rate: f64) -> f64 {
-    flows.iter().enumerate()
-        .map(|(i, &flow)| {
-            flow / (1.0 + rate).powi(i as i32)
+    if flows.is_empty() {
+        return 0.0;
+    }
+
+    flows.iter()
+        .enumerate()
+        .map(|(year, &flow)| {
+            // Handle edge case where rate is very close to -1
+            if (1.0 + rate).abs() < f64::EPSILON {
+                return 0.0;
+            }
+            flow / (1.0 + rate).powi(year as i32)
         })
         .sum()
 } 

@@ -1,4 +1,5 @@
 from typing import Dict, List
+from abc import ABC, abstractmethod
 
 
 def calculate_installation_costs(
@@ -43,3 +44,15 @@ def calculate_installation_costs(
     total_installation = direct_installation + indirect_installation
 
     return total_installation
+
+
+class InstallationStrategy(ABC):
+    @abstractmethod
+    def calculate(self, equipment_cost: float) -> float:
+        pass
+
+
+class PaperMethodologyStrategy(InstallationStrategy):
+    """Implements equation 3.2b from paper"""
+    def calculate(self, equipment_cost: float) -> float:
+        return equipment_cost * 0.25 * (1 + 0.15)  # Base 25% + 15% indirect

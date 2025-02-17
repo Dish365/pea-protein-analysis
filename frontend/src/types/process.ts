@@ -110,7 +110,6 @@ export interface ProcessAnalysis {
   discount_rate: number;
   production_volume: number;
   revenue_per_year: number;
-  cash_flows: number[];
   
   // Risk Analysis
   sensitivity_range: number;
@@ -136,6 +135,14 @@ export interface ProcessAnalysis {
   economic_results?: Record<string, any>;
   environmental_results?: Record<string, any>;
   efficiency_results?: Record<string, any>;
+  
+  // New fields
+  revenue_data: Record<string, number>;
+  economic_factors: {
+    discount_rate: number;
+    project_duration: number;
+    production_volume: number;
+  };
 }
 
 // Consolidated validation schemas that match backend exactly
@@ -220,6 +227,13 @@ export const technicalValidationSchema = z.object({
 
 export const economicValidationSchema = z.object({
   // Production Parameters
+  revenue_data: z.record(z.string(), z.number()).optional(),
+  economic_factors: z.object({
+    discount_rate: z.number().min(0).max(1),
+    project_duration: z.number().min(1).max(50),
+    production_volume: z.number().min(0)
+  }).optional(),
+
   production_volume: z.number().min(0)
     .describe("Annual production volume in kg"),
   operating_hours: z.number().min(0).max(8760)
@@ -285,8 +299,6 @@ export const economicValidationSchema = z.object({
     .describe("Discount rate in decimal"),
   revenue_per_year: z.number().min(0)
     .describe("Annual revenue in USD"),
-  cash_flows: z.array(z.number()).default([])
-    .describe("List of cash flows")
 });
 
 export const environmentalValidationSchema = z.object({

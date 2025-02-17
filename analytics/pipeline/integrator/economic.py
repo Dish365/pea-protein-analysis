@@ -293,86 +293,75 @@ class EconomicIntegrator:
             logger.error(f"OPEX calculation failed: {str(e)}")
             raise RuntimeError(f"OPEX calculation failed: {str(e)}")
 
-    async def analyze_profitability(self,
-                                  capex: float,
-                                  opex: float,
-                                  process_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Analyze profitability metrics using FastAPI endpoint.
-        Validation is handled by the endpoint.
-        """
-        try:
-            # Get project parameters directly from process_data
-            project_duration = process_data.get('project_duration', 10)
-            discount_rate = process_data.get('discount_rate', 0.1)
-            production_volume = process_data.get('production_volume', 1000.0)
-            
-            # Calculate initial cash flow (negative CAPEX)
-            initial_investment = -capex
-            
-            # Calculate annual cash flows (revenue - OPEX)
-            annual_cash_flow = process_data.get('revenue_per_year', opex * 1.2) - opex
-            
-            # Generate cash flows list
-            cash_flows = [initial_investment]  # First year is investment
-            cash_flows.extend([annual_cash_flow] * project_duration)  # Add annual cash flows
-            
-            # Prepare request payload using the ProfitabilityInput model structure
-            payload = {
-                'capex': {
-                    "total_investment": capex,
-                    "equipment_cost": process_data.get('equipment', {}).get('cost', 0),
-                    "installation_cost": capex * process_data.get('installation_factor', 0.2),
-                    "indirect_cost": capex * process_data.get('indirect_costs_factor', 0.15)
-                },
-                'opex': {
-                    "total_annual_cost": opex,
-                    "utilities_cost": process_data.get('utilities_cost', 0),
-                    "materials_cost": process_data.get('materials_cost', 0),
-                    "labor_cost": process_data.get('labor_cost', 0),
-                    "maintenance_cost": process_data.get('maintenance_cost', 0)
-                },
-                'economic_factors': {
-                    "project_duration": project_duration,
-                    "discount_rate": discount_rate,
-                    "production_volume": production_volume,
-                    "installation_factor": process_data.get('installation_factor', 0.2),
-                    "indirect_costs_factor": process_data.get('indirect_costs_factor', 0.15),
-                    "maintenance_factor": process_data.get('maintenance_factor', 0.05)
-                },
-                'process_type': process_data.get('process_type', 'baseline'),
-                'cash_flows': cash_flows,
-                'monte_carlo_iterations': process_data.get('monte_carlo_iterations', 1000),
-                'uncertainty': process_data.get('uncertainty', 0.1)
-            }
-            
-            logger.debug(f"Sending profitability analysis request with payload: {json.dumps(payload)}")
-            
-            # Make API call
-            response = await self.client.post(
-                f"{self.base_url}/api/v1/economic/profitability/analyze",
-                json=payload
-            )
-            
-            if response.status_code != 200:
-                error_detail = response.json().get('detail', str(response.text))
-                logger.error(f"Profitability API call failed: {error_detail}")
-                raise RuntimeError(f"Profitability API call failed: {error_detail}")
-                
-            result = response.json()
-            
-            # Return structured response matching endpoint output
-            return {
-                'metrics': result['metrics'],
-                'monte_carlo': result.get('monte_carlo'),
-                'cash_flows': cash_flows,
-                'process_type': result.get('process_type'),
-                'production_volume': production_volume
-            }
-            
-        except Exception as e:
-            logger.error(f"Profitability analysis failed: {str(e)}", exc_info=True)
-            raise RuntimeError(f"Profitability analysis failed: {str(e)}")
+    async def analyze_profitability(self, capex: float, opex: float, process_data: Dict):
+        """Analyze profitability using the profitability endpoint"""
+        payload = {
+            "capex": {
+                "total_capex": capex,
+                "equipment_costs": process_data.get('equipment', {}).get('cost', 0),
+                "installation_costs": process_data.get('installation_costs', capex * 0.2),
+                "indirect_costs": process_data.get('indirect_costs', capex * 0.1)
+            },
+            "opex": {
+                "total_opex": opex,
+                "utility_costs": process_data.get('utilities_cost', opex * 0.3),
+                "raw_material_costs": process_data.get('materials_cost', opex * 0.4),
+                "labor_costs": process_data.get('labor_cost', opex * 0.2),
+                "maintenance_costs": process_data.get('maintenance_cost', opex * 0.1)
+            },
+            "revenue_data": process_data.get('revenue', {
+                "annual_revenue": opex * 1.2  # Default 20% margin if not provided
+            }),
+            "economic_factors": {
+                "discount_rate": process_data.get('discount_rate', 0.1),
+                "project_duration": process_data.get('project_duration', 10),
+                "production_volume": process_data.get('production_volume', 1000.0),
+                "installation_factor": process_data.get('installation_factor', 0.2),
+                "indirect_costs_factor": process_data.get('indirect_costs_factor', 0.15),
+                "maintenance_factor": process_data.get('maintenance_factor', 0.05)
+            },
+            "process_type": process_data.get('process_type', 'baseline'),
+            "monte_carlo_iterations": process_data.get('monte_carlo_iterations', 1000),
+            "uncertainty": process_data.get('uncertainty', 0.1)
+        }
+        
+        response = await self.client.post(
+            f"{self.base_url}/api/v1/economic/profitability/analyze",
+            json=payload
+        )
+        
+        result = response.json()
+        
+        # Extract cash flows from response
+        cash_flows = result.get('cash_flows', {})
+        
+        # Extract metrics from response
+        metrics = result.get('metrics', {})
+        
+        # Extract key financial indicators
+        financial_indicators = {
+            'npv': metrics.get('npv', 0.0),
+            'roi': metrics.get('roi', 0.0),
+            'payback_period': metrics.get('payback', 0.0),
+            'mcsp': metrics.get('mcsp', {}).get('value', 0.0) if metrics.get('mcsp') else 0.0
+        }
+        
+        # Log the financial indicators for debugging
+        logger.debug(f"Financial indicators calculated: {financial_indicators}")
+        
+        return {
+            'metrics': metrics,
+            'process_type': result['process_type'],
+            'monte_carlo': metrics.get('monte_carlo'),
+            'production_volume': process_data.get('production_volume', 1000.0),
+            'cash_flows': {
+                'initial_investment': cash_flows.get('initial_investment', -capex),
+                'annual_flows': cash_flows.get('annual_flows', []),
+                'total_flows': cash_flows.get('total_flows', 0.0),
+                'discounted_flows': cash_flows.get('discounted_flows', [])
+            },
+            'financial_indicators': financial_indicators
+        }
 
     async def analyze_sensitivity(self, process_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -382,26 +371,38 @@ class EconomicIntegrator:
         try:
             # Calculate cash flows if not provided
             if not process_data.get('cash_flows'):
-                # Get CAPEX and OPEX data
+                # Get profitability analysis first to get cash flows
                 capex_results = await self.calculate_capex(process_data)
                 opex_results = await self.calculate_opex(process_data)
                 
-                # Calculate initial investment (negative)
-                initial_investment = -capex_results['capex_summary']['total_capex']
+                profitability_results = await self.analyze_profitability(
+                    capex=capex_results['capex_summary']['total_capex'],
+                    opex=opex_results['opex_summary']['total_opex'],
+                    process_data=process_data
+                )
                 
-                # Calculate annual cash flow (revenue - opex)
-                annual_revenue = opex_results['opex_summary']['total_opex'] * 1.2  # Assume 20% margin
-                annual_cash_flow = annual_revenue - opex_results['opex_summary']['total_opex']
-                
-                # Generate cash flows list
-                process_data['cash_flows'] = [initial_investment] + [annual_cash_flow] * process_data.get('project_duration', 10)
+                # Use calculated cash flows
+                cash_flows = profitability_results['cash_flows']
+                process_data['cash_flows'] = [
+                    cash_flows['initial_investment'],
+                    *cash_flows['annual_flows']
+                ]
 
-            # Format request payload
+            # Format request payload to match SensitivityAnalysisInput model
             payload = {
                 'base_cash_flows': process_data['cash_flows'],
-                'discount_rate': process_data.get('discount_rate', 0.1),
-                'production_volume': process_data.get('production_volume', 1000.0),
-                'sensitivity_range': process_data.get('sensitivity_range', 0.2),
+                'variables': process_data.get('variables', [
+                    "discount_rate",
+                    "production_volume",
+                    "operating_costs",
+                    "revenue"
+                ]),
+                'ranges': process_data.get('ranges', {
+                    "discount_rate": (0.05, 0.15),
+                    "production_volume": (500.0, 1500.0),
+                    "operating_costs": (0.8, 1.2),
+                    "revenue": (0.8, 1.2)
+                }),
                 'steps': process_data.get('steps', 10)
             }
 
@@ -423,10 +424,10 @@ class EconomicIntegrator:
             # Return structured response matching endpoint output
             return {
                 'sensitivity_analysis': result['sensitivity_analysis'],
-                'variables_analyzed': [
-                    'discount_rate',
-                    'production_volume'
-                ]
+                'base_case': result['base_case'],
+                'variables_analyzed': result['variables_analyzed'],
+                'steps': result['steps'],
+                'implementation': result['implementation']
             }
             
         except Exception as e:
@@ -483,24 +484,22 @@ class EconomicIntegrator:
         try:
             # Format request payload to match ComprehensiveAnalysisInput model
             payload = {
-                'capex': {
-                    'equipment_cost': analysis_data['capex'].get('equipment_costs', 0),
-                    'installation_cost': analysis_data['capex'].get('installation_costs', 0),
-                    'indirect_cost': analysis_data['capex'].get('indirect_costs', 0),
-                    'total_investment': analysis_data['capex'].get('total_investment', 
-                                      analysis_data['capex'].get('total_capex', 0))
+                'equipment_list': analysis_data.get('equipment_list', []),
+                'utilities': analysis_data.get('utilities', []),
+                'raw_materials': analysis_data.get('raw_materials', []),
+                'labor_config': analysis_data.get('labor_config', {}),
+                'revenue_data': analysis_data.get('revenue_data', {}),
+                'economic_factors': {
+                    'installation_factor': analysis_data.get('installation_factor', 0.3),
+                    'indirect_costs_factor': analysis_data.get('indirect_costs_factor', 0.45),
+                    'maintenance_factor': analysis_data.get('maintenance_factor', 0.02),
+                    'project_duration': analysis_data.get('project_duration', 10),
+                    'discount_rate': analysis_data.get('discount_rate', 0.1),
+                    'production_volume': analysis_data.get('production_volume', 1000.0)
                 },
-                'opex': {
-                    'total_annual_cost': analysis_data['opex'].get('total_opex', 0),
-                    'utilities_cost': analysis_data['opex'].get('utilities_cost', 0),
-                    'materials_cost': analysis_data['opex'].get('materials_cost', 0),
-                    'labor_cost': analysis_data['opex'].get('labor_cost', 0),
-                    'maintenance_cost': analysis_data['opex'].get('maintenance_cost', 0)
-                },
-                'production_volume': analysis_data.get('production_volume', 0),
-                'project_duration': analysis_data.get('project_duration', 10),
-                'discount_rate': analysis_data.get('discount_rate', 0.1),
-                'cash_flows': analysis_data.get('cash_flows', [])
+                'process_type': analysis_data.get('process_type', 'baseline'),
+                'monte_carlo_iterations': analysis_data.get('monte_carlo_iterations', 1000),
+                'uncertainty': analysis_data.get('uncertainty', 0.1)
             }
             
             logger.debug(f"Sending comprehensive analysis request with payload: {json.dumps(payload)}")
@@ -520,9 +519,30 @@ class EconomicIntegrator:
             
             # Return structured response matching endpoint output
             return {
-                'investment_analysis': result['investment_analysis'],
-                'annual_costs': result['annual_costs'],
-                'profitability_metrics': result['profitability_metrics']
+                'investment_analysis': result.get('investment_analysis', {}),
+                'operational_costs': result.get('operational_costs', {}),
+                'profitability_metrics': result.get('profitability_metrics', {}),
+                'breakdowns': {
+                    'equipment': result.get('breakdowns', {}).get('equipment', []),
+                    'utilities': result.get('breakdowns', {}).get('utilities', []),
+                    'raw_materials': result.get('breakdowns', {}).get('raw_materials', []),
+                    'labor': result.get('breakdowns', {}).get('labor', {}),
+                    'indirect_factors': result.get('breakdowns', {}).get('indirect_factors', [])
+                },
+                'process_type': result.get('process_type'),
+                'analysis_parameters': {
+                    'monte_carlo_iterations': result.get('analysis_parameters', {}).get('monte_carlo_iterations'),
+                    'uncertainty': result.get('analysis_parameters', {}).get('uncertainty'),
+                    'project_duration': result.get('analysis_parameters', {}).get('project_duration'),
+                    'discount_rate': result.get('analysis_parameters', {}).get('discount_rate'),
+                    'production_volume': result.get('analysis_parameters', {}).get('production_volume')
+                },
+                'cash_flows': result.get('cash_flows', {
+                    'initial_investment': 0.0,
+                    'annual_flows': [],
+                    'total_flows': 0.0,
+                    'discounted_flows': []
+                })
             }
             
         except Exception as e:

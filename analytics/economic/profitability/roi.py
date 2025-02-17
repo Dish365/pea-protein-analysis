@@ -22,8 +22,8 @@ def calculate_roi(
 
     Returns:
         Dict containing:
-        - roi: Simple ROI as percentage
-        - annualized_roi: Annualized ROI as percentage (for multi-period)
+        - roi: Simple ROI as decimal ratio
+        - annualized_roi: Annualized ROI as decimal ratio (for multi-period)
         - total_gain: Total gain from investment
         - net_return: Net return (gain - cost)
 
@@ -48,13 +48,13 @@ def calculate_roi(
     # Calculate net return
     net_return = total_gain - cost_of_investment
 
-    # Calculate simple ROI
-    simple_roi = (net_return / cost_of_investment) * 100
+    # Calculate simple ROI as decimal ratio
+    simple_roi = net_return / cost_of_investment
 
     # Calculate annualized ROI for multi-period gains
     if time_period > 1:
         # Using geometric mean for annualization
-        annualized_roi = (((1 + simple_roi / 100) ** (1 / time_period)) - 1) * 100
+        annualized_roi = ((1 + simple_roi) ** (1 / time_period)) - 1
     else:
         annualized_roi = simple_roi
 

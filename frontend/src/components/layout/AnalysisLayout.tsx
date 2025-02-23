@@ -3,7 +3,15 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Check, Circle, Loader2, AlertCircle, LucideIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  Check,
+  Circle,
+  Loader2,
+  AlertCircle,
+  LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -40,7 +48,7 @@ export function AnalysisLayout({
   steps,
   loading,
   loadingText,
-  error
+  error,
 }: AnalysisLayoutProps) {
   return (
     <div className="flex h-screen">
@@ -52,7 +60,10 @@ export function AnalysisLayout({
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             )}
           </div>
-          <Progress value={(currentStep + 1) / steps.length * 100} className="h-2" />
+          <Progress
+            value={((currentStep + 1) / steps.length) * 100}
+            className="h-2"
+          />
           <nav className="space-y-2">
             {steps.map((step, index) => {
               const isActive = index === currentStep;
@@ -101,7 +112,9 @@ export function AnalysisLayout({
           <div className="flex h-[calc(100vh-2rem)] items-center justify-center">
             <div className="text-center">
               <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="mt-2 text-sm text-muted-foreground">{loadingText}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {loadingText}
+              </p>
             </div>
           </div>
         ) : (
@@ -110,4 +123,4 @@ export function AnalysisLayout({
       </div>
     </div>
   );
-} 
+}

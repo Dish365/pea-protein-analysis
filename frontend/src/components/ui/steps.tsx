@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StepProps {
-  title: string
-  description?: string
-  status: "complete" | "current" | "upcoming"
+  title: string;
+  description?: string;
+  status: "complete" | "current" | "upcoming";
 }
 
 export function Step({ title, description, status }: StepProps) {
@@ -19,8 +19,8 @@ export function Step({ title, description, status }: StepProps) {
           status === "complete"
             ? "border-primary bg-primary text-primary-foreground"
             : status === "current"
-            ? "border-primary"
-            : "border-input"
+              ? "border-primary"
+              : "border-input"
         )}
       >
         {status === "complete" ? (
@@ -45,15 +45,15 @@ export function Step({ title, description, status }: StepProps) {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 interface StepsProps {
   steps: Array<{
-    title: string
-    description?: string
-  }>
-  currentStep: number
+    title: string;
+    description?: string;
+  }>;
+  currentStep: number;
 }
 
 export function Steps({ steps, currentStep }: StepsProps) {
@@ -68,8 +68,8 @@ export function Steps({ steps, currentStep }: StepsProps) {
               index + 1 < currentStep
                 ? "complete"
                 : index + 1 === currentStep
-                ? "current"
-                : "upcoming"
+                  ? "current"
+                  : "upcoming"
             }
           />
           {index < steps.length - 1 && (
@@ -83,5 +83,5 @@ export function Steps({ steps, currentStep }: StepsProps) {
         </React.Fragment>
       ))}
     </div>
-  )
-} 
+  );
+}

@@ -1,12 +1,12 @@
 "use client";
 
-import React from 'react';
+import React from "react";
 import { Card } from "@/components/ui/card";
-import { useAnalysisFlow } from '@/hooks/useAnalysisFlow';
-import TechnicalInputForm from '@/components/forms/TechnicalInputForm';
-import EconomicInputForm from '@/components/forms/EconomicInputForm';
-import EnvironmentalInputForm from '@/components/forms/EnvironmentalInputForm';
-import { AnalysisPreview } from '@/components/forms/AnalysisPreview';
+import { useAnalysisFlow } from "@/hooks/useAnalysisFlow";
+import TechnicalInputForm from "@/components/forms/TechnicalInputForm";
+import EconomicInputForm from "@/components/forms/EconomicInputForm";
+import EnvironmentalInputForm from "@/components/forms/EnvironmentalInputForm";
+import { AnalysisPreview } from "@/components/forms/AnalysisPreview";
 import { TechnicalParameters } from "@/types/technical";
 import { EconomicParameters } from "@/types/economic";
 import { EnvironmentalParameters } from "@/types/environmental";
@@ -17,29 +17,29 @@ import { Button } from "@/components/ui/button";
 
 export const analysisSteps = [
   {
-    title: 'Technical Analysis',
-    description: 'Configure technical parameters',
+    title: "Technical Analysis",
+    description: "Configure technical parameters",
     icon: Beaker,
-    color: 'text-blue-500'
+    color: "text-blue-500",
   },
   {
-    title: 'Economic Analysis',
-    description: 'Define economic parameters',
+    title: "Economic Analysis",
+    description: "Define economic parameters",
     icon: Building2,
-    color: 'text-amber-500'
+    color: "text-amber-500",
   },
   {
-    title: 'Environmental Analysis',
-    description: 'Set environmental parameters',
+    title: "Environmental Analysis",
+    description: "Set environmental parameters",
     icon: Leaf,
-    color: 'text-emerald-500'
+    color: "text-emerald-500",
   },
   {
-    title: 'Review & Submit',
-    description: 'Review and submit analysis',
+    title: "Review & Submit",
+    description: "Review and submit analysis",
     icon: ClipboardCheck,
-    color: 'text-purple-500'
-  }
+    color: "text-purple-500",
+  },
 ];
 
 export default function AnalysisPage() {
@@ -52,22 +52,30 @@ export default function AnalysisPage() {
     handleTechnicalSubmit,
     handleEconomicSubmit,
     handleEnvironmentalSubmit,
-    handleSubmitAnalysis
+    handleSubmitAnalysis,
   } = useAnalysisFlow();
 
-  const currentStepIndex = ['technical', 'economic', 'environmental', 'preview'].indexOf(step);
+  const currentStepIndex = [
+    "technical",
+    "economic",
+    "environmental",
+    "preview",
+  ].indexOf(step);
   const currentStep = analysisSteps[currentStepIndex];
-  const progress = ((currentStepIndex + (step !== 'preview' && data[step] ? 1 : 0)) / analysisSteps.length) * 100;
+  const progress =
+    ((currentStepIndex + (step !== "preview" && data[step] ? 1 : 0)) /
+      analysisSteps.length) *
+    100;
 
   const handleStepChange = async (stepData: any) => {
     switch (step) {
-      case 'technical':
+      case "technical":
         await handleTechnicalSubmit(stepData);
         break;
-      case 'economic':
+      case "economic":
         await handleEconomicSubmit(stepData);
         break;
-      case 'environmental':
+      case "environmental":
         await handleEnvironmentalSubmit(stepData);
         break;
     }
@@ -75,10 +83,10 @@ export default function AnalysisPage() {
 
   const renderCurrentStep = () => {
     switch (step) {
-      case 'technical':
+      case "technical":
         return (
           <div>
-            <TechnicalInputForm 
+            <TechnicalInputForm
               onSubmit={handleStepChange}
               isSubmitting={isSubmitting}
               initialData={data.technical as TechnicalParameters}
@@ -87,18 +95,22 @@ export default function AnalysisPage() {
               <Button
                 type="submit"
                 form="technical-form"
-                disabled={isSubmitting}
+                disabled={
+                  isSubmitting ||
+                  !data.technical ||
+                  Object.keys(data.technical).length === 0
+                }
               >
-                Continue
+                {isSubmitting ? "Saving..." : "Continue"}
               </Button>
             </div>
           </div>
         );
-      
-      case 'economic':
+
+      case "economic":
         return (
           <div>
-            <EconomicInputForm 
+            <EconomicInputForm
               onSubmit={handleStepChange}
               isSubmitting={isSubmitting}
               initialData={data.economic as EconomicParameters}
@@ -106,7 +118,7 @@ export default function AnalysisPage() {
             <div className="mt-6 flex justify-between">
               <Button
                 variant="outline"
-                onClick={() => goToStep('technical')}
+                onClick={() => goToStep("technical")}
                 disabled={isSubmitting}
               >
                 Previous
@@ -114,30 +126,38 @@ export default function AnalysisPage() {
               <Button
                 type="submit"
                 form="economic-form"
-                disabled={isSubmitting}
+                disabled={
+                  isSubmitting ||
+                  !data.economic ||
+                  Object.keys(data.economic).length === 0
+                }
               >
-                Continue
+                {isSubmitting ? "Saving..." : "Continue"}
               </Button>
             </div>
           </div>
         );
-      
-      case 'environmental':
+
+      case "environmental":
         return (
           <div>
-            <EnvironmentalInputForm 
+            <EnvironmentalInputForm
               onSubmit={handleStepChange}
               isSubmitting={isSubmitting}
-              initialData={data.environmental ? {
-                ...data.environmental,
-                production_volume: data.economic?.production_volume || 0,
-                hybrid_weights: data.environmental?.hybrid_weights || {}
-              } as EnvironmentalParameters : undefined}
+              initialData={
+                data.environmental
+                  ? ({
+                      ...data.environmental,
+                      production_volume: data.economic?.production_volume || 0,
+                      hybrid_weights: data.environmental?.hybrid_weights || {},
+                    } as EnvironmentalParameters)
+                  : undefined
+              }
             />
             <div className="mt-6 flex justify-between">
               <Button
                 variant="outline"
-                onClick={() => goToStep('economic')}
+                onClick={() => goToStep("economic")}
                 disabled={isSubmitting}
               >
                 Previous
@@ -145,19 +165,31 @@ export default function AnalysisPage() {
               <Button
                 type="submit"
                 form="environmental-form"
-                disabled={isSubmitting}
+                disabled={
+                  isSubmitting ||
+                  !data.environmental ||
+                  Object.keys(data.environmental).length === 0
+                }
               >
-                Review
+                {isSubmitting ? "Saving..." : "Review"}
               </Button>
             </div>
           </div>
         );
-      
-      case 'preview':
+
+      case "preview":
+        const isDataComplete =
+          data.technical &&
+          data.economic &&
+          data.environmental &&
+          Object.keys(data.technical).length > 0 &&
+          Object.keys(data.economic).length > 0 &&
+          Object.keys(data.environmental).length > 0;
+
         return (
           <AnalysisPreview
             data={data as any}
-            onBack={() => goToStep('environmental')}
+            onBack={() => goToStep("environmental")}
             onSubmit={async () => {
               const analysisId = await handleSubmitAnalysis();
               if (analysisId) {
@@ -167,7 +199,7 @@ export default function AnalysisPage() {
             isSubmitting={isSubmitting}
           />
         );
-      
+
       default:
         return null;
     }
@@ -178,10 +210,10 @@ export default function AnalysisPage() {
       <Card className="p-6">
         {errors.length > 0 && (
           <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{errors.join(', ')}</AlertDescription>
+            <AlertDescription>{errors.join(", ")}</AlertDescription>
           </Alert>
         )}
-        
+
         {/* Current Step Form */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-6">{currentStep?.title}</h2>
@@ -203,4 +235,4 @@ export default function AnalysisPage() {
       </Card>
     </div>
   );
-} 
+}

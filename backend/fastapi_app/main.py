@@ -1,27 +1,74 @@
-from fastapi import FastAPI, APIRouter
-from fastapi.middleware.cors import CORSMiddleware
+"""
+FastAPI Main Application Module
+
+This module initializes and configures the FastAPI application with all its routes and middleware.
+"""
+
 import logging
 import sys
+from typing import Dict, Any, Optional
+
+# Configure logging before any imports
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    force=True,
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
+# Configure specific loggers
+for name in [
+    'backend',
+    'backend.fastapi_app',
+    'backend.fastapi_app.process_analysis',
+    'backend.fastapi_app.process_analysis.economic_endpoint',
+    'analytics',
+    'analytics.economic',
+    'analytics.economic.profitability_analyzer',
+    'analytics.environmental',
+]:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = True
+    
+# Get the main logger
+logger = logging.getLogger('backend.fastapi_app.main')
+
+# Now import the rest of the modules
+from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from fastapi import HTTPException
+from pydantic import BaseModel
 
 from backend.fastapi_app.process_analysis import (
-    capex_endpoints,
-    opex_endpoints,
-    profitability_endpoints,
+    economic_endpoint,
     efficiency_endpoints,
-    impact_endpoints,
+    environmental_endpoints,
     allocation_endpoints,
     protein_endpoints
 )
 
-# Configure logging with Unicode support
-logger = logging.getLogger(__name__)
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S'))
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+from backend.fastapi_app.models.environmental_analysis import (
+    ProcessInputs,
+    AllocationMethod,
+    ProcessAnalysisResponse,
+    AllocationWeights
+)
 
+class ProcessAnalysisRequest(BaseModel):
+    """Complete process analysis request model"""
+    process_data: ProcessInputs
+    allocation_method: Optional[AllocationMethod] = None
+    product_values: Optional[Dict[str, float]] = None
+    mass_flows: Optional[Dict[str, float]] = None
+    hybrid_weights: Optional[AllocationWeights] = None
+
+class CompleteAnalysisResponse(BaseModel):
+    """Complete analysis response model"""
+    protein: Dict[str, Any]
+    economic: Dict[str, Any]
+    environmental: ProcessAnalysisResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,12 +88,18 @@ async def lifespan(app: FastAPI):
     logger.info("Eco-efficiency endpoints initialized")
     logger.info("Workflow components initialized successfully")
 
-    yield  # Application runs here
+    yield
 
     # Shutdown: Clean up resources if needed
     logger.info("Shutting down application")
 
-app = FastAPI(debug=True, lifespan=lifespan)
+app = FastAPI(
+    debug=True,
+    lifespan=lifespan,
+    title="Process Analysis API",
+    description="API for comprehensive process analysis including environmental impacts",
+    version="1.0.0"
+)
 
 # Configure CORS
 app.add_middleware(
@@ -72,113 +125,138 @@ api_router.include_router(
 logger.debug("Configuring economic analysis endpoints")
 economic_router = APIRouter()
 
-# Include sub-routers with their prefixes
-logger.debug("Including CAPEX endpoints")
+# Include economic sub-routers with their prefixes
 economic_router.include_router(
-    capex_endpoints.router,
+    economic_endpoint.capex_router,
     prefix="/capex",
     tags=["Capital Expenditure"]
 )
 
-logger.debug("Including OPEX endpoints")
 economic_router.include_router(
-    opex_endpoints.router,
+    economic_endpoint.opex_router,
     prefix="/opex",
     tags=["Operational Expenditure"]
 )
 
-logger.debug("Including Profitability endpoints")
 economic_router.include_router(
-    profitability_endpoints.router,
+    economic_endpoint.profitability_router,
     prefix="/profitability",
     tags=["Profitability Analysis"]
 )
 
 # Include economic router in main API router
-logger.debug("Including economic router in main API router")
 api_router.include_router(economic_router, prefix="/economic")
 
 # Environmental analysis endpoints
+logger.debug("Including Environmental Analysis endpoints")
+environmental_router = APIRouter(prefix="/environmental")
 
-# Impact analysis endpoints
-logger.debug("Including Impact endpoints")
-api_router.include_router(
-    impact_endpoints.router,
-    prefix="/environmental/impact",
+environmental_router.include_router(
+    environmental_endpoints.router,
+    prefix="/impact",
     tags=["Environmental Impact"]
 )
 
-# Allocation analysis endpoints
-logger.debug("Including Allocation endpoints")
-api_router.include_router(
+environmental_router.include_router(
     allocation_endpoints.router,
-    prefix="/environmental/allocation",
+    prefix="/allocation",
     tags=["Environmental Allocation"]
 )
 
-# Efficiency analysis endpoints
-logger.debug("Including Efficiency endpoints")
-api_router.include_router(
+environmental_router.include_router(
     efficiency_endpoints.router,
-    prefix="/environmental/eco-efficiency",
+    prefix="/eco-efficiency",
     tags=["Eco-efficiency Analysis"]
 )
 
-# Create router for process analysis
-router = APIRouter(prefix="/api/v1/process")
+# Include environmental router in main API router
+api_router.include_router(environmental_router)
 
+# Create router for complete process analysis
+process_router = APIRouter(prefix="/api/v1/process")
 
-@router.post("/analyze/{process_id}")
-async def analyze_process(process_id: str, data: dict):
-    """Complete analysis pipeline"""
+@process_router.post("/analyze/{process_id}", response_model=CompleteAnalysisResponse)
+async def analyze_process(
+    process_id: str,
+    request: ProcessAnalysisRequest,
+    include_contributions: bool = Query(True, description="Include process contributions in response")
+) -> CompleteAnalysisResponse:
+    """
+    Complete analysis pipeline including protein, economic, and environmental analysis
+    
+    Args:
+        process_id: Unique identifier for the process
+        request: Complete process analysis request data
+        include_contributions: Whether to include detailed process contributions
+    
+    Returns:
+        Combined results from all analyses
+    """
     try:
+        logger.info(f"Starting complete analysis for process {process_id}")
+        
         # Perform protein analysis
-        protein_results = await protein_endpoints.analyze_protein(data)
+        protein_results = await protein_endpoints.analyze_protein(request.process_data.dict())
 
-        # Perform economic analysis
-        economic_results = {
-            "capex": await capex_endpoints.analyze_capex(data),
-            "opex": await opex_endpoints.analyze_opex(data),
-            "profitability": await profitability_endpoints.analyze_profitability(data)
-        }
+        # Perform comprehensive economic analysis
+        economic_results = await economic_endpoint.analyze_comprehensive({
+            **request.process_data.dict(),
+            "process_id": process_id
+        })
 
         # Perform environmental analysis
-        environmental_results = {
-            "impact": await impact_endpoints.analyze_impact(data),
-            "allocation": await allocation_endpoints.analyze_allocation(data),
-            "efficiency": await efficiency_endpoints.analyze_efficiency(data)
-        }
+        environmental_results = await environmental_endpoints.analyze_process(
+            request=request.process_data,
+            allocation_method=request.allocation_method,
+            product_values=request.product_values,
+            mass_flows=request.mass_flows,
+            hybrid_weights=request.hybrid_weights,
+            include_contributions=include_contributions
+        )
 
-        return {
-            "protein": protein_results,
-            "economic": economic_results,
-            "environmental": environmental_results
-        }
+        logger.info(f"Completed analysis for process {process_id}")
+        
+        return CompleteAnalysisResponse(
+            protein=protein_results,
+            economic=economic_results,
+            environmental=environmental_results
+        )
 
+    except ValueError as e:
+        logger.error(f"Validation error in process analysis: {str(e)}")
+        raise HTTPException(
+            status_code=422,
+            detail={"message": str(e), "type": "validation_error"}
+        )
     except Exception as e:
+        logger.error(f"Error in process analysis: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Analysis failed: {str(e)}"
+            detail={"message": f"Analysis failed: {str(e)}", "type": "server_error"}
         )
 
 # Include all routers in the main app
-logger.debug("Including main API router in FastAPI app")
 app.include_router(api_router)
-app.include_router(router)
-
+app.include_router(process_router)
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the Process Analysis API"}
-
+    """API root endpoint"""
+    return {
+        "message": "Welcome to the Process Analysis API",
+        "version": "1.0.0",
+        "docs_url": "/docs"
+    }
 
 @app.get("/health")
 async def health_check():
+    """API health check endpoint"""
     return {
         "status": "healthy",
         "components": {
             "api": "running",
             "database": "connected",
             "services": "operational"
-        }
+        },
+        "version": "1.0.0"
     }

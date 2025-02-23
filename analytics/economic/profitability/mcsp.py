@@ -1,4 +1,3 @@
-import random
 import numpy as np
 from typing import Dict, List, Tuple
 
@@ -10,6 +9,7 @@ def calculate_mcsp(
     target_npv: float = 0,
     iterations: int = 1000,
     confidence_interval: float = 0.95,
+    random_seed: int = None  # Add seed parameter
 ) -> Dict[str, float]:
     """
     Calculate Minimum Concentrate Selling Price using Monte Carlo simulation.
@@ -22,17 +22,24 @@ def calculate_mcsp(
         target_npv: Target NPV (usually 0 for MCSP calculation)
         iterations: Number of Monte Carlo iterations
         confidence_interval: Confidence interval for results
+        random_seed: Random seed for reproducibility
 
     Returns:
         Dictionary containing MCSP and statistical metrics
     """
+    # Set random seed if provided
+    if random_seed is not None:
+        rng = np.random.RandomState(random_seed)
+    else:
+        rng = np.random.RandomState()
+
     npvs = []
     mcsps = []
 
     # Monte Carlo simulation
     for _ in range(iterations):
-        # Sample cash flows with uncertainty
-        sampled_flows = [cf * random.uniform(0.9, 1.1) for cf in cash_flows]
+        # Sample cash flows with uncertainty using numpy's RNG
+        sampled_flows = [cf * (1 + rng.uniform(-0.1, 0.1)) for cf in cash_flows]
 
         # Calculate NPV for this iteration
         npv = sum(cf / (1 + discount_rate) ** i for i, cf in enumerate(sampled_flows))

@@ -50,8 +50,8 @@ class CapitalExpenditureAnalysis:
         self._cached_results = None
 
     def calculate_total_capex(self, 
-                            installation_factor: float = 0.2,
-                            indirect_costs_factor: float = 0.15,
+                            installation_factor: float = None,
+                            indirect_costs_factor: float = None,
                             indirect_factors: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """
         Calculate total capital expenditure and its components
@@ -75,22 +75,29 @@ class CapitalExpenditureAnalysis:
             return self._format_result(self._cached_results)
 
         try:
-            # Calculate equipment costs
-            equipment_costs = calculate_equipment_costs(self._equipment_list)
-            logger.debug(f"Calculated equipment costs: {equipment_costs}")
+            # Get factors from economic configuration
+            installation_factor = installation_factor or self._economic_config.get('installation_factor', 0.25)
+            indirect_costs_factor = indirect_costs_factor or self._economic_config.get('indirect_costs_factor', 0.15)
 
-            # Calculate installation costs
+            # Calculate equipment costs with validation
+            equipment_costs = calculate_equipment_costs(self._equipment_list)
+            
+            # Calculate installation costs with actual factors
             installation_costs = calculate_installation_costs(
                 equipment_costs,
-                installation_factor,
-                indirect_costs_factor
+                installation_factor=installation_factor,
+                indirect_costs_factor=indirect_costs_factor
             )
-            logger.debug(f"Calculated installation costs: {installation_costs}")
-
-            # Use provided indirect factors or stored ones
-            factors_to_use = indirect_factors or self._indirect_factors
-            indirect_costs = calculate_indirect_costs(factors_to_use)
-            logger.debug(f"Calculated indirect costs: {indirect_costs}")
+            
+            # Determine which factors to use
+            factors_to_use = indirect_factors if indirect_factors is not None else self._indirect_factors
+            
+            # Calculate indirect costs with dynamic bases
+            indirect_costs = calculate_indirect_costs(
+                factors_to_use,
+                total_equipment_cost=equipment_costs,
+                total_installation_cost=installation_costs
+            )
 
             # Calculate total CAPEX
             total_capex = equipment_costs + installation_costs + indirect_costs
@@ -117,11 +124,13 @@ class CapitalExpenditureAnalysis:
 
     def _format_result(self, result: CapexResult) -> Dict[str, Any]:
         """Format CapexResult into API response structure"""
+        # Remove contingency calculation
         return {
             "total_capex": result.total_capex,
             "equipment_costs": result.equipment_costs,
             "installation_costs": result.installation_costs,
             "indirect_costs": result.indirect_costs,
+            "total_investment": result.total_capex,  # Now matches base CAPEX
             "equipment_breakdown": result.equipment_breakdown,
             "indirect_factors": result.indirect_factors
         }

@@ -10,6 +10,7 @@ class AllocationEngine:
         self.economic_allocator = EconomicAllocator()
         self.physical_allocator = PhysicalAllocator()
         self.hybrid_allocator = HybridAllocator()
+        self._hybrid_weights = {'economic': 0.5, 'physical': 0.5}
         
     def configure_allocation(self,
                            product_values: Dict[str, float],
@@ -27,6 +28,7 @@ class AllocationEngine:
         
         self.hybrid_allocator.configure_allocation(product_values, mass_flows)
         if hybrid_weights:
+            self._hybrid_weights = hybrid_weights
             self.hybrid_allocator.set_allocation_weights(
                 hybrid_weights['economic'],
                 hybrid_weights['physical']
@@ -72,15 +74,12 @@ class AllocationEngine:
             economic_factors = self.economic_allocator.get_allocation_factors()
             physical_factors = self.physical_allocator.get_allocation_factors()
             
-            # Get weights, defaulting to 0.5 each if not set
-            weights = getattr(self.hybrid_allocator, '_weights', {'economic': 0.5, 'physical': 0.5})
-            
             # Combine factors using weights
             hybrid_factors = {}
             for product in economic_factors:
                 hybrid_factors[product] = (
-                    weights['economic'] * economic_factors[product] +
-                    weights['physical'] * physical_factors[product]
+                    self._hybrid_weights['economic'] * economic_factors[product] +
+                    self._hybrid_weights['physical'] * physical_factors[product]
                 )
             return hybrid_factors
             

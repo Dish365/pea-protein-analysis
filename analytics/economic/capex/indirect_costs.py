@@ -1,7 +1,11 @@
 from typing import Dict, List
 
 
-def calculate_indirect_costs(indirect_factors: List[Dict[str, float]]) -> float:
+def calculate_indirect_costs(
+    indirect_factors: List[Dict[str, float]],
+    total_equipment_cost: float = 0,
+    total_installation_cost: float = 0
+) -> float:
     """
     Calculate the indirect costs based on the provided factors.
     Based on paper Section 3.2.1
@@ -12,6 +16,8 @@ def calculate_indirect_costs(indirect_factors: List[Dict[str, float]]) -> float:
             - name: Factor name
             - cost: Base cost to apply percentage to
             - percentage: Percentage to apply (as decimal)
+        total_equipment_cost: Total equipment cost
+        total_installation_cost: Total installation cost
 
     Returns:
         float: Total indirect costs
@@ -35,6 +41,13 @@ def calculate_indirect_costs(indirect_factors: List[Dict[str, float]]) -> float:
         # Calculate indirect cost for this factor
         base_cost = factor["cost"]
         percentage = factor["percentage"]
+        
+        # Handle contingency dynamically
+        if factor.get('name') == 'Contingency' and 'reference_base' in factor:
+            if factor['reference_base'] == 'equipment':
+                base_cost = total_equipment_cost
+            elif factor['reference_base'] == 'direct':
+                base_cost = total_equipment_cost + total_installation_cost
 
         # Apply percentage to base cost
         factor_cost = base_cost * percentage

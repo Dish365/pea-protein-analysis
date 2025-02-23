@@ -25,6 +25,9 @@ pub extern "C" fn run_sensitivity_analysis(
     range_min: f64,
     range_max: f64,
     steps: usize,
+    discount_rate: f64,
+    fixed_cost_ratio: f64,
+    variable_cost_ratio: f64,
     results: *mut f64
 ) {
     // Convert input slice safely
@@ -40,10 +43,10 @@ pub extern "C" fn run_sensitivity_analysis(
             // Match on SensitivityVariable
             match variable_index {
                 0 => calculate_npv_with_rate(values, factor), // Discount rate
-                1 => calculate_with_volume_factor(values, factor), // Production volume
-                2 => calculate_with_opex_factor(values, factor), // Operating costs
-                3 => calculate_with_revenue_factor(values, factor), // Revenue
-                _ => calculate_npv_with_rate(values, 0.1) // Default to discount rate if unknown
+                1 => calculate_with_volume_factor(values, factor, discount_rate, fixed_cost_ratio, range_min, range_max), // Production volume
+                2 => calculate_with_opex_factor(values, factor, discount_rate, fixed_cost_ratio, variable_cost_ratio), // Operating costs
+                3 => calculate_with_revenue_factor(values, factor, discount_rate), // Revenue
+                _ => calculate_npv_with_rate(values, discount_rate) // Default to discount rate if unknown
             }
         })
         .collect();
@@ -77,46 +80,91 @@ fn calculate_npv_with_modified_flows(cash_flows: &[f64], modifier: f64, discount
     )
 }
 
-fn calculate_with_volume_factor(cash_flows: &[f64], factor: f64) -> f64 {
+fn calculate_with_volume_factor(
+    cash_flows: &[f64],
+    factor: f64,
+    discount_rate: f64,
+    fixed_cost_ratio: f64,
+    range_min: f64,
+    range_max: f64
+) -> f64 {
     let initial_investment = cash_flows[0];
-    let modified_flows: Vec<f64> = std::iter::once(initial_investment)
-        .chain(cash_flows[1..].iter().map(|&cf| cf * factor))
-        .collect();
     
-    calculate_npv(
-        modified_flows.as_ptr(),
-        modified_flows.len(),
-        0.1
-    )
-}
-
-fn calculate_with_opex_factor(cash_flows: &[f64], factor: f64) -> f64 {
-    let initial_investment = cash_flows[0];
+    // For production volume, the input range is typically [min, max]
+    // We want to convert this to a relative scale where:
+    // - The middle point (base case) maps to 1.0
+    // - Values below base case give factors < 1.0
+    // - Values above base case give factors > 1.0
+    
+    // Example: If range is [750000, 2250000], base case is 1500000
+    // Then 750000 should map to 0.5, 1500000 to 1.0, and 2250000 to 1.5
+    let base_volume = (range_max + range_min) / 2.0;
+    let relative_factor = if factor > 0.0 { factor / base_volume } else { 0.0 };
+    
     let modified_flows: Vec<f64> = std::iter::once(initial_investment)
         .chain(cash_flows[1..].iter().map(|&cf| {
-            if cf < 0.0 { cf * factor } else { cf } // Only modify negative flows (costs)
+            // For each cash flow:
+            // 1. Fixed portion remains unchanged
+            // 2. Variable portion scales with production volume
+            // 3. Revenue (positive cash flows) also scales with production volume
+            
+            let is_revenue = cf > 0.0;
+            if is_revenue {
+                // Revenue scales directly with production volume
+                cf * relative_factor
+            } else {
+                // Costs are split between fixed and variable
+                let fixed_portion = cf * fixed_cost_ratio;
+                let variable_portion = cf * (1.0 - fixed_cost_ratio);
+                fixed_portion + (variable_portion * relative_factor)
+            }
         }))
         .collect();
     
     calculate_npv(
         modified_flows.as_ptr(),
         modified_flows.len(),
-        0.1
+        discount_rate
     )
 }
 
-fn calculate_with_revenue_factor(cash_flows: &[f64], factor: f64) -> f64 {
+fn calculate_with_opex_factor(cash_flows: &[f64], factor: f64, discount_rate: f64, fixed_cost_ratio: f64, variable_cost_ratio: f64) -> f64 {
     let initial_investment = cash_flows[0];
     let modified_flows: Vec<f64> = std::iter::once(initial_investment)
         .chain(cash_flows[1..].iter().map(|&cf| {
-            if cf > 0.0 { cf * factor } else { cf } // Only modify positive flows (revenue)
+            // Use actual cost ratios from analysis
+            let variable_cost_portion = cf.abs() * variable_cost_ratio;
+            let fixed_portion = cf.abs() * fixed_cost_ratio;
+            let revenue_portion = cf + variable_cost_portion;
+            revenue_portion - (variable_cost_portion * factor) - fixed_portion
         }))
         .collect();
     
     calculate_npv(
         modified_flows.as_ptr(),
         modified_flows.len(),
-        0.1
+        discount_rate
+    )
+}
+
+fn calculate_with_revenue_factor(cash_flows: &[f64], factor: f64, discount_rate: f64) -> f64 {
+    let initial_investment = cash_flows[0];
+    let modified_flows: Vec<f64> = std::iter::once(initial_investment)
+        .chain(cash_flows[1..].iter().map(|&cf| {
+            if cf > 0.0 {
+                // Scale only positive cash flows (revenue)
+                cf * factor
+            } else {
+                // Leave negative cash flows (costs) unchanged
+                cf
+            }
+        }))
+        .collect();
+    
+    calculate_npv(
+        modified_flows.as_ptr(),
+        modified_flows.len(),
+        discount_rate
     )
 }
 

@@ -1,11 +1,14 @@
 "use client";
 
 import "@/app/globals.css"
-import { Inter } from "next/font/google"
+import { Inter as FontSans } from "next/font/google"
 import { cn } from "@/lib/utils"
 import { Providers } from "@/components/providers/index"
 
-const inter = Inter({ subsets: ["latin"] })
+const fontSans = FontSans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+})
 
 export default function RootLayout({
   children,
@@ -14,9 +17,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn(inter.className, "min-h-screen bg-background antialiased")}>
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+      </head>
+      <body 
+        className={cn(
+          "min-h-screen bg-background font-sans antialiased",
+          fontSans.variable
+        )}
+      >
         <Providers>
-          {children}
+          <main className="relative flex min-h-screen flex-col">
+            {children}
+          </main>
         </Providers>
       </body>
     </html>

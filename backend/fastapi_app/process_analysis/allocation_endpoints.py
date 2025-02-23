@@ -86,11 +86,19 @@ async def allocate_impacts(request: AllocationRequest):
             raise ValueError("Product values and mass flows must have the same product keys")
 
         try:
+            # Convert hybrid weights to dictionary if present
+            hybrid_weights_dict = None
+            if request.hybrid_weights:
+                hybrid_weights_dict = {
+                    'economic': request.hybrid_weights.economic,
+                    'physical': request.hybrid_weights.physical
+                }
+
             # Configure allocation engine with process data
             allocation_engine.configure_allocation(
                 product_values=request.product_values,
                 mass_flows=request.mass_flows,
-                hybrid_weights=request.hybrid_weights
+                hybrid_weights=hybrid_weights_dict
             )
 
             # Convert dictionary values to lists, ensuring matching order
@@ -121,7 +129,7 @@ async def allocate_impacts(request: AllocationRequest):
                 allocation_factors = rust_results["allocation_factors"]
             else:  # hybrid
                 # Calculate hybrid allocation using both services
-                weights = request.hybrid_weights or {"physical": 0.5, "economic": 0.5}
+                weights = hybrid_weights_dict or {"physical": 0.5, "economic": 0.5}
                 
                 # Get base factors using Rust with matched lengths
                 economic_values = [request.product_values[product] for product in products_list]
@@ -154,7 +162,8 @@ async def allocate_impacts(request: AllocationRequest):
             # Map results back to product keys
             allocated_results = {
                 "allocation_factors": dict(zip(products_list, allocation_factors[:len(products_list)])),
-                "allocated_impacts": allocated_impacts
+                "allocated_impacts": allocated_impacts,
+                "method_used": request.method
             }
 
             logger.info("Impact allocation completed successfully")

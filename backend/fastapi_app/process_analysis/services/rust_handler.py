@@ -57,10 +57,14 @@ class RustHandler:
                 ctypes.POINTER(ctypes.c_double),  # base_values
                 ctypes.c_size_t,                  # len
                 ctypes.c_size_t,                  # iterations
-                ctypes.c_double,                  # uncertainty
+                ctypes.c_double,                  # price_uncertainty
+                ctypes.c_double,                  # cost_uncertainty
+                ctypes.c_double,                  # production_uncertainty
+                ctypes.c_size_t,                  # random_seed
+                ctypes.c_double,                  # discount_rate
                 ctypes.POINTER(ctypes.c_double),  # results
             ]
-            self.lib.run_economic_monte_carlo.restype = None
+            self.lib.run_economic_monte_carlo.restype = ctypes.c_bool
 
             # Configure sensitivity analysis function
             self.lib.run_sensitivity_analysis.argtypes = [
@@ -70,6 +74,9 @@ class RustHandler:
                 ctypes.c_double,                  # range_min
                 ctypes.c_double,                  # range_max
                 ctypes.c_size_t,                  # steps
+                ctypes.c_double,                  # discount_rate
+                ctypes.c_double,                  # fixed_cost_ratio
+                ctypes.c_double,                  # variable_cost_ratio
                 ctypes.POINTER(ctypes.c_double),  # results
             ]
             self.lib.run_sensitivity_analysis.restype = None
@@ -132,43 +139,64 @@ class RustHandler:
         discount_rate: float,
         initial_investment: float,
         iterations: int = 1000,
-        uncertainty: float = 0.1
+        price_uncertainty: float = 0.1,
+        cost_uncertainty: float = 0.1,
+        production_uncertainty: float = 0.1,
+        random_seed: int = 42
     ) -> Dict[str, Any]:
         """
         Run Monte Carlo simulation for NPV analysis using Rust implementation
-        
-        Args:
-            cash_flows: List of projected cash flows
-            discount_rate: Annual discount rate
-            initial_investment: Initial investment amount
-            iterations: Number of Monte Carlo iterations
-            uncertainty: Uncertainty factor for cash flow variation
-            
-        Returns:
-            Dictionary containing Monte Carlo simulation results
         """
         try:
+            logger.debug(f"Starting Monte Carlo simulation with parameters:")
+            logger.debug(f"  - Cash flows: {cash_flows}")
+            logger.debug(f"  - Discount rate: {discount_rate}")
+            logger.debug(f"  - Initial investment: {initial_investment}")
+            logger.debug(f"  - Iterations: {iterations}")
+            logger.debug(f"  - Random seed: {random_seed}")
+            
+            # Validate inputs
+            if not cash_flows:
+                raise ValueError("Cash flows list cannot be empty")
+            if not isinstance(random_seed, int):
+                raise ValueError(f"Random seed must be an integer, got {type(random_seed)}")
+            
             # Convert cash flows to C array
             arr = (ctypes.c_double * len(cash_flows))(*cash_flows)
             results = (ctypes.c_double * 4)()  # [mean, std_dev, min_value, max_value]
             
-            # Call Rust function
-            self.lib.run_economic_monte_carlo(
+            # Call Rust function with seed
+            success = self.lib.run_economic_monte_carlo(
                 arr,
                 len(cash_flows),
                 iterations,
-                uncertainty,
+                price_uncertainty,
+                cost_uncertainty,
+                production_uncertainty,
+                random_seed,
+                discount_rate,
                 results
             )
             
+            if not success:
+                raise RuntimeError("Monte Carlo simulation failed in Rust implementation")
+            
             # Parse results
+            mean_npv = float(results[0])
+            std_dev = float(results[1])
+            min_val = float(results[2])
+            max_val = float(results[3])
+            
+            logger.debug(f"Monte Carlo simulation completed:")
+            logger.debug(f"  - Mean NPV: {mean_npv}")
+            logger.debug(f"  - Std Dev: {std_dev}")
+            logger.debug(f"  - Range: [{min_val}, {max_val}]")
+            
             return {
-                "iterations": iterations,
-                "uncertainty": uncertainty,
                 "results": {
-                    "mean": results[0],
-                    "std_dev": results[1],
-                    "confidence_interval": [results[2], results[3]]  # min and max values
+                    "mean": mean_npv,
+                    "std_dev": std_dev,
+                    "confidence_interval": [min_val, max_val]
                 }
             }
             
@@ -411,27 +439,41 @@ class RustHandler:
         variable_index: int,
         range_min: float,
         range_max: float,
-        steps: int = 10
+        steps: int = 10,
+        discount_rate: float = 0.1,
+        fixed_cost_ratio: float = None,
+        variable_cost_ratio: float = None
     ) -> List[float]:
-        """
-        Run sensitivity analysis using Rust implementation
+        """Run sensitivity analysis using Rust implementation"""
         
-        Args:
-            base_values: List of cash flows starting with initial investment
-            variable_index: Index of variable to analyze (0 for discount rate, 1 for production volume)
-            range_min: Minimum value for sensitivity range
-            range_max: Maximum value for sensitivity range
-            steps: Number of steps in sensitivity analysis
-            
-        Returns:
-            List of NPV values for each sensitivity step
-        """
+        logger.info("\n=== Rust Sensitivity Analysis Parameters ===")
+        logger.info(f"Variable Index: {variable_index}")
+        logger.info(f"Range: [{range_min}, {range_max}]")
+        logger.info(f"Steps: {steps}")
+        logger.info(f"Discount Rate: {discount_rate}")
+        logger.info(f"Base Values (first 5): {base_values[:5]}")
+        logger.info(f"Total Base Values Length: {len(base_values)}")
+        
         try:
+            # If ratios not provided, use default values based on typical cost structure
+            if fixed_cost_ratio is None:
+                fixed_cost_ratio = 0.3  # Default 30% fixed costs
+                logger.warning("Using default fixed_cost_ratio: 0.3")
+            if variable_cost_ratio is None:
+                variable_cost_ratio = 0.7  # Default 70% variable costs
+                logger.warning("Using default variable_cost_ratio: 0.7")
+            
+            logger.info(f"\nCost Ratios for Sensitivity:")
+            logger.info(f"Fixed Cost Ratio: {fixed_cost_ratio:.4f}")
+            logger.info(f"Variable Cost Ratio: {variable_cost_ratio:.4f}")
+            logger.info(f"Ratio Sum Check: {fixed_cost_ratio + variable_cost_ratio:.4f}")
+            
             # Convert inputs to C types
             values_array = (ctypes.c_double * len(base_values))(*base_values)
             results_array = (ctypes.c_double * (steps + 1))()  # +1 for inclusive range
             
             # Call Rust function
+            logger.info("\nCalling Rust sensitivity_analysis function...")
             self.lib.run_sensitivity_analysis(
                 values_array,
                 len(base_values),
@@ -439,11 +481,18 @@ class RustHandler:
                 range_min,
                 range_max,
                 steps,
+                discount_rate,
+                fixed_cost_ratio,
+                variable_cost_ratio,
                 results_array
             )
             
-            # Convert results back to Python list
-            return [results_array[i] for i in range(steps + 1)]
+            # Get results and log them
+            results = [results_array[i] for i in range(steps + 1)]
+            logger.info(f"\nResults from Rust (first 3): {results[:3]}")
+            logger.info(f"Results length: {len(results)}")
+            
+            return results
             
         except Exception as e:
             logger.error(f"Error in sensitivity analysis: {str(e)}", exc_info=True)

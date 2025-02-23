@@ -1,113 +1,36 @@
-"use client";
-
-import React from "react";
-import { cn } from "@/lib/utils";
+import React from 'react';
+import { Card } from "@/components/ui/card";
+import { LineChart, ArrowRight, Home } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Check, Circle, Loader2, AlertCircle, LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-interface AnalysisStep {
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  color: string;
-}
 
 interface AnalysisLayoutProps {
   children: React.ReactNode;
-  title: string;
-  currentStep: number;
-  steps: {
-    title: string;
-    description: string;
-    icon: LucideIcon;
-    color: string;
-  }[];
-  loading: boolean;
-  loadingText: string;
-  error?: {
-    step: string;
-    message: string;
-  };
 }
 
-export function AnalysisLayout({
-  children,
-  title,
-  currentStep,
-  steps,
-  loading,
-  loadingText,
-  error
-}: AnalysisLayoutProps) {
+export default function AnalysisLayout({ children }: AnalysisLayoutProps) {
   return (
-    <div className="flex h-screen">
-      <div className="w-64 border-r bg-muted/10 p-6">
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold">{title}</h2>
-            {loading && (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            )}
-          </div>
-          <Progress value={(currentStep + 1) / steps.length * 100} className="h-2" />
-          <nav className="space-y-2">
-            {steps.map((step, index) => {
-              const isActive = index === currentStep;
-              const isComplete = index < currentStep;
-              const hasError = error?.step === step.title.toLowerCase();
-
-              return (
-                <div
-                  key={step.title}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm",
-                    isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
-                    isComplete && "text-foreground",
-                    hasError && "border-destructive"
-                  )}
-                >
-                  <step.icon className={cn("h-4 w-4", step.color)} />
-                  <div className="flex-1">
-                    <div className="font-medium leading-none">{step.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {step.description}
-                    </div>
-                  </div>
-                  {isComplete ? (
-                    <Check className="h-4 w-4" />
-                  ) : hasError ? (
-                    <AlertCircle className="h-4 w-4 text-destructive" />
-                  ) : null}
-                </div>
-              );
-            })}
-          </nav>
+    <div className="container mx-auto py-8 space-y-6 animate-in fade-in duration-500">
+      <div className="flex items-center gap-3 pb-2 border-b">
+        <div className="flex items-center gap-2">
+          <LineChart className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight">Economic Analysis</h1>
         </div>
+        <nav className="flex items-center gap-2 ml-auto text-sm">
+          <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
+            <Link href="/dashboard" className="flex items-center gap-1">
+              <Home className="w-4 h-4" />
+              Dashboard
+            </Link>
+          </Button>
+          <ArrowRight className="w-4 h-4 text-muted-foreground" />
+          <span className="text-foreground font-medium">Analysis</span>
+        </nav>
       </div>
-      <div className="flex-1 overflow-auto">
-        {error && (
-          <Alert variant="destructive" className="m-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        )}
-        {loading ? (
-          <div className="flex h-[calc(100vh-2rem)] items-center justify-center">
-            <div className="text-center">
-              <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="mt-2 text-sm text-muted-foreground">{loadingText}</p>
-            </div>
-          </div>
-        ) : (
-          children
-        )}
-      </div>
+      
+      <Card className="p-6 shadow-lg bg-gradient-to-b from-background to-muted/10">
+        {children}
+      </Card>
     </div>
   );
-} 
+}

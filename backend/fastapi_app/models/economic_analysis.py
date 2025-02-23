@@ -26,12 +26,13 @@ class EconomicFactors(BaseModel):
 class Equipment(BaseModel):
     """Unified equipment model for both CAPEX and OPEX calculations"""
     name: str
-    base_cost: float = Field(..., gt=0, description="Base equipment cost in USD")
+    base_cost: float = Field(..., gt=0, description="Total equipment cost in USD")
     efficiency_factor: float = Field(..., gt=0, le=1, description="Equipment efficiency factor (0-1)")
     installation_complexity: float = Field(1.0, ge=0.5, le=2.0, description="Installation complexity multiplier")
     maintenance_cost: float = Field(..., gt=0, description="Annual maintenance cost in USD")
     energy_consumption: float = Field(..., gt=0, description="Energy consumption in kWh")
     processing_capacity: float = Field(..., gt=0, description="Processing capacity in kg/h")
+    capacity_units: str = Field("kg/h", description="Processing capacity units")
 
     @field_validator('name')
     @classmethod
@@ -39,6 +40,10 @@ class Equipment(BaseModel):
         if not v.strip():
             raise ValueError("Equipment name cannot be empty")
         return v.strip()
+
+    @field_validator('base_cost')
+    def validate_base_cost(cls, v):
+        return v  # No automatic scaling
 
 
 class IndirectFactor(BaseModel):
@@ -60,7 +65,7 @@ class CapexInput(BaseModel):
     equipment_list: List[Equipment]
     indirect_factors: List[IndirectFactor] = Field(
         default_factory=list,
-        description="List of indirect cost factors. If empty, defaults will be used."
+        description="List of indirect cost factors including engineering, construction, and contingency. If empty, defaults will be used."
     )
     economic_factors: EconomicFactors
     process_type: ProcessType
@@ -70,13 +75,25 @@ class CapexInput(BaseModel):
             "examples": [{
                 "equipment_list": [{
                     "name": "main_equipment",
-                    "cost": 50000.0,
-                    "efficiency": 0.85,
+                    "base_cost": 50000.0,
+                    "efficiency_factor": 0.85,
+                    "installation_complexity": 1.2,
                     "maintenance_cost": 5000.0,
                     "energy_consumption": 1000.0,
                     "processing_capacity": 100.0
                 }],
-                "indirect_factors": [],
+                "indirect_factors": [
+                    {
+                        "name": "engineering",
+                        "cost": 50000.0,
+                        "percentage": 0.15
+                    },
+                    {
+                        "name": "contingency",
+                        "cost": 50000.0,
+                        "percentage": 0.10
+                    }
+                ],
                 "economic_factors": {
                     "installation_factor": 0.2,
                     "indirect_costs_factor": 0.15,
@@ -97,6 +114,7 @@ class Utility(BaseModel):
     consumption: float = Field(..., gt=0)
     unit_price: float = Field(..., gt=0)
     unit: str
+    operating_hours: float = Field(..., gt=0, description="Annual operating hours")
     annual_cost: Optional[float] = None
 
     @field_validator('annual_cost')
@@ -104,7 +122,11 @@ class Utility(BaseModel):
     def calculate_annual_cost(cls, v: Optional[float], info: ValidationInfo) -> float:
         if v is None:
             data = info.data
-            return data['consumption'] * data['unit_price'] if all(k in data for k in ['consumption', 'unit_price']) else 0.0
+            return (
+                data['consumption'] * 
+                data['unit_price'] * 
+                data['operating_hours']
+            ) if all(k in data for k in ['consumption', 'unit_price', 'operating_hours']) else 0.0
         return v
 
 
@@ -114,6 +136,7 @@ class RawMaterial(BaseModel):
     quantity: float = Field(..., gt=0)
     unit_price: float = Field(..., gt=0)
     unit: str
+    protein_content: Optional[float] = Field(None, ge=0, le=1, description="Protein content as decimal (0-1)")
     annual_cost: Optional[float] = None
 
     @field_validator('annual_cost')
@@ -131,6 +154,7 @@ class LaborConfig(BaseModel):
     hours_per_week: float = Field(..., gt=0)
     weeks_per_year: float = Field(..., gt=0)
     num_workers: int = Field(..., gt=0)
+    benefits_factor: float = Field(..., gt=0, lt=1, description="Benefits as a percentage of base salary (0-1)")
     annual_cost: Optional[float] = None
 
     @field_validator('annual_cost')
@@ -138,9 +162,10 @@ class LaborConfig(BaseModel):
     def calculate_annual_cost(cls, v: Optional[float], info: ValidationInfo) -> float:
         if v is None:
             data = info.data
-            if all(k in data for k in ['hourly_wage', 'hours_per_week', 'weeks_per_year', 'num_workers']):
-                return (data['hourly_wage'] * data['hours_per_week'] * 
-                       data['weeks_per_year'] * data['num_workers'])
+            if all(k in data for k in ['hourly_wage', 'hours_per_week', 'weeks_per_year', 'num_workers', 'benefits_factor']):
+                base_salary = (data['hourly_wage'] * data['hours_per_week'] * 
+                             data['weeks_per_year'] * data['num_workers'])
+                return base_salary * (1 + data['benefits_factor'])  # Add benefits
         return v or 0.0
 
 
@@ -154,17 +179,57 @@ class OpexInput(BaseModel):
     process_type: ProcessType
 
 
+class BusinessMetricsResponse(BaseModel):
+    """Response model for business metrics analysis"""
+    timestamp: str
+    metrics: Dict[str, Any]
+
+
+class UncertaintyConfig(BaseModel):
+    """Configuration for uncertainty in Monte Carlo analysis"""
+    price: float = Field(0.15, gt=0, lt=1, description="Price uncertainty factor (0-1)")
+    cost: float = Field(0.12, gt=0, lt=1, description="Cost uncertainty factor (0-1)")
+    production: float = Field(0.10, gt=0, lt=1, description="Production uncertainty factor (0-1)")
+
+
+class RevenueData(BaseModel):
+    """Revenue data model for profitability analysis"""
+    product_price: float = Field(..., gt=0, description="Product price per unit")
+    annual_production: float = Field(..., gt=0, description="Annual production volume")
+    yield_efficiency: float = Field(
+        0.95, gt=0, le=1,
+        description="Process yield efficiency (0-1)"
+    )
+
+    @field_validator('product_price', 'annual_production', 'yield_efficiency')
+    @classmethod
+    def validate_numeric(cls, v: float) -> float:
+        """Ensure numeric values are properly converted"""
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            raise ValueError(f"Value {v} must be a valid number")
+
+
 class ComprehensiveAnalysisInput(BaseModel):
     """Unified input model for comprehensive economic analysis"""
     equipment_list: List[Equipment]
     utilities: List[Utility]
     raw_materials: List[RawMaterial]
     labor_config: LaborConfig
-    revenue_data: Dict[str, float]
+    revenue_data: RevenueData
     economic_factors: EconomicFactors
     process_type: ProcessType
+    indirect_factors: List[IndirectFactor] = Field(
+        default_factory=list,
+        description="List of indirect cost factors. If empty, defaults will be used."
+    )
     monte_carlo_iterations: Optional[int] = Field(1000, ge=0)
-    uncertainty: Optional[float] = Field(0.1, gt=0, lt=1)
+    uncertainty: Optional[UncertaintyConfig] = Field(
+        default_factory=lambda: UncertaintyConfig(price=0.15, cost=0.12, production=0.10),
+        description="Uncertainty factors for Monte Carlo analysis"
+    )
+    random_seed: Optional[int] = Field(42, description="Random seed for Monte Carlo simulation reproducibility")
 
     model_config = {
         "json_schema_extra": {
@@ -182,7 +247,8 @@ class ComprehensiveAnalysisInput(BaseModel):
                     "name": "electricity",
                     "consumption": 50000.0,
                     "unit_price": 0.12,
-                    "unit": "kWh"
+                    "unit": "kWh",
+                    "operating_hours": 8000
                 }],
                 "raw_materials": [{
                     "name": "pea_biomass",
@@ -194,11 +260,13 @@ class ComprehensiveAnalysisInput(BaseModel):
                     "hourly_wage": 25.0,
                     "hours_per_week": 40,
                     "weeks_per_year": 50,
-                    "num_workers": 5
+                    "num_workers": 5,
+                    "benefits_factor": 0.35  # 35% benefits on top of base salary
                 },
                 "revenue_data": {
                     "product_price": 10.0,
-                    "annual_production": 500000.0
+                    "annual_production": 500000.0,
+                    "yield_efficiency": 0.95
                 },
                 "economic_factors": {
                     "installation_factor": 0.3,
@@ -208,9 +276,26 @@ class ComprehensiveAnalysisInput(BaseModel):
                     "discount_rate": 0.1,
                     "production_volume": 1000.0
                 },
+                "indirect_factors": [
+                    {
+                        "name": "engineering",
+                        "cost": 100000.0,
+                        "percentage": 0.15
+                    },
+                    {
+                        "name": "construction",
+                        "cost": 100000.0,
+                        "percentage": 0.20
+                    }
+                ],
                 "process_type": "baseline",
                 "monte_carlo_iterations": 1000,
-                "uncertainty": 0.1
+                "uncertainty": {
+                    "price": 0.15,
+                    "cost": 0.12,
+                    "production": 0.10
+                },
+                "random_seed": 42
             }]
         }
     }

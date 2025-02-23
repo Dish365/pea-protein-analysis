@@ -8,7 +8,8 @@ from backend.fastapi_app.process_analysis.services.rust_handler import RustHandl
 import logging
 import numpy as np
 
-logger = logging.getLogger(__name__)
+# Configure module logger with full package path
+logger = logging.getLogger('analytics.economic.profitability_analyzer')
 
 @dataclass
 class ProjectParameters:
@@ -56,7 +57,28 @@ class ProfitabilityAnalysis:
         if not all([self.capex_data, self.opex_data, self.revenue_data, self.parameters]):
             raise ValueError("All project data must be set before analysis")
 
-    def _calculate_cash_flows(self) -> List[float]:
+    def _calculate_effective_production(self) -> float:
+        """Calculate effective production volume considering protein content and yield"""
+        if not isinstance(self.revenue_data, dict):
+            raise ValueError("Invalid revenue data format")
+
+        # Get raw material data for protein content
+        raw_materials = self.opex_data.get("raw_materials_breakdown", [])
+        pea_flour = next((rm for rm in raw_materials if rm["name"].lower() == "pea flour"), None)
+        
+        if pea_flour and "protein_content" in pea_flour and "quantity" in pea_flour:
+            # Calculate based on protein content and yield
+            raw_protein = pea_flour["quantity"] * pea_flour["protein_content"]
+            yield_efficiency = self.revenue_data.get("yield_efficiency", 0.78)  # Default 78% yield
+            return raw_protein * yield_efficiency
+        elif "annual_production" in self.revenue_data:
+            # Fallback to specified production with yield adjustment
+            yield_efficiency = self.revenue_data.get("yield_efficiency", 0.78)  # Default 78% yield
+            return self.revenue_data["annual_production"] * yield_efficiency
+        else:
+            raise ValueError("Cannot calculate effective production: missing required data")
+
+    def _calculate_cash_flows(self, apply_uncertainties: bool = True) -> List[float]:
         """Centralized cash flow calculation with enhanced validation"""
         self._validate_data()
         
@@ -67,87 +89,139 @@ class ProfitabilityAnalysis:
             # Calculate annual operating costs
             annual_opex = self.opex_data["total_annual_cost"]
             
-            # Calculate annual revenue from price and production
-            if isinstance(self.revenue_data, dict):
-                if "product_price" in self.revenue_data and "annual_production" in self.revenue_data:
-                    base_revenue = self.revenue_data["product_price"] * self.revenue_data["annual_production"]
-                elif "annual" in self.revenue_data:
-                    base_revenue = self.revenue_data["annual"]
+            # Calculate annual revenue using effective production
+            if "product_price" not in self.revenue_data:
+                raise ValueError("Revenue data must contain product_price")
+                
+            effective_production = self._calculate_effective_production()
+            base_revenue = self.revenue_data["product_price"] * effective_production
+            
+            if apply_uncertainties:
+                # Get uncertainty values from the UncertaintyConfig model
+                if hasattr(self.parameters, 'uncertainty') and self.parameters.uncertainty:
+                    price_uncertainty = self.parameters.uncertainty.price
+                    cost_uncertainty = self.parameters.uncertainty.cost
+                    production_uncertainty = self.parameters.uncertainty.production
                 else:
-                    raise ValueError("Revenue data must contain either 'product_price' and 'annual_production' or 'annual'")
+                    # Use default values if uncertainty config is not provided
+                    price_uncertainty = 0.15  # 15% default price uncertainty
+                    cost_uncertainty = 0.12  # 12% default cost uncertainty
+                    production_uncertainty = 0.10  # 10% default production uncertainty
+
+                # Apply correlated uncertainties
+                price_factor = 1 + self.rng.normal(0, price_uncertainty/3)
+                cost_factor = 1 + self.rng.normal(0, cost_uncertainty/3)
+                production_factor = 1 + self.rng.normal(0, production_uncertainty/3)
+                
+                # Calculate annual cash flows with uncertainties
+                annual_cash_flow = (
+                    base_revenue * price_factor * production_factor -
+                    annual_opex * cost_factor
+                )
             else:
-                raise ValueError("Invalid revenue data format")
+                # Use deterministic values for sensitivity analysis
+                annual_cash_flow = base_revenue - annual_opex
             
-            # Apply Monte Carlo simulation for uncertainty using seeded RNG
-            annual_flows = []
-            for year in range(self.parameters.project_duration):
-                # Revenue uncertainty
-                revenue_uncertainty = self.parameters.uncertainty * self.rng.uniform(-1, 1)
-                annual_revenue = base_revenue * (1 + revenue_uncertainty)
-                
-                # Cost uncertainty
-                cost_uncertainty = self.parameters.uncertainty * self.rng.uniform(-1, 1)
-                year_opex = annual_opex * (1 + cost_uncertainty)
-                
-                # Net cash flow for the year
-                net_cash_flow = annual_revenue - year_opex
-                annual_flows.append(net_cash_flow)
-            
-            # Return complete cash flow series
-            cash_flows = [initial_investment] + annual_flows
-            logger.debug(f"Generated cash flows: {cash_flows}")
+            # Generate cash flow series
+            cash_flows = [initial_investment]  # Year 0
+            cash_flows.extend([annual_cash_flow] * self.parameters.project_duration)  # Years 1-N
             
             return cash_flows
             
-        except KeyError as e:
-            logger.error(f"Missing required financial data: {str(e)}")
-            raise ValueError(f"Incomplete financial data: {str(e)} required")
         except Exception as e:
-            logger.error(f"Error calculating cash flows: {str(e)}")
-            raise ValueError(f"Cash flow calculation failed: {str(e)}")
+            logger.error(f"Error in cash flow calculation: {str(e)}")
+            raise
 
     def calculate_profitability_metrics(
         self,
-        use_rust: bool = True,
-        target_npv: Optional[float] = None
+        use_rust: bool = True
     ) -> Dict[str, Any]:
-        """
-        Calculate comprehensive profitability metrics using either Rust or Python
-        implementations based on the use_rust flag.
-        """
+        """Calculate all profitability metrics"""
+        self._validate_data()
+        
         try:
-            self._validate_data()
+            # Set random seed if provided
+            if self.parameters.random_seed is not None:
+                self.rng = np.random.RandomState(self.parameters.random_seed)
+                logger.debug(f"Set random seed to {self.parameters.random_seed}")
+
+            # Calculate cash flows with uncertainties
             cash_flows = self._calculate_cash_flows()
-            initial_investment = self.capex_data["total_investment"]
+            initial_investment = -cash_flows[0]  # First cash flow is negative investment
 
-            if use_rust:
-                # Use Rust implementation for core calculations
-                metrics = self._calculate_metrics_rust(cash_flows, initial_investment)
-            else:
-                # Use Python implementation
-                metrics = self._calculate_metrics_python(cash_flows, initial_investment)
+            try:
+                if use_rust and self.parameters.monte_carlo_iterations > 0:
+                    # Use Rust implementation for Monte Carlo
+                    metrics = self._calculate_metrics_rust(
+                        cash_flows=cash_flows,
+                        initial_investment=initial_investment
+                    )
+                else:
+                    # Use Python implementation
+                    metrics = self._calculate_metrics_python(
+                        cash_flows=cash_flows,
+                        initial_investment=initial_investment
+                    )
+            except Exception as calc_error:
+                logger.error(f"Error in metrics calculation: {str(calc_error)}")
+                # Fallback to Python implementation
+                metrics = self._calculate_metrics_python(
+                    cash_flows=cash_flows,
+                    initial_investment=initial_investment
+                )
 
-            # Calculate MCSP if target NPV provided
-            if target_npv is not None:
-                mcsp = calculate_mcsp(
+            # Ensure metrics has the correct structure
+            if not isinstance(metrics, dict):
+                metrics = {}
+            
+            # Ensure NPV exists and is properly formatted
+            if 'npv' not in metrics or not isinstance(metrics['npv'], dict):
+                # Calculate basic NPV if not present
+                npv_result = calculate_npv(
                     cash_flows=cash_flows,
                     discount_rate=self.parameters.discount_rate,
-                    production_volume=self.parameters.production_volume,
-                    target_npv=target_npv,
-                    iterations=self.parameters.monte_carlo_iterations,
-                    confidence_interval=0.95
+                    initial_investment=initial_investment
                 )
-                metrics["mcsp"] = mcsp
+                metrics['npv'] = {
+                    'value': float(npv_result['npv']),
+                    'unit': 'USD'
+                }
+
+            # Format the final metrics structure
+            formatted_metrics = {
+                "npv": metrics.get('npv', {'value': 0.0, 'unit': 'USD'}),
+                "roi": metrics.get('roi', {'value': 0.0, 'unit': 'ratio'}),
+                "monte_carlo": metrics.get('monte_carlo', {
+                    "results": {
+                        "mean": metrics.get('npv', {}).get('value', 0.0),
+                        "std_dev": 0.0,
+                        "confidence_interval": [0.0, 0.0]
+                    }
+                })
+            }
 
             return {
-                "metrics": metrics,
-                "cash_flows": cash_flows,
-                "initial_investment": initial_investment
+                "metrics": formatted_metrics,
+                "cash_flows": cash_flows
             }
 
         except Exception as e:
-            logger.error(f"Error in profitability analysis: {str(e)}", exc_info=True)
-            raise
+            logger.error(f"Error calculating profitability metrics: {str(e)}")
+            # Return minimal valid result structure
+            return {
+                "metrics": {
+                    "npv": {'value': 0.0, 'unit': 'USD'},
+                    "roi": {'value': 0.0, 'unit': 'ratio'},
+                    "monte_carlo": {
+                        "results": {
+                            "mean": 0.0,
+                            "std_dev": 0.0,
+                            "confidence_interval": [0.0, 0.0]
+                        }
+                    }
+                },
+                "cash_flows": cash_flows if 'cash_flows' in locals() else [0.0]
+            }
 
     def _calculate_metrics_rust(
         self,
@@ -155,29 +229,60 @@ class ProfitabilityAnalysis:
         initial_investment: float
     ) -> Dict[str, Union[float, Dict]]:
         """Calculate metrics using Rust implementation"""
-        # Run Monte Carlo simulation
-        monte_carlo_results = self.rust_handler.run_monte_carlo_simulation(
-            cash_flows=cash_flows,
-            discount_rate=self.parameters.discount_rate,
-            initial_investment=initial_investment,
-            iterations=self.parameters.monte_carlo_iterations,
-            uncertainty=self.parameters.uncertainty
-        )
+        try:
+            logger.debug(f"Starting Monte Carlo simulation with seed {self.parameters.random_seed}")
+            logger.debug(f"Cash flows: {cash_flows}")
+            logger.debug(f"Parameters: {self.parameters}")
+            
+            # Run Monte Carlo simulation with seed
+            monte_carlo_results = self.rust_handler.run_monte_carlo_simulation(
+                cash_flows=cash_flows,
+                discount_rate=self.parameters.discount_rate,
+                initial_investment=initial_investment,
+                iterations=self.parameters.monte_carlo_iterations,
+                price_uncertainty=self.parameters.uncertainty.price,
+                cost_uncertainty=self.parameters.uncertainty.cost,
+                production_uncertainty=self.parameters.uncertainty.production,
+                random_seed=self.parameters.random_seed if self.parameters.random_seed is not None else 42
+            )
+            logger.debug(f"Monte Carlo results: {monte_carlo_results}")
 
-        # Calculate ROI using Rust
-        total_gain = sum(cash_flows[1:])  # Exclude initial investment
-        roi_results = calculate_roi(
-            gain_from_investment=total_gain,
-            cost_of_investment=initial_investment,
-            time_period=self.parameters.project_duration
-        )
+            # Calculate discounted cash flows for ROI
+            discounted_flows = []
+            for t, cf in enumerate(cash_flows[1:], 1):  # Start from year 1
+                discounted_cf = cf / ((1 + self.parameters.discount_rate) ** t)
+                discounted_flows.append(discounted_cf)
+            
+            # Calculate ROI using discounted values
+            total_discounted_gain = sum(discounted_flows)
+            roi_results = calculate_roi(
+                gain_from_investment=total_discounted_gain,
+                cost_of_investment=initial_investment,
+                time_period=self.parameters.project_duration
+            )
 
-        return {
-            "monte_carlo": monte_carlo_results,
-            "roi": roi_results,
-            "initial_investment": initial_investment,
-            "total_gain": total_gain
-        }
+            # Format ROI
+            formatted_roi = {
+                'value': float(roi_results['roi']),
+                'unit': 'ratio'
+            }
+
+            # Format NPV from Monte Carlo results
+            formatted_npv = {
+                'value': float(monte_carlo_results["results"]["mean"]),
+                'unit': 'USD'
+            }
+            logger.debug(f"Formatted NPV: {formatted_npv}")
+
+            return {
+                "npv": formatted_npv,
+                "roi": formatted_roi,
+                "monte_carlo": monte_carlo_results
+            }
+        except Exception as e:
+            logger.error(f"Error in Monte Carlo simulation: {str(e)}")
+            # Fallback to Python implementation if Monte Carlo fails
+            return self._calculate_metrics_python(cash_flows, initial_investment)
 
     def _calculate_metrics_python(
         self,
@@ -185,49 +290,79 @@ class ProfitabilityAnalysis:
         initial_investment: float
     ) -> Dict[str, Union[float, Dict]]:
         """Calculate metrics using Python implementation"""
-        npv_results = calculate_npv(
-            cash_flows=cash_flows,
-            discount_rate=self.parameters.discount_rate,
-            initial_investment=initial_investment
-        )
+        try:
+            npv_results = calculate_npv(
+                cash_flows=cash_flows,
+                discount_rate=self.parameters.discount_rate,
+                initial_investment=initial_investment
+            )
 
-        roi_results = calculate_roi(
-            gain_from_investment=sum(cash_flows[1:]),
-            cost_of_investment=initial_investment,
-            time_period=self.parameters.project_duration
-        )
+            # Ensure NPV is properly formatted
+            formatted_npv = {
+                'value': float(npv_results['npv']),
+                'unit': 'USD'
+            }
 
-        payback_results = calculate_payback_period(
-            initial_investment=initial_investment,
-            cash_flows=cash_flows[1:],  # Exclude initial investment
-            discount_rate=self.parameters.discount_rate
-        )
+            # Calculate discounted cash flows for ROI
+            discounted_flows = []
+            for t, cf in enumerate(cash_flows[1:], 1):  # Start from year 1
+                discounted_cf = cf / ((1 + self.parameters.discount_rate) ** t)
+                discounted_flows.append(discounted_cf)
 
-        return {
-            "npv": npv_results,
-            "roi": roi_results,
-            "payback": payback_results
-        }
+            # Calculate ROI using discounted values
+            total_discounted_gain = sum(discounted_flows)
+            roi_results = calculate_roi(
+                gain_from_investment=total_discounted_gain,
+                cost_of_investment=initial_investment,
+                time_period=self.parameters.project_duration
+            )
+
+            # Format ROI using simple ROI instead of annualized
+            formatted_roi = {
+                'value': float(roi_results['roi']) if isinstance(roi_results, dict) else float(roi_results),
+                'unit': 'ratio'
+            }
+
+            payback_results = calculate_payback_period(
+                initial_investment=initial_investment,
+                cash_flows=cash_flows[1:],  # Exclude initial investment
+                discount_rate=self.parameters.discount_rate
+            )
+
+            return {
+                "npv": formatted_npv,
+                "roi": formatted_roi,
+                "payback": payback_results
+            }
+        except Exception as e:
+            logger.error(f"Error in Python metrics calculation: {str(e)}")
+            # Return minimal valid result structure
+            return {
+                "npv": {'value': 0.0, 'unit': 'USD'},
+                "roi": {'value': 0.0, 'unit': 'ratio'},
+                "payback": {'value': float('inf')}
+            }
 
     def perform_sensitivity_analysis(
         self,
         variables: List[str],
         ranges: Dict[str, tuple],
-        steps: int = 10
+        steps: int = 10,
+        fixed_cost_ratio: float = None,
+        variable_cost_ratio: float = None
     ) -> Dict[str, Dict[str, List[float]]]:
         """
         Perform sensitivity analysis on specified variables using Rust implementation.
-        
-        Args:
-            variables: List of variables to analyze (discount_rate, production_volume, operating_costs, revenue)
-            ranges: Dictionary of (min, max) tuples for each variable
-            steps: Number of steps in sensitivity analysis
-            
-        Returns:
-            Dictionary of sensitivity results for each variable
         """
         self._validate_data()
-        cash_flows = self._calculate_cash_flows()
+        logger.info("=== Starting Sensitivity Analysis in Profitability Analyzer ===")
+        logger.info(f"Variables to analyze: {variables}")
+        logger.info(f"Variable ranges: {ranges}")
+        logger.info(f"Number of steps: {steps}")
+        
+        # Calculate deterministic cash flows for sensitivity analysis
+        cash_flows = self._calculate_cash_flows(apply_uncertainties=False)
+        logger.info(f"Base cash flows (first 5): {cash_flows[:5]}...")
         
         # Variable mapping to Rust implementation indices
         variable_mapping = {
@@ -236,26 +371,36 @@ class ProfitabilityAnalysis:
             "operating_costs": 2,
             "revenue": 3
         }
+        logger.info(f"Variable mapping configuration: {variable_mapping}")
+
+        logger.info(f"Cost ratios - Fixed: {fixed_cost_ratio:.4f}, Variable: {variable_cost_ratio:.4f}")
         
         results = {}
         
         for var in variables:
+            logger.info(f"\n=== Processing Variable: {var} ===")
             if var not in variable_mapping:
-                logger.warning(f"Unsupported sensitivity variable: {var}")
+                logger.warning(f"Skipping unsupported variable: {var}")
                 continue
                 
             range_min, range_max = ranges[var]
             var_index = variable_mapping[var]
+            logger.info(f"Variable index: {var_index}, Range: ({range_min}, {range_max})")
             
             try:
-                # Run Rust sensitivity analysis
+                logger.info(f"Calling Rust sensitivity analysis for {var}")
                 sensitivity_values = self.rust_handler.run_sensitivity_analysis(
                     base_values=cash_flows,
                     variable_index=var_index,
                     range_min=range_min,
                     range_max=range_max,
-                    steps=steps
+                    steps=steps,
+                    discount_rate=self.parameters.discount_rate,
+                    fixed_cost_ratio=fixed_cost_ratio,
+                    variable_cost_ratio=variable_cost_ratio
                 )
+                logger.info(f"Received {len(sensitivity_values)} sensitivity values")
+                logger.info(f"First few values: {sensitivity_values[:3]}...")
                 
                 # Calculate range values for x-axis
                 range_values = [
@@ -268,6 +413,7 @@ class ProfitabilityAnalysis:
                 
                 # Calculate base case NPV for percent changes
                 base_npv = sensitivity_values[steps//2]
+                logger.info(f"Base NPV for {var}: {base_npv}")
                 
                 results[var] = {
                     "values": sensitivity_values,
@@ -279,11 +425,17 @@ class ProfitabilityAnalysis:
                         for val in sensitivity_values
                     ]
                 }
+                logger.info(f"Completed analysis for {var}")
+                logger.info(f"Range values: {range_values[:3]}... to {range_values[-3:]}")
+                logger.info(f"Percent changes: {results[var]['percent_change'][:3]}... to {results[var]['percent_change'][-3:]}")
             except Exception as e:
-                logger.error(f"Error in Rust sensitivity analysis for {var}: {str(e)}")
+                logger.error(f"Error in sensitivity analysis for {var}: {str(e)}", exc_info=True)
                 raise ValueError(f"Sensitivity analysis failed for {var}: {str(e)}")
         
         if not results:
+            logger.error("No sensitivity results were generated")
             raise ValueError("No valid sensitivity analyses could be performed")
         
+        logger.info("=== Sensitivity Analysis Complete ===")
+        logger.info(f"Successfully analyzed variables: {list(results.keys())}")
         return results

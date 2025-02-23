@@ -26,7 +26,7 @@ export function useRecentAnalyses(page = 1, pageSize = 10) {
     queryKey: ["recentAnalyses", page, pageSize],
     queryFn: async () => {
       const response = await api.get<ApiResponse<ProcessListResponse>>(
-        API_ENDPOINTS.process.list,
+        API_ENDPOINTS.analysis.list,
         {
           params: {
             page,

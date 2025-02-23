@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 def calculate_installation_costs(
     equipment_costs: float,
-    installation_factor: float = 0.2,
+    installation_factor: float = 0.25,
     indirect_costs_factor: float = 0.15,
 ) -> float:
     """
@@ -16,7 +16,7 @@ def calculate_installation_costs(
 
     Args:
         equipment_costs: Total base equipment costs
-        installation_factor: Factor for direct installation costs (default: 0.2 or 20%)
+        installation_factor: Factor for direct installation costs (default: 0.25 or 25%)
         indirect_costs_factor: Factor for indirect costs related to installation (default: 0.15 or 15%)
 
     Returns:
@@ -53,6 +53,6 @@ class InstallationStrategy(ABC):
 
 
 class PaperMethodologyStrategy(InstallationStrategy):
-    """Implements equation 3.2b from paper"""
+    """Implements equation 3.2b from paper using default factors"""
     def calculate(self, equipment_cost: float) -> float:
-        return equipment_cost * 0.25 * (1 + 0.15)  # Base 25% + 15% indirect
+        return calculate_installation_costs(equipment_cost)  # Use default factors

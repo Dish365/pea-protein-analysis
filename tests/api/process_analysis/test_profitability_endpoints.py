@@ -129,7 +129,8 @@ def test_analyze_comprehensive():
         name="Electricity",
         consumption=50000.0,
         unit_price=0.12,
-        unit="kWh"
+        unit="kWh",
+        operating_hours=8000  # Add operating hours
     )
     
     # Setup raw material
@@ -145,7 +146,8 @@ def test_analyze_comprehensive():
         hourly_wage=25.0,
         hours_per_week=40,
         weeks_per_year=50,
-        num_workers=5
+        num_workers=5,
+        benefits_factor=0.35  # 35% benefits on top of base salary
     )
     
     # Setup economic factors

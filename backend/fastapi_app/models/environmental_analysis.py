@@ -2,20 +2,26 @@
 Shared environmental analysis models to ensure consistency across endpoints.
 """
 
-from pydantic import BaseModel, Field, field_validator
-from typing import Dict, List, Optional, Literal
+from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Dict, List, Optional, Literal, TypedDict, Union
+from enum import Enum
 import math
 
+class AllocationMethod(str, Enum):
+    """Valid allocation methods"""
+    PHYSICAL = "physical"
+    ECONOMIC = "economic"
+    HYBRID = "hybrid"
 
-class ProcessEnvironmentalData(BaseModel):
+class ProcessInputs(BaseModel):
     """Environmental process data model."""
-    electricity_consumption: float = Field(..., gt=0, description="Electricity consumption in kWh")
-    cooling_consumption: float = Field(..., gt=0, description="Cooling energy consumption in kWh")
-    water_consumption: float = Field(..., gt=0, description="Water consumption in kg")
-    transport_consumption: float = Field(..., gt=0, description="Transport in ton-km")
-    product_mass: float = Field(..., gt=0, description="Product mass in kg")
-    equipment_mass: float = Field(..., gt=0, description="Equipment mass in kg")
-    waste_mass: float = Field(..., gt=0, description="Waste mass in kg")
+    electricity_kwh: float = Field(..., gt=0, description="Electricity consumption in kWh")
+    cooling_kwh: float = Field(..., gt=0, description="Cooling energy consumption in kWh")
+    water_kg: float = Field(..., gt=0, description="Water consumption in kg")
+    transport_ton_km: float = Field(..., gt=0, description="Transport in ton-km")
+    product_kg: float = Field(..., gt=0, description="Product mass in kg")
+    equipment_kg: float = Field(..., gt=0, description="Equipment mass in kg")
+    waste_kg: float = Field(..., gt=0, description="Waste mass in kg")
     thermal_ratio: float = Field(0.3, ge=0, le=1, description="Ratio of thermal processing")
 
     @field_validator('*')
@@ -25,49 +31,48 @@ class ProcessEnvironmentalData(BaseModel):
             raise ValueError(f"{field} cannot be NaN or infinite")
         return v
 
+class ImpactFactor(TypedDict):
+    """Impact factor definition"""
+    value: float
+    unit: str
+    description: str
 
-class ImpactFactors(BaseModel):
-    """Environmental impact factors."""
-    gwp_factors: Dict[str, float]
-    hct_factors: Dict[str, float]
-    frs_factors: Dict[str, float]
-    water_factors: Dict[str, float]
+class ProcessContribution(TypedDict):
+    """Process contribution definition"""
+    value: float
+    unit: str
+    process: str
 
-
-class ImpactResults(BaseModel):
+class ImpactResults(TypedDict):
     """Environmental impact calculation results."""
-    gwp: float = Field(..., description="Global Warming Potential")
-    hct: float = Field(..., description="Human Carcinogenic Toxicity")
-    frs: float = Field(..., description="Fossil Resource Scarcity")
-    water_impact: float = Field(..., description="Water Impact")
-    process_contributions: Dict[str, Dict[str, float]]
+    gwp: float
+    hct: float
+    frs: float
+    water_consumption: float
 
-
-class AllocationMethod(str):
-    ECONOMIC = "economic"
-    PHYSICAL = "physical"
-    HYBRID = "hybrid"
-
+class DetailedImpactResults(TypedDict):
+    """Detailed impact results including process contributions"""
+    total_impacts: ImpactResults
+    process_contributions: Dict[str, Dict[str, ProcessContribution]]
+    metadata: Dict[str, float]
 
 class AllocationWeights(BaseModel):
     """Weights for hybrid allocation."""
     economic: float = Field(..., ge=0, le=1)
     physical: float = Field(..., ge=0, le=1)
 
-    @field_validator('*')
-    @classmethod
-    def validate_weights(cls, v: float) -> float:
-        if math.isnan(v) or math.isinf(v):
-            raise ValueError("Weight cannot be NaN or infinite")
-        return v
-
+    @model_validator(mode='after')
+    def validate_weights_sum(self) -> 'AllocationWeights':
+        if not math.isclose(self.economic + self.physical, 1.0, rel_tol=1e-9):
+            raise ValueError("Weights must sum to 1.0")
+        return self
 
 class AllocationRequest(BaseModel):
     """Environmental impact allocation request."""
     impacts: Dict[str, float]
     product_values: Dict[str, float]
     mass_flows: Dict[str, float]
-    method: Literal["economic", "physical", "hybrid"] = "hybrid"
+    method: AllocationMethod = AllocationMethod.HYBRID
     hybrid_weights: Optional[AllocationWeights] = None
 
     @field_validator('impacts', 'product_values', 'mass_flows')
@@ -80,20 +85,21 @@ class AllocationRequest(BaseModel):
                 raise ValueError(f"Value for {key} must be positive")
         return v
 
+    @model_validator(mode='after')
+    def validate_hybrid_weights(self) -> 'AllocationRequest':
+        if self.method == AllocationMethod.HYBRID and self.hybrid_weights is None:
+            self.hybrid_weights = AllocationWeights(economic=0.5, physical=0.5)
+        return self
 
-class AllocationResults(BaseModel):
+class AllocationResults(TypedDict):
     """Environmental impact allocation results."""
     allocation_factors: Dict[str, float]
     allocated_impacts: Dict[str, Dict[str, float]]
-    method_used: str
-    process_type: Optional[str] = None
+    method_used: AllocationMethod
 
-
-class EnvironmentalMetrics(BaseModel):
-    """Combined environmental metrics."""
-    impact_results: ImpactResults
+class ProcessAnalysisResponse(BaseModel):
+    """Complete process analysis response."""
+    status: str = "success"
+    impact_results: DetailedImpactResults
     allocation_results: Optional[AllocationResults] = None
-    energy_intensity: float
-    water_intensity: float
-    waste_ratio: float
-    thermal_efficiency: float 
+    suggested_allocation_method: Optional[AllocationMethod] = None 

@@ -1,5 +1,6 @@
 from django.db import models
 from enum import Enum
+from process_data.validators import validate_equipment_structure
 
 class ProcessType(str, Enum):
     BASELINE = 'baseline'
@@ -51,25 +52,12 @@ class ProcessAnalysis(models.Model):
     d90_particle_size = models.FloatField(help_text="D90 particle size in μm", default=0.0)
     
     # ===== Economic Analysis Inputs =====
-    # Equipment and Costs
+    # Equipment Configuration
     equipment = models.JSONField(
-        help_text="List of equipment with details including cost, efficiency, maintenance",
+        help_text="List of equipment with details including base cost, efficiency factor, installation complexity",
+        validators=[validate_equipment_structure],
         default=list
     )
-    equipment_cost = models.FloatField(help_text="Base equipment cost in USD", default=0.0)
-    maintenance_cost = models.FloatField(help_text="Annual maintenance cost in USD", default=0.0)
-    installation_factor = models.FloatField(default=0.2, help_text="Installation cost factor")
-    indirect_costs_factor = models.FloatField(default=0.15, help_text="Indirect costs factor")
-    maintenance_factor = models.FloatField(default=0.05, help_text="Maintenance cost factor")
-    indirect_factors = models.JSONField(
-        help_text="List of indirect cost factors with name, cost, percentage",
-        default=list
-    )
-    
-    # Operating Costs
-    raw_material_cost = models.FloatField(help_text="Raw material cost per kg in USD", default=0.0)
-    utility_cost = models.FloatField(help_text="Utility cost per unit in USD", default=0.0)
-    labor_cost = models.FloatField(help_text="Labor cost per hour in USD", default=0.0)
     
     # Resource Configuration
     utilities = models.JSONField(
@@ -83,6 +71,28 @@ class ProcessAnalysis(models.Model):
     labor_config = models.JSONField(
         help_text="Labor configuration with wages, hours, workers",
         default=dict
+    )
+    
+    # Revenue Data
+    revenue_data = models.JSONField(
+        help_text="Revenue data including product price and annual production",
+        default=dict
+    )
+    
+    # Economic Factors
+    economic_factors = models.JSONField(
+        help_text="Economic factors including installation, indirect costs, maintenance factors, and project parameters",
+        default=dict
+    )
+    
+    # Analysis Parameters
+    monte_carlo_iterations = models.IntegerField(
+        help_text="Number of iterations for Monte Carlo simulation",
+        default=1000
+    )
+    uncertainty = models.FloatField(
+        help_text="Uncertainty factor for sensitivity analysis",
+        default=0.1
     )
     
     # Financial Parameters
@@ -135,6 +145,10 @@ class ProcessAnalysis(models.Model):
         help_text="Weights for hybrid allocation",
         default=dict
     )
+    
+    data = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         ordering = ['-timestamp']

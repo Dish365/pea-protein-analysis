@@ -1,181 +1,222 @@
-"use client";
-
 import React from 'react';
-import { Building2, Zap, DollarSign } from 'lucide-react';
-import { formatCurrency } from '@/lib/formatters';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CostBreakdown as CostBreakdownType } from '@/types/economic';
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ComprehensiveAnalysisResponse } from '@/types/economic';
+import { formatCurrency, formatPercentage } from '@/utils/formatters';
+import { 
+  Building2, 
+  CircleDollarSign, 
+  BarChart3, 
+  Wallet, 
+  Clock, 
+  Users, 
+  Wrench, 
+  Package, 
+  Zap,
+  TrendingUp
+} from 'lucide-react';
 
 interface CostBreakdownProps {
-  capex: {
-    total_capex: number;
-    equipment_cost: number;
-    installation_cost: number;
-    indirect_cost: number;
-  };
-  opex: {
-    total_opex: number;
-    utilities_cost: number;
-    materials_cost: number;
-    labor_cost: number;
-    maintenance_cost: number;
-  };
-  costBreakdown: CostBreakdownType;
-  unitCost: number;
+  data: ComprehensiveAnalysisResponse;
 }
 
-export function CostBreakdown({
-  capex,
-  opex,
-  costBreakdown,
-  unitCost,
-}: CostBreakdownProps) {
-  const capexItems = [
-    {
-      title: 'Equipment',
-      value: costBreakdown.equipment_cost,
-      color: 'rgb(59 130 246)', // blue-500
-      tooltip: 'Base equipment cost',
-    },
-    {
-      title: 'Installation',
-      value: capex.installation_cost,
-      color: 'rgb(34 197 94)', // green-500
-      tooltip: 'Equipment installation cost',
-    },
-    {
-      title: 'Indirect Costs',
-      value: costBreakdown.indirect_cost,
-      color: 'rgb(234 179 8)', // yellow-500
-      tooltip: 'Engineering, construction, and contingency costs',
-    },
-  ];
+export const CostBreakdown: React.FC<CostBreakdownProps> = ({ data }) => {
+  const { capex_analysis, opex_analysis } = data;
+  
+  // Early return if essential data is missing
+  if (!capex_analysis?.capex_summary || !opex_analysis?.opex_summary || !data.profitability_analysis?.metrics?.cost_structure) {
+    return (
+      <Card>
+        <CardContent>
+          <h2 className="text-2xl font-bold mb-4">
+            Capital and Operational Expenditure
+          </h2>
+          <p className="text-muted-foreground">
+            Cost breakdown data not available
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  const opexItems = [
-    {
-      title: 'Utilities',
-      value: costBreakdown.utilities_cost,
-      color: 'rgb(147 51 234)', // purple-500
-      tooltip: 'Annual utility costs (electricity, water, etc.)',
-    },
-    {
-      title: 'Materials',
-      value: costBreakdown.raw_materials_cost,
-      color: 'rgb(236 72 153)', // pink-500
-      tooltip: 'Annual raw material costs',
-    },
-    {
-      title: 'Labor',
-      value: costBreakdown.labor_cost,
-      color: 'rgb(239 68 68)', // red-500
-      tooltip: 'Annual labor costs',
-    },
-    {
-      title: 'Maintenance',
-      value: costBreakdown.maintenance_cost,
-      color: 'rgb(249 115 22)', // orange-500
-      tooltip: 'Annual maintenance costs',
-    },
-  ];
-
-  const renderCostBreakdown = (items: typeof capexItems | typeof opexItems, total: number) => (
-    <div className="space-y-4">
-      {items.map((item, index) => (
-        <TooltipProvider key={index}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="font-medium">{item.title}</span>
-                  <span className="text-muted-foreground">
-                    {formatCurrency(item.value)} ({((item.value / total) * 100).toFixed(1)}%)
-                  </span>
-                </div>
-                <Progress
-                  value={(item.value / total) * 100}
-                  indicatorColor={item.color}
-                  className="h-2"
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{item.tooltip}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      ))}
-    </div>
-  );
+  const { capex_summary, working_capital_components, investment_efficiency } = capex_analysis;
+  const { opex_summary } = opex_analysis;
+  const { cost_structure } = data.profitability_analysis.metrics;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Cost Analysis</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Unit Production Cost: {formatCurrency(unitCost)}/kg
-        </p>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="capex" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="capex" className="space-x-2">
-              <Building2 className="h-4 w-4" />
-              <span>Capital Expenditure</span>
-            </TabsTrigger>
-            <TabsTrigger value="opex" className="space-x-2">
-              <Zap className="h-4 w-4" />
-              <span>Operating Expenses</span>
-            </TabsTrigger>
-          </TabsList>
+    <Card className="bg-gradient-to-br from-background to-muted/20">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <CircleDollarSign className="w-6 h-6 text-primary" />
+          <h2 className="text-2xl font-bold">
+            Capital and Operational Expenditure
+          </h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* CAPEX Section */}
+          <div className="bg-card rounded-lg p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <Building2 className="w-5 h-5 text-primary" />
+              <h3 className="text-lg font-semibold">
+                Capital Expenditure
+              </h3>
+            </div>
+            <div className="text-lg font-medium">
+              Base CAPEX: {formatCurrency(capex_summary.total_capex)}
+            </div>
+          </div>
 
-          <TabsContent value="capex" className="space-y-4">
-            <Card>
-              <CardContent className="pt-6">
+          {/* Working Capital Section */}
+          {working_capital_components && (
+            <div className="bg-card rounded-lg p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <Wallet className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-semibold">
+                  Working Capital Components
+                </h3>
+              </div>
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <div className="rounded-full p-2 bg-primary/20">
-                    <DollarSign className="h-4 w-4" />
+                  <Package className="w-4 h-4 text-muted-foreground" />
+                  <p>
+                    Inventory ({working_capital_components.inventory.months} months): 
+                    <span className="font-medium ml-1">{formatCurrency(working_capital_components.inventory.value)}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <p>
+                    Accounts Receivable ({working_capital_components.receivables.days} days): 
+                    <span className="font-medium ml-1">{formatCurrency(working_capital_components.receivables.value)}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <p>
+                    Accounts Payable ({working_capital_components.payables.days} days): 
+                    <span className="font-medium ml-1">{formatCurrency(working_capital_components.payables.value)}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 pt-2">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  <p className="font-bold">
+                    Net Working Capital: {formatCurrency(capex_summary.working_capital)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Investment Summary */}
+          <div className="col-span-1 md:col-span-2 bg-primary/5 rounded-lg p-4">
+            <div className="flex flex-col md:flex-row md:justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <p className="font-bold text-lg">
+                  Total Investment: {formatCurrency(capex_summary.total_investment)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <CircleDollarSign className="w-5 h-5 text-primary" />
+                <p className="text-lg">
+                  Annual OPEX: {formatCurrency(opex_summary.total_opex)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Cost Structure */}
+          <div className="col-span-1 md:col-span-2 bg-card rounded-lg p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              <h3 className="text-lg font-semibold">
+                Cost Structure
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-muted/30 rounded-lg p-4">
+                <p className="font-semibold mb-3 flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 bg-primary rounded-full"></span>
+                  Fixed Costs: {formatCurrency(data.profitability_analysis.metrics.cost_structure.fixed_costs.value)} 
+                  <span className="text-muted-foreground">
+                    ({formatPercentage(data.profitability_analysis.metrics.cost_structure.fixed_costs.percentage / 100)})
+                  </span>
+                </p>
+                <div className="ml-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <p>
+                      Labor: {formatCurrency(data.profitability_analysis.metrics.cost_structure.fixed_costs.breakdown.labor)}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total CAPEX</p>
-                    <p className="text-2xl font-bold text-primary">{formatCurrency(capex.total_capex)}</p>
+                  <div className="flex items-center gap-2">
+                    <Wrench className="w-4 h-4 text-muted-foreground" />
+                    <p>
+                      Maintenance: {formatCurrency(data.profitability_analysis.metrics.cost_structure.fixed_costs.breakdown.maintenance)}
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            {renderCostBreakdown(capexItems, capex.total_capex)}
-          </TabsContent>
-
-          <TabsContent value="opex" className="space-y-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <div className="rounded-full p-2 bg-primary/20">
-                    <DollarSign className="h-4 w-4" />
+              </div>
+              <div className="bg-muted/30 rounded-lg p-4">
+                <p className="font-semibold mb-3 flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 bg-secondary rounded-full"></span>
+                  Variable Costs: {formatCurrency(data.profitability_analysis.metrics.cost_structure.variable_costs.value)} 
+                  <span className="text-muted-foreground">
+                    ({formatPercentage(data.profitability_analysis.metrics.cost_structure.variable_costs.percentage / 100)})
+                  </span>
+                </p>
+                <div className="ml-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4 text-muted-foreground" />
+                    <p>
+                      Raw Materials: {formatCurrency(data.profitability_analysis.metrics.cost_structure.variable_costs.breakdown.raw_materials)}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Annual OPEX</p>
-                    <p className="text-2xl font-bold text-primary">{formatCurrency(opex.total_opex)}</p>
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-muted-foreground" />
+                    <p>
+                      Utilities: {formatCurrency(data.profitability_analysis.metrics.cost_structure.variable_costs.breakdown.utilities)}
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            {renderCostBreakdown(opexItems, opex.total_opex)}
-          </TabsContent>
-        </Tabs>
+              </div>
+            </div>
+          </div>
+
+          {/* Investment Efficiency */}
+          {investment_efficiency && (
+            <div className="col-span-1 md:col-span-2 bg-card rounded-lg p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-semibold">
+                  Investment Efficiency
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-muted/30 rounded-lg p-3 flex items-center gap-2">
+                  <CircleDollarSign className="w-4 h-4 text-primary" />
+                  <p>
+                    Investment per Unit: {formatCurrency(investment_efficiency.per_unit)}
+                  </p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-3 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  <p>
+                    Revenue to Investment Ratio: {investment_efficiency.revenue_to_investment.toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-3 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  <p>
+                    OPEX to CAPEX Ratio: {investment_efficiency.opex_to_capex.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
-} 
+};

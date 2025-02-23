@@ -290,9 +290,11 @@ class ProcessAnalysisCreateView(APIView):
             )
             
             return Response({
-                'id': process.id,
-                'status': 'draft',
-                'message': 'Analysis created successfully'
+                'data': {
+                    'id': str(process.id),
+                    'status': 'draft',
+                    'message': 'Analysis created successfully'
+                }
             }, status=status.HTTP_201_CREATED)
             
         except Exception as e:
@@ -361,12 +363,17 @@ class ProcessAnalysisSubmitView(APIView):
         try:
             process = ProcessAnalysis.objects.get(id=process_id)
             
-            if not process.data:
+            # Use request.data instead of process.data
+            if not request.data:
                 return Response(
                     {'error': 'No analysis data found'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
                 
+            # Update process data if needed
+            process.data = request.data
+            process.save()
+            
             # Update status to pending
             process.status = 'pending'
             process.save()
@@ -398,10 +405,12 @@ class ProcessAnalysisSubmitView(APIView):
                 process.save()
                 
                 return Response({
-                    'id': process.id,
-                    'status': 'completed',
-                    'message': 'Analysis completed successfully',
-                    'results': AnalysisResultSerializer(analysis_result).data
+                    'data': {
+                        'id': str(process.id),
+                        'status': 'completed',
+                        'message': 'Analysis completed successfully',
+                        'results': AnalysisResultSerializer(analysis_result).data
+                    }
                 })
                 
             except Exception as e:

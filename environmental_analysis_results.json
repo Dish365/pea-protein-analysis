@@ -1,0 +1,118 @@
+{
+  "status": "success",
+  "impact_results": {
+    "total_impacts": {
+      "gwp": 598.5,
+      "hct": 2.935e-05,
+      "frs": 313.75,
+      "water_consumption": 5825.0
+    },
+    "process_contributions": {
+      "gwp": {
+        "electricity": {
+          "value": 475.0,
+          "unit": "kg_CO2_eq/kWh",
+          "process": "electricity"
+        },
+        "water": {
+          "value": 3.5,
+          "unit": "kg_CO2_eq/kg",
+          "process": "water"
+        },
+        "transport": {
+          "value": 120.0,
+          "unit": "kg_CO2_eq/ton_km",
+          "process": "transport"
+        }
+      },
+      "hct": {
+        "electricity": {
+          "value": 2.185e-05,
+          "unit": "CTUh/kWh",
+          "process": "electricity"
+        },
+        "water_treatment": {
+          "value": 5.25e-06,
+          "unit": "CTUh/kg",
+          "process": "water_treatment"
+        },
+        "waste": {
+          "value": 2.25e-06,
+          "unit": "CTUh/kg",
+          "process": "waste"
+        }
+      },
+      "frs": {
+        "electricity": {
+          "value": 190.0,
+          "unit": "kg_oil_eq/kWh",
+          "process": "electricity"
+        },
+        "thermal_treatment": {
+          "value": 97.5,
+          "unit": "kg_oil_eq/kg",
+          "process": "thermal_treatment"
+        },
+        "mechanical_processing": {
+          "value": 26.25,
+          "unit": "kg_oil_eq/kg",
+          "process": "mechanical_processing"
+        }
+      },
+      "water": {
+        "tempering": {
+          "value": 1500.0,
+          "unit": "kg_water_per_kg",
+          "process": "tempering"
+        },
+        "cleaning": {
+          "value": 4250.0,
+          "unit": "kg_water_per_kg",
+          "process": "cleaning"
+        },
+        "cooling": {
+          "value": 75.0,
+          "unit": "kg_water_per_kwh",
+          "process": "cooling"
+        }
+      }
+    },
+    "metadata": {
+      "total_mass": 1500.0,
+      "energy_intensity": 0.6333333333333333,
+      "water_intensity": 2.3333333333333335,
+      "thermal_ratio": 0.65
+    }
+  },
+  "allocation_results": {
+    "allocation_factors": {
+      "starch": 0.05254716981132075,
+      "fiber": 0.038805031446540884,
+      "protein_isolate": 0.15864779874213836
+    },
+    "allocated_impacts": {
+      "gwp": {
+        "protein_isolate": 379.80283018867925,
+        "starch": 125.79792452830188,
+        "fiber": 92.89924528301887
+      },
+      "hct": {
+        "protein_isolate": 1.8625251572327042e-05,
+        "starch": 6.1690377358490556e-06,
+        "fiber": 4.555710691823899e-06
+      },
+      "frs": {
+        "protein_isolate": 199.10298742138363,
+        "starch": 65.94669811320755,
+        "fiber": 48.70031446540881
+      },
+      "water_consumption": {
+        "protein_isolate": 3696.493710691824,
+        "starch": 1224.3490566037735,
+        "fiber": 904.1572327044025
+      }
+    },
+    "method_used": "hybrid"
+  },
+  "suggested_allocation_method": "hybrid"
+}

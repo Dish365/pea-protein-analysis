@@ -123,97 +123,24 @@ class AnalysisResultSerializer(serializers.ModelSerializer):
         """Convert model instance to JSON-serializable format"""
         data = super().to_representation(instance)
         
-        # Define expected nested structures from test data
-        expected_structure = {
-            'summary': {
-                'technical': {
-                    'protein_recovery': {
-                        'mass': 0.0,
-                        'content': 0.0,
-                        'yield': 0.0
-                    },
-                    'separation_efficiency': 0.0,
-                    'process_efficiency': 0.0,
-                    'particle_size_distribution': {
-                        'd10': 0.0,
-                        'd50': 0.0,
-                        'd90': 0.0
-                    }
-                },
-                'economic': {
-                    'capex_analysis': {
-                        'total_capex': 0.0,
-                        'equipment_cost': 0.0,
-                        'installation_cost': 0.0,
-                        'indirect_cost': 0.0
-                    },
-                    'opex_analysis': {
-                        'total_opex': 0.0,
-                        'utilities_cost': 0.0,
-                        'materials_cost': 0.0,
-                        'labor_cost': 0.0,
-                        'maintenance_cost': 0.0
-                    },
-                    'profitability_analysis': {
-                        'npv': 0.0,
-                        'roi': 0.0
-                    }
-                },
-                'environmental': {
-                    'impact_assessment': {
-                        'gwp': 0.0,
-                        'hct': 0.0,
-                        'frs': 0.0
-                    },
-                    'consumption_metrics': {
-                        'electricity': None,
-                        'cooling': None,
-                        'water': None
-                    }
-                },
-                'efficiency': {
-                    'efficiency_metrics': {
-                        'eco_efficiency_index': 0.0
-                    },
-                    'performance_indicators': {
-                        'relative_performance': 0.0
-                    }
-                }
-            }
-        }
+        # Extract results from the root level
+        technical_results = data.pop('technical_results', {})
+        economic_results = data.pop('economic_results', {})
+        environmental_results = data.pop('environmental_results', {})
+        efficiency_results = data.pop('efficiency_results', {})
         
-        # Transform results into summary structure
+        # Create summary structure
         summary = {
-            'technical': data.pop('technical_results', {}),
-            'economic': data.pop('economic_results', {}),
-            'environmental': data.pop('environmental_results', {}),
-            'efficiency': data.pop('efficiency_results', {})
+            'technical': technical_results,
+            'economic': economic_results,
+            'environmental': environmental_results,
+            'efficiency': efficiency_results
         }
         
-        # Merge with expected structure
-        for section, structure in expected_structure['summary'].items():
-            if section in summary:
-                if section == 'environmental':
-                    # Deep merge for environmental section to preserve consumption_metrics
-                    env_data = summary[section]
-                    env_structure = structure.copy()  # Create a copy to avoid modifying the original
-                    
-                    # Update impact assessment if present
-                    if 'impact_assessment' in env_data:
-                        env_structure['impact_assessment'].update(env_data.get('impact_assessment', {}))
-                    
-                    # Update consumption metrics if present
-                    if 'consumption_metrics' in env_data:
-                        env_structure['consumption_metrics'].update(env_data.get('consumption_metrics', {}))
-                    elif isinstance(env_data.get('environmental_results', {}), dict):
-                        # Handle nested environmental_results structure
-                        env_results = env_data.get('environmental_results', {})
-                        if 'consumption_metrics' in env_results:
-                            env_structure['consumption_metrics'].update(env_results['consumption_metrics'])
-                    
-                    summary[section] = env_structure
-                else:
-                    summary[section] = {**structure, **summary[section]}
+        # Handle environmental section specially to preserve structure
+        if isinstance(summary['environmental'].get('environmental_results', {}), dict):
+            env_results = summary['environmental'].pop('environmental_results', {})
+            summary['environmental'].update(env_results)
         
         data['summary'] = summary
         data['status'] = 'success'
@@ -346,36 +273,142 @@ class TechnicalInputSerializer(serializers.Serializer):
 class EconomicInputSerializer(serializers.Serializer):
     """
     Serializer for economic analysis input validation.
+    Matches the structure in economic.py
     """
-    # Equipment and Costs
-    equipment = serializers.JSONField()
-    equipment_cost = serializers.FloatField(min_value=0)
-    maintenance_cost = serializers.FloatField(min_value=0)
-    installation_factor = serializers.FloatField(min_value=0, max_value=1, default=0.2)
-    indirect_costs_factor = serializers.FloatField(min_value=0, max_value=1, default=0.15)
-    maintenance_factor = serializers.FloatField(min_value=0, max_value=1, default=0.05)
-    indirect_factors = serializers.JSONField()
-    
-    # Operating Costs
-    raw_material_cost = serializers.FloatField(min_value=0)
-    utility_cost = serializers.FloatField(min_value=0)
-    labor_cost = serializers.FloatField(min_value=0)
-    
+    # Equipment Configuration
+    equipment = serializers.ListField(
+        child=serializers.DictField(),
+        min_length=1
+    )
+
     # Resource Configuration
-    utilities = serializers.JSONField()
-    raw_materials = serializers.JSONField()
-    labor_config = serializers.JSONField()
-    
-    # Financial Parameters
-    project_duration = serializers.IntegerField(min_value=1)
-    discount_rate = serializers.FloatField(min_value=0, max_value=1)
-    production_volume = serializers.FloatField(min_value=0)
-    revenue_per_year = serializers.FloatField(min_value=0)
-    cash_flows = serializers.JSONField()
-    
-    # Risk Analysis
-    sensitivity_range = serializers.FloatField(min_value=0, max_value=1, default=0.2)
-    steps = serializers.IntegerField(min_value=1, default=10)
+    utilities = serializers.ListField(
+        child=serializers.DictField(),
+        min_length=1
+    )
+
+    raw_materials = serializers.ListField(
+        child=serializers.DictField(),
+        min_length=1
+    )
+
+    labor_config = serializers.DictField()
+    revenue_data = serializers.DictField()
+    economic_factors = serializers.DictField()
+
+    # Process Type and Analysis Parameters
+    process_type = serializers.ChoiceField(choices=['baseline', 'rf', 'ir'])
+    monte_carlo_iterations = serializers.IntegerField(
+        min_value=100, 
+        max_value=10000, 
+        default=1000
+    )
+    uncertainty = serializers.FloatField(
+        min_value=0, 
+        max_value=1, 
+        default=0.1
+    )
+
+    # Add validation for new indirect costs field
+    indirect_costs = serializers.ListField(
+        child=serializers.DictField(),
+        required=False,
+        default=[]
+    )
+
+    def validate_equipment(self, value):
+        """Validate equipment structure"""
+        required_fields = ['name', 'base_cost', 'processing_capacity',
+                         'energy_consumption', 'maintenance_factor']
+        for item in value:
+            missing = [field for field in required_fields if field not in item]
+            if missing:
+                raise serializers.ValidationError(
+                    f"Missing required fields for equipment: {', '.join(missing)}"
+                )
+        return value
+
+    def validate_utilities(self, value):
+        """Validate utilities structure"""
+        required_fields = ['name', 'consumption', 'unit_price', 'unit']
+        for item in value:
+            missing = [field for field in required_fields if field not in item]
+            if missing:
+                raise serializers.ValidationError(
+                    f"Missing required fields for utility: {', '.join(missing)}"
+                )
+        return value
+
+    def validate_raw_materials(self, value):
+        """Validate raw materials structure"""
+        required_fields = ['name', 'quantity', 'unit_price', 'unit']
+        for item in value:
+            missing = [field for field in required_fields if field not in item]
+            if missing:
+                raise serializers.ValidationError(
+                    f"Missing required fields for raw material: {', '.join(missing)}"
+                )
+        return value
+
+    def validate_labor_config(self, value):
+        """Validate labor configuration"""
+        required_fields = ['hourly_wage', 'hours_per_week', 'weeks_per_year', 'num_workers']
+        missing = [field for field in required_fields if field not in value]
+        if missing:
+            raise serializers.ValidationError(
+                f"Missing required fields for labor config: {', '.join(missing)}"
+            )
+        if value.get('hours_per_week', 0) > 168:
+            raise serializers.ValidationError("Hours per week cannot exceed 168")
+        if value.get('weeks_per_year', 0) > 52:
+            raise serializers.ValidationError("Weeks per year cannot exceed 52")
+        if value.get('num_workers', 0) < 1:
+            raise serializers.ValidationError("Number of workers must be at least 1")
+        return value
+
+    def validate_revenue_data(self, value):
+        """Validate revenue data"""
+        required_fields = ['product_price', 'annual_production']
+        missing = [field for field in required_fields if field not in value]
+        if missing:
+            raise serializers.ValidationError(
+                f"Missing required fields for revenue data: {', '.join(missing)}"
+            )
+        return value
+
+    def validate_economic_factors(self, value):
+        """Validate economic factors"""
+        required_fields = ['installation_factor', 'indirect_costs_factor', 'maintenance_factor',
+                         'project_duration', 'discount_rate', 'production_volume']
+        missing = [field for field in required_fields if field not in value]
+        if missing:
+            raise serializers.ValidationError(
+                f"Missing required fields for economic factors: {', '.join(missing)}"
+            )
+        if not 0 <= value.get('installation_factor', 0) <= 1:
+            raise serializers.ValidationError("Installation factor must be between 0 and 1")
+        if not 0 <= value.get('indirect_costs_factor', 0) <= 1:
+            raise serializers.ValidationError("Indirect costs factor must be between 0 and 1")
+        if not 0 <= value.get('maintenance_factor', 0) <= 1:
+            raise serializers.ValidationError("Maintenance factor must be between 0 and 1")
+        if not 0 <= value.get('discount_rate', 0) <= 1:
+            raise serializers.ValidationError("Discount rate must be between 0 and 1")
+        if value.get('project_duration', 0) < 1:
+            raise serializers.ValidationError("Project duration must be at least 1 year")
+        if value.get('production_volume', 0) <= 0:
+            raise serializers.ValidationError("Production volume must be positive")
+        return value
+
+    def validate_indirect_costs(self, value):
+        """Validate indirect costs structure"""
+        required_fields = ['name', 'cost', 'percentage']
+        for item in value:
+            missing = [field for field in required_fields if field not in item]
+            if missing:
+                raise serializers.ValidationError(
+                    f"Missing required fields for indirect cost: {', '.join(missing)}"
+                )
+        return value
 
 
 class EnvironmentalInputSerializer(serializers.Serializer):

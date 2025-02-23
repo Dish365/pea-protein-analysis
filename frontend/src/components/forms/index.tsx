@@ -1,326 +1,174 @@
-"use client"
-
-import React, { useState } from 'react';
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
 import {
-  Form
-} from "@/components/ui/form";
-import TechnicalInputForm from './TechnicalInputForm';
-import EconomicInputForm from './EconomicInputForm';
-import EnvironmentalInputForm from './EnvironmentalInputForm';
-import { Steps } from "@/components/ui/steps";
-import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/useToast";
-import {
-  ProcessTypeEnum,
-  processValidationSchema,
-  TechnicalValidationData,
-  EconomicValidationData,
-  EnvironmentalValidationData,
-  validateProcessData
-} from '@/types/process';
+  Equipment,
+  Utility,
+  RawMaterial,
+  LaborConfig,
+  RevenueData,
+  EconomicFactors,
+  WorkingCapital,
+  EconomicFormValues
+} from "@/types/economic";
 
-// Define the form's data structure to match our validation schema
-interface ProcessFormData {
-  technical: TechnicalValidationData;
-  economic: EconomicValidationData;
-  environmental: EnvironmentalValidationData;
-}
+// Define base equipment configuration
+export const DEFAULT_EQUIPMENT: Equipment[] = [
+    {
+        name: "Extraction Reactor",
+        base_cost: 1200000.0,
+        processing_capacity: 5000,
+        efficiency_factor: 0.78,
+        installation_complexity: 1.35,
+        maintenance_cost: 45000.0,
+        energy_consumption: 180
+    },
+    {
+        name: "Centrifugal Separator",
+        base_cost: 650000.0,
+        processing_capacity: 2000,
+        efficiency_factor: 0.85,
+        installation_complexity: 1.25,
+        maintenance_cost: 28000.0,
+        energy_consumption: 110
+    }
+];
 
-interface ProcessInputFormProps {
-  onSubmit?: (values: ProcessFormData) => void;
-  onSuccess?: (response: any) => void;
-  initialValues?: Partial<ProcessFormData>;
-  loading?: boolean;
-}
+// Define base utility configuration
+export const DEFAULT_UTILITIES: Utility[] = [
+    {
+        name: "Steam",
+        consumption: 1500,
+        unit_price: 0.028,
+        operating_hours: 6000,
+        unit: "kg"
+    },
+    {
+        name: "Electricity",
+        consumption: 950,
+        unit_price: 0.105,
+        operating_hours: 8000,
+        unit: "kWh"
+    }
+];
 
-interface FormStep {
-  title: string;
-  description: string;
-  component: React.ReactNode;
-}
+// Define base raw material configuration
+export const DEFAULT_RAW_MATERIALS: RawMaterial[] = [
+    {
+        name: "Pea Flour",
+        quantity: 2500000.0,
+        unit_price: 0.92,
+        protein_content: 0.25,
+        unit: "kg"
+    },
+    {
+        name: "NaOH",
+        quantity: 15000.0,
+        unit_price: 0.35,
+        unit: "kg"
+    }
+];
 
-export const DEFAULT_TECHNICAL_VALUES = {
-  process_type: ProcessTypeEnum.BASELINE,
-  air_flow: 100,
-  classifier_speed: 1000,
-  input_mass: 1000,
-  output_mass: 800,
-  initial_protein_content: 80,
-  final_protein_content: 45,
-  initial_moisture_content: 12,
-  final_moisture_content: 8,
-  d10_particle_size: 10,
-  d50_particle_size: 50,
-  d90_particle_size: 90,
-  electricity_consumption: 0.5,
-  cooling_consumption: 0.3,
-  water_consumption: 0.2,
-  transport_consumption: 0.4,
-  equipment_mass: 1000,
-  thermal_ratio: 0.3
-} as const;
-
-export const DEFAULT_ECONOMIC_VALUES: EconomicValidationData = {
-  // Production Parameters
-  production_volume: 1000,
-  operating_hours: 2000,
-
-  // Equipment Configuration
-  equipment: [{
-    name: "main_equipment",
-    cost: 50000,
-    efficiency: 0.85,
-    maintenance_cost: 2500,
-    energy_consumption: 100,
-    processing_capacity: 1000
-  }],
-  equipment_cost: 50000,
-  maintenance_cost: 2500,
-  installation_factor: 0.2,
-  indirect_costs_factor: 0.15,
-  maintenance_factor: 0.05,
-  indirect_factors: [{
-    name: "engineering",
-    cost: 50000,
-    percentage: 0.15
-  }],
-
-  // Resource Configuration
-  utilities: [{
-    name: "electricity",
-    consumption: 100,
-    unit_price: 0.15,
-    unit: "kWh"
-  }],
-  raw_materials: [{
-    name: "feed_material",
-    quantity: 1000,
-    unit_price: 2.5,
-    unit: "kg"
-  }],
-  labor_config: {
-    hourly_wage: 25,
+// Define base labor configuration
+export const DEFAULT_LABOR_CONFIG: LaborConfig = {
+    hourly_wage: 35.75,
     hours_per_week: 40,
     weeks_per_year: 52,
-    num_workers: 1
-  },
+    num_workers: 15,
+    benefits_factor: 0.30
+};
 
-  // Operating Costs
-  utility_cost: 0.15,
-  raw_material_cost: 2.5,
-  labor_cost: 25,
+// Define base revenue configuration
+export const DEFAULT_REVENUE_DATA: RevenueData = {
+    product_price: 6.50,
+    annual_production: 1500000,
+    yield_efficiency: 0.70
+};
 
-  // Financial Parameters
-  project_duration: 10,
-  discount_rate: 0.1,
-  revenue_data: {
-    year_0: 100000,
-    year_1: 110000,
-    // ...
-  },
-  economic_factors: {
-    discount_rate: 0.1,
+// Define base economic factors
+export const DEFAULT_ECONOMIC_FACTORS: EconomicFactors = {
+    installation_factor: 0.35,
+    indirect_costs_factor: 0.40,
+    maintenance_factor: 0.045,
     project_duration: 10,
-    production_volume: 1000
-  },
-  revenue_per_year: 100000,
-}
-
-export const DEFAULT_ENVIRONMENTAL_VALUES: EnvironmentalValidationData = {
-  production_volume: 1000,
-  electricity_consumption: 0.5,
-  water_consumption: 0.2,
-  cooling_consumption: 0.3,
-  transport_consumption: 0.4,
-  equipment_mass: 1000,
-  thermal_ratio: 0.3,
-  allocation_method: "hybrid",
-  hybrid_weights: {
-    economic: 0.5,
-    physical: 0.5
-  }
+    discount_rate: 0.10,
+    production_volume: 1500000
 };
 
-const DEFAULT_FORM_VALUES: ProcessFormData = {
-  technical: DEFAULT_TECHNICAL_VALUES,
-  economic: DEFAULT_ECONOMIC_VALUES,
-  environmental: DEFAULT_ENVIRONMENTAL_VALUES
+// Define working capital defaults
+export const DEFAULT_WORKING_CAPITAL: WorkingCapital = {
+    inventory_months: 3,
+    receivables_days: 45,
+    payables_days: 30
 };
 
-const ProcessInputForm: React.FC<ProcessInputFormProps> = ({
-  onSubmit,
-  onSuccess,
-  initialValues = DEFAULT_FORM_VALUES,
-  loading: externalLoading = false,
-}) => {
-  const form = useForm<ProcessFormData>({
-    resolver: zodResolver(processValidationSchema),
-    defaultValues: initialValues,
-  });
-  
-  const [currentStep, setCurrentStep] = useState(1);
-  const { toast } = useToast();
+// Define Monte Carlo configuration
+export const DEFAULT_MONTE_CARLO = {
+    iterations: 10000,
+    uncertainty: {
+        price: 0.30,
+        cost: 0.25
+    },
+    random_seed: 42
+};
 
-  const steps: FormStep[] = [
+// Define sensitivity configuration
+export const DEFAULT_SENSITIVITY = {
+    variables: ["discount_rate", "production_volume", "operating_costs", "revenue"],
+    ranges: {
+        "discount_rate": [0.05, 0.15] as [number, number],
+        "production_volume": [500.0, 1500.0] as [number, number],
+        "operating_costs": [0.8, 1.2] as [number, number],
+        "revenue": [0.8, 1.2] as [number, number]
+    },
+    steps: 15
+};
+
+// Define metrics filters
+export const DEFAULT_METRICS_FILTERS = {
+    include_margins: true,
+    include_break_even: true,
+    include_cost_structure: true,
+    include_efficiency: true,
+    include_risk: true
+};
+
+// Define indirect factors
+export const DEFAULT_INDIRECT_FACTORS = [
     {
-      title: 'Technical Parameters',
-      description: 'Configure process specifications',
-      component: (
-        <TechnicalInputForm 
-          onSubmit={async (technicalValues) => {
-            form.setValue('technical', technicalValues);
-            const isValid = await form.trigger('technical');
-            if (isValid) next();
-          }}
-          isSubmitting={form.formState.isSubmitting}
-          initialData={form.getValues().technical}
-        />
-      ),
+        name: "Engineering & Design",
+        cost: 275000.0,
+        percentage: 0.15
     },
     {
-      title: 'Economic Parameters',
-      description: 'Define cost and revenue factors',
-      component: (
-        <EconomicInputForm 
-          onSubmit={async (economicValues) => {
-            form.setValue('economic', economicValues);
-            const isValid = await form.trigger('economic');
-            if (isValid) next();
-          }}
-          isSubmitting={form.formState.isSubmitting}
-          initialData={form.getValues().economic}
-        />
-      ),
+        name: "Construction Management",
+        cost: 325000.0,
+        percentage: 0.20
     },
     {
-      title: 'Environmental Parameters',
-      description: 'Specify environmental impacts',
-      component: (
-        <EnvironmentalInputForm 
-          onSubmit={async (environmentalValues) => {
-            form.setValue('environmental', environmentalValues);
-            const isValid = await form.trigger('environmental');
-            if (isValid) handleSubmit(form.getValues());
-          }}
-          isSubmitting={form.formState.isSubmitting}
-          initialData={form.getValues().environmental}
-        />
-      ),
-    },
-  ];
-
-  const handleSubmit = async (values: ProcessFormData) => {
-    try {
-      // Only submit when all steps are completed
-      if (currentStep === steps.length) {
-        // Validate complete process data
-        const errors = validateProcessData(values);
-        if (errors.length > 0) {
-          errors.forEach(error => {
-            toast({
-              title: "Validation Error",
-              description: error,
-              variant: "destructive",
-            });
-          });
-          return;
-        }
-
-        // If all validations pass, submit the data
-        if (onSubmit) {
-          await onSubmit(values);
-        }
-        if (onSuccess) {
-          onSuccess(values);
-        }
-      }
-    } catch (error) {
-      console.error("Form submission error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to submit analysis. Please try again.",
-        variant: "destructive",
-      });
+        name: "Contingency",
+        cost: 275000.0,
+        percentage: 0.15,
+        reference_base: "direct"
     }
-  };
+];
 
-  const next = async () => {
-    try {
-      const currentStepName = ['technical', 'economic', 'environmental'][currentStep - 1];
-      const isValid = await form.trigger(currentStepName as keyof ProcessFormData);
-      if (isValid) {
-        setCurrentStep(currentStep + 1);
-      } else {
-        toast({
-          title: "Error",
-          description: "Please fill in all required fields correctly",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Validation failed:', error);
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields correctly",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const prev = () => {
-    setCurrentStep(currentStep - 1);
-  };
-
-  return (
-    <Card className="max-w-4xl mx-auto">
-      <CardContent className="pt-6">
-        <Steps
-          steps={steps}
-          currentStep={currentStep}
-        />
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
-            <div className="steps-content mb-8">
-              {steps[currentStep - 1].component}
-            </div>
-
-            <div className="flex justify-between mt-8">
-              {currentStep > 1 && (
-                <Button
-                  variant="outline"
-                  onClick={prev}
-                  disabled={form.formState.isSubmitting || externalLoading}
-                >
-                  Previous
-                </Button>
-              )}
-              {currentStep < steps.length && (
-                <Button
-                  onClick={next}
-                  disabled={form.formState.isSubmitting || externalLoading}
-                >
-                  Continue
-                </Button>
-              )}
-              {currentStep === steps.length && (
-                <Button
-                  type="submit"
-                  disabled={form.formState.isSubmitting || externalLoading}
-                >
-                  {form.formState.isSubmitting || externalLoading ? "Processing..." : "Complete Analysis"}
-                </Button>
-              )}
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-  );
+export const DEFAULT_ECONOMIC_VALUES: EconomicFormValues = {
+    process_type: "baseline",
+    economic_factors: DEFAULT_ECONOMIC_FACTORS,
+    equipment_list: DEFAULT_EQUIPMENT,
+    utilities: DEFAULT_UTILITIES,
+    raw_materials: DEFAULT_RAW_MATERIALS,
+    labor_config: DEFAULT_LABOR_CONFIG,
+    revenue_data: DEFAULT_REVENUE_DATA,
+    working_capital: DEFAULT_WORKING_CAPITAL,
+    analysis_config: {
+        monte_carlo: DEFAULT_MONTE_CARLO,
+        sensitivity: DEFAULT_SENSITIVITY,
+        metrics_filters: DEFAULT_METRICS_FILTERS
+    },
+    indirect_factors: DEFAULT_INDIRECT_FACTORS
 };
 
-export default ProcessInputForm;
+
+
+
+
+

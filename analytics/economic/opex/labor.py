@@ -1,62 +1,87 @@
-from typing import Dict, List
+from typing import Dict, Any
+from math import ceil
 
 
-def calculate_labor_costs(
-    hourly_wage: float,
-    hours_per_week: float,
-    weeks_per_year: float,
-    num_workers: int,
-    overtime_factor: float = 1.5,
-    overtime_hours: float = 0.0,
-) -> float:
+def calculate_labor_costs(labor_config: Dict[str, Any], production_volume: float) -> Dict[str, Any]:
     """
-    Calculate total labor costs including regular time and overtime.
-    Based on paper Section 3.2.2
-
+    Calculate labor costs with proper scaling based on production volume.
+    Accounts for multiple shifts and worker requirements based on scale.
+    
     Args:
-        hourly_wage: Base hourly wage rate
-        hours_per_week: Regular working hours per week
-        weeks_per_year: Working weeks per year
-        num_workers: Number of workers
-        overtime_factor: Overtime pay multiplier (default: 1.5)
-        overtime_hours: Additional overtime hours per week (default: 0.0)
-
+        labor_config: Dictionary containing:
+            - hourly_wage: Base hourly wage per worker
+            - hours_per_week: Standard hours per week per shift
+            - weeks_per_year: Working weeks per year
+            - benefits_factor: Additional benefits as fraction of base wage
+        production_volume: Annual production volume in kg
+            
     Returns:
-        float: Total annual labor costs
-
+        Dictionary containing:
+        - total_cost: Total annual labor cost
+        - direct_labor: Direct labor cost
+        - benefits: Cost of benefits
+        - shifts: Number of shifts required
+        - workers_per_shift: Number of workers per shift
+        - total_workers: Total number of workers
+        
     Raises:
-        ValueError: If any input parameters are invalid
+        ValueError: If labor configuration is invalid
     """
     # Validate inputs
-    if hourly_wage <= 0:
-        raise ValueError("Hourly wage must be positive")
-
-    if hours_per_week < 0 or hours_per_week > 168:  # 168 hours in a week
-        raise ValueError("Hours per week must be between 0 and 168")
-
-    if weeks_per_year < 0 or weeks_per_year > 52:
-        raise ValueError("Weeks per year must be between 0 and 52")
-
-    if num_workers < 0:
-        raise ValueError("Number of workers cannot be negative")
-
-    if overtime_factor < 1:
-        raise ValueError("Overtime factor must be greater than or equal to 1")
-
-    if overtime_hours < 0:
-        raise ValueError("Overtime hours cannot be negative")
-
-    # Calculate regular time costs
-    regular_hours_per_year = hours_per_week * weeks_per_year
-    regular_costs = hourly_wage * regular_hours_per_year * num_workers
-
-    # Calculate overtime costs
-    overtime_hours_per_year = overtime_hours * weeks_per_year
-    overtime_costs = (
-        hourly_wage * overtime_factor * overtime_hours_per_year * num_workers
+    required_fields = ["hourly_wage", "hours_per_week", "weeks_per_year", "benefits_factor"]
+    if not all(field in labor_config for field in required_fields):
+        raise ValueError(f"Labor config must contain all required fields: {required_fields}")
+        
+    if production_volume <= 0:
+        raise ValueError("Production volume must be positive")
+        
+    # Constants for labor scaling
+    BASE_VOLUME = 1000000  # 1000 metric tons per year
+    BASE_WORKERS_PER_SHIFT = 4  # Base number of workers for BASE_VOLUME
+    MAX_VOLUME_PER_WORKER = 500000  # Maximum kg per worker per year
+    
+    # Calculate required number of workers based on production volume
+    workers_per_shift = ceil(
+        BASE_WORKERS_PER_SHIFT * 
+        (production_volume / BASE_VOLUME) ** 0.7  # Use 0.7 power rule for labor scaling
     )
-
-    # Total labor costs
-    total_labor_costs = regular_costs + overtime_costs
-
-    return total_labor_costs
+    
+    # Calculate required shifts based on production volume
+    annual_hours_per_shift = labor_config["hours_per_week"] * labor_config["weeks_per_year"]
+    volume_per_worker_hour = MAX_VOLUME_PER_WORKER / annual_hours_per_shift
+    
+    required_worker_hours = production_volume / volume_per_worker_hour
+    total_available_hours = workers_per_shift * annual_hours_per_shift
+    
+    num_shifts = ceil(required_worker_hours / total_available_hours)
+    num_shifts = min(max(num_shifts, 1), 3)  # Limit to 1-3 shifts
+    
+    # Calculate total number of workers
+    total_workers = workers_per_shift * num_shifts
+    
+    # Calculate annual base labor cost
+    annual_hours = (
+        labor_config["hours_per_week"] * 
+        labor_config["weeks_per_year"]
+    )
+    
+    base_labor_cost = (
+        labor_config["hourly_wage"] * 
+        annual_hours * 
+        total_workers
+    )
+    
+    # Calculate benefits
+    benefits_cost = base_labor_cost * labor_config["benefits_factor"]
+    
+    # Calculate total cost
+    total_cost = base_labor_cost + benefits_cost
+    
+    return {
+        "total_cost": total_cost,
+        "direct_labor": base_labor_cost,
+        "benefits": benefits_cost,
+        "shifts": num_shifts,
+        "workers_per_shift": workers_per_shift,
+        "total_workers": total_workers
+    }

@@ -23,8 +23,10 @@ class OpexResult:
     labor_costs: float
     maintenance_costs: float
     raw_materials_breakdown: List[Dict[str, float]]
-    utilities_breakdown: List[Dict[str, float]]
-    labor_breakdown: Dict[str, float]
+    utilities_breakdown: Dict[str, Any]  # Updated to include consumption rates
+    labor_breakdown: Dict[str, Any]  # Updated to include shift information
+    production_volume: float
+    reference_volume: float
 
 
 class OperationalExpenditureAnalysis:
@@ -38,7 +40,17 @@ class OperationalExpenditureAnalysis:
         self._utilities: List[Dict[str, float]] = []
         self._labor_data: Dict[str, float] = {}
         self._maintenance_factors: Dict[str, float] = {}
+        self._production_volume: Optional[float] = None
+        self._reference_volume: Optional[float] = None
         self._cached_result: Optional[OpexResult] = None
+
+    def set_production_volume(self, volume: float, reference_volume: Optional[float] = None) -> None:
+        """Set production volume and optional reference volume for scaling calculations"""
+        if volume <= 0:
+            raise ValueError("Production volume must be positive")
+        self._production_volume = volume
+        self._reference_volume = reference_volume or volume
+        self._invalidate_cache()
 
     def add_raw_material(self, material: Dict[str, float]) -> None:
         """Add raw material to the analysis and invalidate cache"""
@@ -74,13 +86,15 @@ class OperationalExpenditureAnalysis:
             raise EmptyDataError("Labor data must be provided")
         if not self._maintenance_factors:
             raise EmptyDataError("Maintenance factors must be provided")
+        if self._production_volume is None:
+            raise EmptyDataError("Production volume must be set")
 
     def calculate_total_opex(self) -> Dict[str, Any]:
         """
-        Calculate total operational expenditure including all components
+        Calculate total operational expenditure including all components with proper scaling
         
         Returns:
-            Dictionary containing total OPEX and its components
+            Dictionary containing total OPEX and its components with detailed breakdowns
         """
         # Check cache first
         if self._cached_result:
@@ -91,22 +105,28 @@ class OperationalExpenditureAnalysis:
             # Validate input data
             self._validate_data()
 
-            # Calculate raw material costs
-            raw_material_result = calculate_raw_material_costs(self._raw_materials)
+            # Calculate raw material costs with scaling
+            raw_material_result = calculate_raw_material_costs(
+                self._raw_materials,
+                self._production_volume,
+                self._reference_volume
+            )
             logger.debug(f"Calculated raw material costs: {raw_material_result}")
 
-            # Calculate utility costs
-            utility_result = calculate_utility_costs(self._utilities)
+            # Calculate utility costs with scaling
+            utility_result = calculate_utility_costs(
+                self._utilities,
+                self._production_volume,
+                self._reference_volume
+            )
             logger.debug(f"Calculated utility costs: {utility_result}")
 
-            # Calculate labor costs
-            labor_costs = calculate_labor_costs(
-                hourly_wage=self._labor_data["hourly_wage"],
-                hours_per_week=self._labor_data["hours_per_week"],
-                weeks_per_year=self._labor_data["weeks_per_year"],
-                num_workers=int(self._labor_data["num_workers"])
+            # Calculate labor costs with scaling
+            labor_result = calculate_labor_costs(
+                self._labor_data,
+                self._production_volume
             )
-            logger.debug(f"Calculated labor costs: {labor_costs}")
+            logger.debug(f"Calculated labor costs: {labor_result}")
 
             # Calculate maintenance costs
             maintenance_costs = calculate_maintenance_costs(
@@ -119,7 +139,7 @@ class OperationalExpenditureAnalysis:
             total_opex = (
                 raw_material_result["total_cost"] +
                 utility_result["total_cost"] +
-                labor_costs +
+                labor_result["total_cost"] +
                 maintenance_costs
             )
             logger.debug(f"Calculated total OPEX: {total_opex}")
@@ -129,11 +149,27 @@ class OperationalExpenditureAnalysis:
                 total_opex=total_opex,
                 raw_material_costs=raw_material_result["total_cost"],
                 utility_costs=utility_result["total_cost"],
-                labor_costs=labor_costs,
+                labor_costs=labor_result["total_cost"],
                 maintenance_costs=maintenance_costs,
-                raw_materials_breakdown=self._raw_materials.copy(),
-                utilities_breakdown=self._utilities.copy(),
-                labor_breakdown=self._get_labor_breakdown()
+                raw_materials_breakdown=raw_material_result["materials_breakdown"],
+                utilities_breakdown={
+                    "costs": utility_result["costs_by_utility"],
+                    "consumption": utility_result["consumption_rates"]
+                },
+                labor_breakdown={
+                    "costs": {
+                        "direct": labor_result["direct_labor"],
+                        "benefits": labor_result["benefits"],
+                        "total": labor_result["total_cost"]
+                    },
+                    "staffing": {
+                        "shifts": labor_result["shifts"],
+                        "workers_per_shift": labor_result["workers_per_shift"],
+                        "total_workers": labor_result["total_workers"]
+                    }
+                },
+                production_volume=self._production_volume,
+                reference_volume=self._reference_volume
             )
             
             self._cached_result = result
@@ -149,42 +185,38 @@ class OperationalExpenditureAnalysis:
         """Format OpexResult into API response structure"""
         return {
             "total_opex": result.total_opex,
-            "raw_material_costs": result.raw_material_costs,
-            "utility_costs": result.utility_costs,
-            "labor_costs": result.labor_costs,
-            "maintenance_costs": result.maintenance_costs,
-            "raw_materials_breakdown": result.raw_materials_breakdown,
-            "utilities_breakdown": result.utilities_breakdown,
-            "labor_breakdown": result.labor_breakdown
-        }
-
-    def _get_labor_breakdown(self) -> Dict[str, float]:
-        """Calculate detailed breakdown of labor costs"""
-        annual_hours = self._labor_data["hours_per_week"] * self._labor_data["weeks_per_year"]
-        annual_cost_per_worker = (
-            self._labor_data["hourly_wage"] * 
-            self._labor_data["hours_per_week"] * 
-            self._labor_data["weeks_per_year"]
-        )
-        
-        return {
-            "hourly_wage": self._labor_data["hourly_wage"],
-            "hours_per_week": self._labor_data["hours_per_week"],
-            "weeks_per_year": self._labor_data["weeks_per_year"],
-            "num_workers": self._labor_data["num_workers"],
-            "annual_hours": annual_hours,
-            "annual_cost_per_worker": annual_cost_per_worker,
-            "total_annual_cost": annual_cost_per_worker * self._labor_data["num_workers"]
+            "cost_breakdown": {
+                "raw_materials": result.raw_material_costs,
+                "utilities": result.utility_costs,
+                "labor": result.labor_costs,
+                "maintenance": result.maintenance_costs
+            },
+            "detailed_breakdown": {
+                "raw_materials": result.raw_materials_breakdown,
+                "utilities": result.utilities_breakdown,
+                "labor": result.labor_breakdown
+            },
+            "scaling_info": {
+                "production_volume": result.production_volume,
+                "reference_volume": result.reference_volume,
+                "volume_ratio": result.production_volume / result.reference_volume
+            }
         }
 
     def get_raw_materials_breakdown(self) -> List[Dict[str, float]]:
         """Get detailed breakdown of raw material costs"""
-        return self._raw_materials.copy()
+        if not self._cached_result:
+            raise ValueError("Must calculate OPEX first")
+        return self._cached_result.raw_materials_breakdown
 
-    def get_utilities_breakdown(self) -> List[Dict[str, float]]:
-        """Get detailed breakdown of utility costs"""
-        return self._utilities.copy()
+    def get_utilities_breakdown(self) -> Dict[str, Any]:
+        """Get detailed breakdown of utility costs and consumption"""
+        if not self._cached_result:
+            raise ValueError("Must calculate OPEX first")
+        return self._cached_result.utilities_breakdown
 
-    def get_labor_breakdown(self) -> Dict[str, float]:
-        """Get detailed breakdown of labor costs"""
-        return self._get_labor_breakdown()
+    def get_labor_breakdown(self) -> Dict[str, Any]:
+        """Get detailed breakdown of labor costs and staffing"""
+        if not self._cached_result:
+            raise ValueError("Must calculate OPEX first")
+        return self._cached_result.labor_breakdown

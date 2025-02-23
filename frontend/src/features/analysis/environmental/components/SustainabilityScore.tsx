@@ -4,39 +4,38 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Zap, Recycle, Leaf } from 'lucide-react';
+import { ImpactResults } from '@/types/environmental';
 
 interface SustainabilityScoreProps {
-  energyEfficiency: number;
-  resourceDepletion: number;
-  wasteRecycling: number;
+  impactResults: ImpactResults;
 }
 
 export function SustainabilityScore({
-  energyEfficiency,
-  resourceDepletion,
-  wasteRecycling,
+  impactResults,
 }: SustainabilityScoreProps) {
+  const { metadata, rf_parameters, process_breakdown } = impactResults;
+
   const metrics = [
     {
       label: "Energy Efficiency",
-      value: energyEfficiency,
+      value: (1 - metadata.energy_intensity) * 100,
       icon: <Zap className="h-4 w-4" />,
       description: "Process energy utilization efficiency",
       target: 80,
     },
     {
       label: "Resource Conservation",
-      value: 100 - resourceDepletion,
+      value: (1 - metadata.water_intensity) * 100,
       icon: <Leaf className="h-4 w-4" />,
       description: "Resource conservation rate",
       target: 70,
     },
     {
-      label: "Waste Recycling",
-      value: wasteRecycling,
+      label: "RF Treatment Efficiency",
+      value: rf_parameters.contribution_percentage,
       icon: <Recycle className="h-4 w-4" />,
-      description: "Waste recycling and recovery rate",
-      target: 75,
+      description: "RF treatment contribution to total process",
+      target: 19,
     },
   ];
 
@@ -91,11 +90,32 @@ export function SustainabilityScore({
               </div>
               <Progress
                 value={performance}
-                className="h-2"
+                className={`h-2 ${
+                  performance >= 90 ? 'bg-emerald-100' :
+                  performance >= 70 ? 'bg-blue-100' :
+                  'bg-yellow-100'
+                }`}
               />
             </div>
           );
         })}
+
+        {/* Process Breakdown */}
+        <div className="mt-6">
+          <h3 className="font-medium mb-3">Process Breakdown</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {Object.entries(process_breakdown).map(([process, value]) => (
+              <div key={process} className="text-center p-2 bg-muted rounded-lg">
+                <p className="text-sm font-medium capitalize">
+                  {process.replace(/_/g, ' ')}
+                </p>
+                <p className="text-lg font-semibold">
+                  {(value * 100).toFixed(1)}%
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

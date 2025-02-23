@@ -14,6 +14,10 @@ export const API_CONFIG = {
 export const API_ENDPOINTS = {
   economic: {
     analyze: `${API_V1_URL}/economic/profitability/analyze/comprehensive`,
+  },
+  environmental: {
+    analyze: `${API_V1_URL}/environmental/impact/analyze-process`,
+    impactFactors: `${API_V1_URL}/environmental/impact/impact-factors`,
   }
 } as const;
 

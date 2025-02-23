@@ -9,14 +9,28 @@ from ..impact.base import ProcessContribution
 @dataclass
 class ProcessInputs:
     """Data class for process inputs to ensure type safety"""
-    electricity_kwh: float
-    water_kg: float
-    transport_ton_km: float
+    rf_electricity_kwh: float
+    rf_frequency_mhz: float
+    rf_anode_current_a: float
+    rf_grid_current_a: float
+    air_classifier_milling_kwh: float
+    air_classification_kwh: float
+    hammer_milling_kwh: float
+    dehulling_kwh: float
+    tempering_water_kg: float
+    initial_moisture_content: float
+    final_moisture_content: float
+    target_moisture_content: float
     product_kg: float
     equipment_kg: float
-    cooling_kwh: float
+    transport_ton_km: float
     waste_kg: float
-    thermal_ratio: float = 0.3
+    rf_temperature_outfeed_c: float
+    rf_temperature_electrode_c: float
+    conveyor_speed_m_min: float
+    material_depth_mm: float
+    electrode_gap_mm: float
+    thermal_ratio: float
 
 class ImpactResults(TypedDict):
     """Type definition for impact calculation results"""
@@ -30,6 +44,7 @@ class DetailedImpactResults(TypedDict):
     total_impacts: ImpactResults
     process_contributions: Dict[str, Dict[str, ProcessContribution]]
     metadata: Dict[str, float]
+    rf_parameters: Dict[str, float]  # Added RF-specific parameters
 
 class ImpactCalculator:
     """Environmental Impact Calculator Service"""
@@ -56,40 +71,51 @@ class ImpactCalculator:
         """Calculate all environmental impacts for the process
         
         Args:
-            electricity_kwh: Electricity consumption in kWh
-            water_kg: Water consumption in kg
+            rf_electricity_kwh: RF unit electricity consumption
+            air_classifier_milling_kwh: Air classifier mill energy
+            air_classification_kwh: Air classification energy
+            hammer_milling_kwh: Hammer mill energy
+            dehulling_kwh: Dehulling energy
+            tempering_water_kg: Water used for tempering
+            product_kg: Product mass
+            equipment_kg: Equipment mass
             transport_ton_km: Transport in ton-km
-            product_kg: Product mass in kg
-            equipment_kg: Equipment mass in kg
-            cooling_kwh: Cooling energy in kWh
-            waste_kg: Waste mass in kg
-            thermal_ratio: Ratio of product going through thermal treatment (default: 0.3)
-        
-        Returns:
-            Dictionary containing all calculated impacts
+            waste_kg: Waste mass
+            rf_temperature_outfeed_c: RF outfeed temperature
+            rf_temperature_electrode_c: RF electrode temperature
+            thermal_ratio: Ratio of thermal processing
         """
         # Convert kwargs to ProcessInputs for type safety
         inputs = ProcessInputs(**kwargs)
         self._validate_inputs(inputs)
         
         try:
+            # Calculate total electricity consumption
+            total_electricity = (
+                inputs.rf_electricity_kwh +
+                inputs.air_classifier_milling_kwh +
+                inputs.air_classification_kwh +
+                inputs.hammer_milling_kwh +
+                inputs.dehulling_kwh
+            )
+            
             # Calculate GWP
             gwp = self._calculators['gwp'].calculate_total_impact(
-                electricity_kwh=inputs.electricity_kwh,
-                water_kg=inputs.water_kg,
+                electricity_kwh=total_electricity,
+                water_kg=inputs.tempering_water_kg,
                 transport_ton_km=inputs.transport_ton_km
             )
             
             # Calculate HCT
             hct = self._calculators['hct'].calculate_total_impact(
-                electricity_kwh=inputs.electricity_kwh,
-                water_treated_kg=inputs.water_kg,
+                electricity_kwh=total_electricity,
+                water_treated_kg=inputs.tempering_water_kg,
                 waste_kg=inputs.waste_kg
             )
             
             # Calculate FRS
             frs = self._calculators['frs'].calculate_total_impact(
-                electricity_kwh=inputs.electricity_kwh,
+                electricity_kwh=total_electricity,
                 thermal_product_kg=inputs.product_kg * inputs.thermal_ratio,
                 mechanical_product_kg=inputs.product_kg * (1 - inputs.thermal_ratio)
             )
@@ -98,10 +124,10 @@ class ImpactCalculator:
             water = self._calculators['water'].calculate_total_impact(
                 product_kg=inputs.product_kg,
                 equipment_kg=inputs.equipment_kg,
-                cooling_kwh=inputs.cooling_kwh
+                cooling_kwh=total_electricity  # Using total electricity for cooling water calculation
             )
             
-            # Store results
+            # Store results with RF-specific parameters
             self._results = {
                 'total_impacts': {
                     'gwp': gwp,
@@ -112,9 +138,16 @@ class ImpactCalculator:
                 'process_contributions': self.get_process_contributions(),
                 'metadata': {
                     'total_mass': inputs.product_kg,
-                    'energy_intensity': inputs.electricity_kwh / inputs.product_kg if inputs.product_kg > 0 else 0,
-                    'water_intensity': inputs.water_kg / inputs.product_kg if inputs.product_kg > 0 else 0,
+                    'energy_intensity': total_electricity / inputs.product_kg if inputs.product_kg > 0 else 0,
+                    'water_intensity': inputs.tempering_water_kg / inputs.product_kg if inputs.product_kg > 0 else 0,
                     'thermal_ratio': inputs.thermal_ratio
+                },
+                'rf_parameters': {
+                    'temperature_outfeed': inputs.rf_temperature_outfeed_c,
+                    'temperature_electrode': inputs.rf_temperature_electrode_c,
+                    'energy_consumption': inputs.rf_electricity_kwh,
+                    'contribution_percentage': (inputs.rf_electricity_kwh / total_electricity * 100)
+                    if total_electricity > 0 else 0
                 }
             }
             

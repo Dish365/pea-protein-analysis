@@ -5,14 +5,19 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EnvironmentalResults } from '@/types/environmental';
+import { 
+  EnvironmentalAnalysisResponse,
+  ImpactResults,
+  AllocationResults,
+} from '@/types/environmental';
+
 import { EmissionsBreakdown } from './EmissionsBreakdown';
 import { ImpactMetrics } from './ImpactMetrics';
 import { ResourceConsumption } from './ResourceConsumption';
 import { SustainabilityScore } from './SustainabilityScore';
 
 interface EnvironmentalAnalysisViewProps {
-  data?: EnvironmentalResults;
+  data?: EnvironmentalAnalysisResponse;
   isLoading?: boolean;
   error?: string;
 }
@@ -24,51 +29,46 @@ export function EnvironmentalAnalysisView({
 }: EnvironmentalAnalysisViewProps) {
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <Skeleton className="h-4 w-[200px]" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[180px]" />
-                <Skeleton className="h-4 w-[150px]" />
-                <Skeleton className="h-4 w-[160px]" />
-              </div>
+      <div className="space-y-8">
+        <Card className="p-6">
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <Skeleton className="h-4 w-[200px]" />
             </div>
-          </Card>
-          <Card className="p-6">
-            <div className="space-y-4">
-              <Skeleton className="h-4 w-[250px]" />
-              <div className="grid grid-cols-2 gap-4">
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
-              </div>
-            </div>
-          </Card>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="p-6">
-            <div className="space-y-4">
-              <Skeleton className="h-4 w-[220px]" />
-              <div className="h-[200px] bg-muted rounded-md" />
-            </div>
-          </Card>
-          <Card className="p-6">
-            <div className="space-y-4">
+            <div className="space-y-2">
               <Skeleton className="h-4 w-[180px]" />
-              <div className="space-y-2">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
+              <Skeleton className="h-4 w-[150px]" />
+              <Skeleton className="h-4 w-[160px]" />
             </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
+        <Card className="p-6">
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-[250px]" />
+            <div className="space-y-4">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          </div>
+        </Card>
+        <Card className="p-6">
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-[220px]" />
+            <div className="h-[200px] bg-muted rounded-md" />
+          </div>
+        </Card>
+        <Card className="p-6">
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-[180px]" />
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -104,29 +104,21 @@ export function EnvironmentalAnalysisView({
   }
 
   const { 
-    impact_assessment, 
-    consumption_metrics, 
-    allocated_impacts, 
-    energy_efficiency, 
-    resource_depletion, 
-    waste_recycling_rate 
+    impact_results,
+    allocation_results,
+    rf_validation,
   } = data;
 
-  const hasValidData = impact_assessment &&
-    typeof impact_assessment.gwp === 'number' &&
-    typeof impact_assessment.hct === 'number' &&
-    typeof impact_assessment.frs === 'number' &&
-    consumption_metrics &&
-    typeof consumption_metrics.electricity === 'number' &&
-    typeof consumption_metrics.cooling === 'number' &&
-    typeof consumption_metrics.water === 'number' &&
-    typeof energy_efficiency === 'number' &&
-    typeof resource_depletion === 'number' &&
-    typeof waste_recycling_rate === 'number' &&
-    allocated_impacts &&
-    Object.values(allocated_impacts).every(impact => 
-      typeof impact === 'number' || impact === null
-    );
+  const hasValidData = impact_results &&
+    typeof impact_results.total_impacts.gwp === 'number' &&
+    typeof impact_results.total_impacts.hct === 'number' &&
+    typeof impact_results.total_impacts.frs === 'number' &&
+    typeof impact_results.total_impacts.water_consumption === 'number' &&
+    impact_results.process_contributions &&
+    impact_results.metadata &&
+    allocation_results &&
+    allocation_results.allocation_factors &&
+    allocation_results.allocated_impacts;
 
   if (!hasValidData) {
     return (
@@ -141,28 +133,21 @@ export function EnvironmentalAnalysisView({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-2">
-        <ImpactMetrics
-          impacts={impact_assessment}
-          allocatedImpacts={allocated_impacts}
-        />
-        <SustainabilityScore
-          energyEfficiency={energy_efficiency}
-          resourceDepletion={resource_depletion}
-          wasteRecycling={waste_recycling_rate}
-        />
-      </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <EmissionsBreakdown
-          impacts={impact_assessment}
-          allocatedImpacts={allocated_impacts}
-        />
-        <ResourceConsumption
-          metrics={consumption_metrics}
-          efficiency={energy_efficiency}
-        />
-      </div>
+    <div className="space-y-8">
+      <ImpactMetrics
+        impactResults={impact_results}
+        allocationResults={allocation_results}
+      />
+      <SustainabilityScore
+        impactResults={impact_results}
+      />
+      <EmissionsBreakdown
+        impactResults={impact_results}
+        allocationResults={allocation_results}
+      />
+      <ResourceConsumption
+        impactResults={impact_results}
+      />
     </div>
   );
 } 

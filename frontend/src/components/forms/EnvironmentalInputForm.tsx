@@ -1,310 +1,375 @@
-"use client";
-
-import React from "react";
-import { useForm, FormProvider } from "react-hook-form";
+import React from 'react';
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { EnvironmentalParameters } from "@/types/environmental";
+import * as z from "zod";
+import { Form } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 import { FormSection } from "./shared/FormSection";
 import { FormNumberInput } from "./shared/FormNumberInput";
 import { FormSelect } from "./shared/FormSelect";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Progress } from "@/components/ui/progress";
-import { ArrowRight, Loader2 } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { environmentalValidationSchema, EnvironmentalValidationData } from '@/types/process';
-import { DEFAULT_ENVIRONMENTAL_VALUES } from './index';
+import { 
+  EnvironmentalAnalysisRequest,
+  ProcessInputs,
+} from '../../types/environmental';
+
+const defaultProcessInputs: ProcessInputs = {
+  // RF Pretreatment Parameters
+  rf_electricity_kwh: 150.0,
+  rf_temperature_outfeed_c: 84.4,
+  rf_temperature_electrode_c: 100.1,
+  rf_frequency_mhz: 27.12,
+  rf_anode_current_a: 1.79,
+  rf_grid_current_a: 0.56,
+  
+  // Process Steps Energy Consumption
+  air_classifier_milling_kwh: 250.0,
+  air_classification_kwh: 250.0,
+  hammer_milling_kwh: 150.0,
+  dehulling_kwh: 150.0,
+  
+  // Water and Moisture Management
+  tempering_water_kg: 800.0,
+  initial_moisture_content: 0.136,
+  final_moisture_content: 0.102,
+  target_moisture_content: 0.125,
+  
+  // Production Parameters
+  product_kg: 1500.0,
+  equipment_kg: 8500.0,
+  waste_kg: 450.0,
+  transport_ton_km: 1200.0,
+  
+  // Process Configuration
+  conveyor_speed_m_min: 0.17,
+  material_depth_mm: 30.0,
+  electrode_gap_mm: 86.9,
+  thermal_ratio: 0.65,
+};
+
+const defaultAllocationValues = {
+  product_values: {
+    protein_concentrate: 6.50,
+    starch: 2.30,
+    fiber: 1.80,
+  },
+  mass_flows: {
+    protein_concentrate: 219.0,
+    starch: 600.0,
+    fiber: 181.0,
+  },
+  hybrid_weights: {
+    economic: 0.6,
+    physical: 0.4,
+  },
+};
 
 const allocationMethodOptions = [
-  { value: 'economic', label: 'Economic Allocation' },
-  { value: 'physical', label: 'Physical Allocation' },
-  { value: 'hybrid', label: 'Hybrid Allocation' }
+  { value: 'economic', label: 'Economic' },
+  { value: 'physical', label: 'Physical' },
+  { value: 'hybrid', label: 'Hybrid' },
 ];
 
-type EnvironmentalFormValues = EnvironmentalValidationData;
+// Form validation schema
+const formSchema = z.object({
+  // RF Pretreatment Parameters
+  rf_electricity_kwh: z.number().min(0),
+  rf_temperature_outfeed_c: z.number().min(80).max(90),
+  rf_temperature_electrode_c: z.number().min(95).max(105),
+  rf_frequency_mhz: z.number().min(0),
+  rf_anode_current_a: z.number().min(0),
+  rf_grid_current_a: z.number().min(0),
+  
+  // Process Steps Energy
+  air_classifier_milling_kwh: z.number().min(0),
+  air_classification_kwh: z.number().min(0),
+  hammer_milling_kwh: z.number().min(0),
+  dehulling_kwh: z.number().min(0),
+  
+  // Water and Moisture
+  tempering_water_kg: z.number().min(0),
+  initial_moisture_content: z.number().min(0).max(1),
+  final_moisture_content: z.number().min(0).max(1),
+  target_moisture_content: z.number().min(0).max(1),
+  
+  // Production Parameters
+  product_kg: z.number().min(0),
+  equipment_kg: z.number().min(0),
+  waste_kg: z.number().min(0),
+  transport_ton_km: z.number().min(0),
+  
+  // Process Configuration
+  conveyor_speed_m_min: z.number().min(0),
+  material_depth_mm: z.number().min(0),
+  electrode_gap_mm: z.number().min(0),
+  thermal_ratio: z.number().min(0).max(1),
+  
+  // Allocation
+  allocation_method: z.enum(['economic', 'physical', 'hybrid']),
+  product_values: z.record(z.number().min(0)),
+  mass_flows: z.record(z.number().min(0)),
+  hybrid_weights: z.object({
+    economic: z.number().min(0).max(1),
+    physical: z.number().min(0).max(1),
+  }),
+});
 
 interface EnvironmentalInputFormProps {
-  onSubmit: (values: EnvironmentalParameters) => void;
-  isSubmitting?: boolean;
-  initialData?: EnvironmentalParameters;
+  onSubmit: (data: EnvironmentalAnalysisRequest) => void;
+  isLoading?: boolean;
 }
 
-export default function EnvironmentalInputForm({
+export function EnvironmentalInputForm({
   onSubmit,
-  isSubmitting = false,
-  initialData
+  isLoading = false,
 }: EnvironmentalInputFormProps) {
-  const form = useForm<EnvironmentalFormValues>({
-    resolver: zodResolver(environmentalValidationSchema),
-    defaultValues: initialData || DEFAULT_ENVIRONMENTAL_VALUES,
-    mode: "onChange"
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      ...defaultProcessInputs,
+      allocation_method: 'economic',
+      product_values: defaultAllocationValues.product_values,
+      mass_flows: defaultAllocationValues.mass_flows,
+      hybrid_weights: defaultAllocationValues.hybrid_weights,
+    },
   });
 
-  const watchAllocationMethod = form.watch("allocation_method");
-
-  const getRequiredFields = () => {
-    const fields = [
-      'production_volume', 'electricity_consumption', 'water_consumption',
-      'equipment_mass', 'thermal_ratio', 'allocation_method'
-    ];
+  const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    const requestData: EnvironmentalAnalysisRequest = {
+      request: {
+        ...values,
+        rf_electricity_kwh: values.rf_electricity_kwh,
+        rf_temperature_outfeed_c: values.rf_temperature_outfeed_c,
+        rf_temperature_electrode_c: values.rf_temperature_electrode_c,
+        // ... other process inputs
+      },
+      allocation_method: values.allocation_method,
+      product_values: values.product_values,
+      mass_flows: values.mass_flows,
+      hybrid_weights: values.hybrid_weights,
+    };
     
-    if (form.watch('allocation_method') === 'hybrid') {
-      fields.push('hybrid_weights.economic', 'hybrid_weights.physical');
-    }
-    
-    return fields;
+    onSubmit(requestData);
   };
 
-  const calculateProgress = () => {
-    const fields = getRequiredFields();
-    const values = form.getValues();
-    const filledFields = fields.filter(field => {
-      let value;
-      if (field.includes('.')) {
-        const [parent, child] = field.split('.');
-        if (parent === 'hybrid_weights') {
-          value = (values.hybrid_weights as Record<string, number>)?.[child];
-        }
-      } else {
-        value = values[field as keyof EnvironmentalFormValues];
-      }
-      return value !== undefined && value !== null && !form.formState.errors[field as keyof EnvironmentalFormValues];
-    });
-    return (filledFields.length / fields.length) * 100;
-  };
-
-  const progress = calculateProgress();
-
-  const handleFormSubmit = async (data: EnvironmentalFormValues) => {
-    // Basic parameters
-    if (!data.production_volume || data.production_volume <= 0) {
-      form.setError('production_volume', {
-        type: 'manual',
-        message: 'Production volume must be positive'
-      });
-      return;
-    }
-    if (!data.equipment_mass || data.equipment_mass <= 0) {
-      form.setError('equipment_mass', {
-        type: 'manual',
-        message: 'Equipment mass must be positive'
-      });
-      return;
-    }
-
-    // Resource consumption
-    if (!data.electricity_consumption || data.electricity_consumption <= 0) {
-      form.setError('electricity_consumption', {
-        type: 'manual',
-        message: 'Electricity consumption must be positive'
-      });
-      return;
-    }
-    if (!data.water_consumption || data.water_consumption <= 0) {
-      form.setError('water_consumption', {
-        type: 'manual',
-        message: 'Water consumption must be positive'
-      });
-      return;
-    }
-    if (data.cooling_consumption < 0) {
-      form.setError('cooling_consumption', {
-        type: 'manual',
-        message: 'Cooling consumption cannot be negative'
-      });
-      return;
-    }
-    if (data.transport_consumption < 0) {
-      form.setError('transport_consumption', {
-        type: 'manual',
-        message: 'Transport consumption cannot be negative'
-      });
-      return;
-    }
-
-    // Process efficiency
-    if (!data.thermal_ratio || data.thermal_ratio < 0 || data.thermal_ratio > 1) {
-      form.setError('thermal_ratio', {
-        type: 'manual',
-        message: 'Thermal ratio must be between 0 and 1'
-      });
-      return;
-    }
-
-    // Allocation configuration
-    if (!data.allocation_method || !['economic', 'physical', 'hybrid'].includes(data.allocation_method)) {
-      form.setError('allocation_method', {
-        type: 'manual',
-        message: 'Please select a valid allocation method'
-      });
-      return;
-    }
-
-    // Hybrid allocation validation
-    if (data.allocation_method === 'hybrid') {
-      const weights = data.hybrid_weights || {};
-      const totalWeight = (weights.economic || 0) + (weights.physical || 0);
-      if (Math.abs(totalWeight - 1) > 0.001) {
-        form.setError('hybrid_weights.economic', {
-          type: 'manual',
-          message: 'Hybrid weights must sum to 1'
-        });
-        return;
-      }
-    }
-
-    onSubmit(data);
-  };
+  const allocationMethod = form.watch('allocation_method');
 
   return (
-    <TooltipProvider>
-      <FormProvider {...form}>
-        <div className="space-y-6 max-w-4xl mx-auto">
-          <div className="space-y-2 mb-8">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Environmental Analysis Parameters</h2>
-              <span className="text-sm text-muted-foreground">
-                {Math.round(progress)}% Complete
-              </span>
-            </div>
-            <Progress value={progress} className="h-2" />
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+        <FormSection 
+          title="RF Pretreatment Parameters"
+          tooltip="Radio Frequency treatment parameters for pea protein processing"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <FormNumberInput
+              name="rf_electricity_kwh"
+              label="RF Electricity"
+              unit="kWh"
+              tooltip="Radio frequency unit power consumption"
+              required
+            />
+            <FormNumberInput
+              name="rf_temperature_outfeed_c"
+              label="Outfeed Temperature"
+              unit="°C"
+              tooltip="Temperature at outfeed (optimal: 80-90°C)"
+              min={80}
+              max={90}
+              required
+            />
+            <FormNumberInput
+              name="rf_temperature_electrode_c"
+              label="Electrode Temperature"
+              unit="°C"
+              tooltip="Electrode temperature (optimal: 95-105°C)"
+              min={95}
+              max={105}
+              required
+            />
+            <FormNumberInput
+              name="rf_frequency_mhz"
+              label="RF Frequency"
+              unit="MHz"
+              tooltip="Operating frequency of RF unit"
+              required
+            />
+            <FormNumberInput
+              name="rf_anode_current_a"
+              label="Anode Current"
+              unit="A"
+              tooltip="Anode current measurement"
+              required
+            />
+            <FormNumberInput
+              name="rf_grid_current_a"
+              label="Grid Current"
+              unit="A"
+              tooltip="Grid current measurement"
+              required
+            />
           </div>
+        </FormSection>
 
-          <form id="environmental-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
-            <div className="grid gap-6">
-              <Card className="p-6">
-                <FormSection 
-                  title="Process Configuration" 
-                  tooltip="Configure the basic process parameters"
-                >
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormNumberInput
-                      name="production_volume"
-                      label="Production Volume"
-                      unit="kg/year"
-                      min={0}
-                      required
-                      tooltip="Annual production capacity"
-                    />
-                    <FormNumberInput
-                      name="equipment_mass"
-                      label="Equipment Mass"
-                      unit="kg"
-                      min={0}
-                      required
-                      tooltip="Total mass of process equipment"
-                    />
-                  </div>
-                </FormSection>
-              </Card>
+        <FormSection 
+          title="Process Steps Energy Consumption"
+          tooltip="Energy consumption for each processing step"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <FormNumberInput
+              name="air_classifier_milling_kwh"
+              label="Air Classifier Milling"
+              unit="kWh"
+              tooltip="Energy consumption for air classifier milling"
+              required
+            />
+            <FormNumberInput
+              name="air_classification_kwh"
+              label="Air Classification"
+              unit="kWh"
+              tooltip="Energy consumption for air classification"
+              required
+            />
+            <FormNumberInput
+              name="hammer_milling_kwh"
+              label="Hammer Milling"
+              unit="kWh"
+              tooltip="Energy consumption for hammer milling"
+              required
+            />
+            <FormNumberInput
+              name="dehulling_kwh"
+              label="Dehulling"
+              unit="kWh"
+              tooltip="Energy consumption for dehulling"
+              required
+            />
+          </div>
+        </FormSection>
 
-              <Card className="p-6">
-                <FormSection 
-                  title="Resource Consumption" 
-                  tooltip="Specify the resource consumption parameters"
-                >
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormNumberInput
-                      name="electricity_consumption"
-                      label="Electricity Consumption"
-                      unit="kWh/kg"
-                      min={0}
-                      step={0.01}
-                      required
-                      tooltip="Specific electricity consumption per kg of product"
-                    />
-                    <FormNumberInput
-                      name="water_consumption"
-                      label="Water Consumption"
-                      unit="kg"
-                      min={0}
-                      required
-                      tooltip="Total water consumption"
-                    />
-                    <FormNumberInput
-                      name="cooling_consumption"
-                      label="Cooling Consumption"
-                      unit="kWh/kg"
-                      min={0}
-                      step={0.01}
-                      required
-                      tooltip="Specific cooling energy consumption per kg of product"
-                    />
-                    <FormNumberInput
-                      name="transport_consumption"
-                      label="Transport Energy"
-                      unit="MJ"
-                      min={0}
-                      required
-                      tooltip="Transport energy consumption"
-                    />
-                  </div>
-                </FormSection>
-              </Card>
+        <FormSection 
+          title="Water and Moisture Management"
+          tooltip="Water usage and moisture content parameters"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <FormNumberInput
+              name="tempering_water_kg"
+              label="Tempering Water"
+              unit="kg"
+              tooltip="Water used in tempering process"
+              required
+            />
+            <FormNumberInput
+              name="initial_moisture_content"
+              label="Initial Moisture"
+              tooltip="Initial moisture content (0-1)"
+              step={0.001}
+              min={0}
+              max={1}
+              required
+            />
+            <FormNumberInput
+              name="final_moisture_content"
+              label="Final Moisture"
+              tooltip="Final moisture content (0-1)"
+              step={0.001}
+              min={0}
+              max={1}
+              required
+            />
+            <FormNumberInput
+              name="target_moisture_content"
+              label="Target Moisture"
+              tooltip="Target moisture content (0-1)"
+              step={0.001}
+              min={0}
+              max={1}
+              required
+            />
+          </div>
+        </FormSection>
 
-              <Card className="p-6">
-                <FormSection 
-                  title="Process Efficiency" 
-                  tooltip="Configure process efficiency parameters"
-                >
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormNumberInput
-                      name="thermal_ratio"
-                      label="Thermal Ratio"
-                      unit="ratio"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      required
-                      tooltip="Ratio of thermal to electrical energy consumption"
-                    />
-                  </div>
-                </FormSection>
-              </Card>
+        <FormSection 
+          title="Allocation Configuration"
+          tooltip="Configure how environmental impacts are allocated between products"
+        >
+          <div className="space-y-6">
+            <FormSelect
+              name="allocation_method"
+              label="Allocation Method"
+              options={allocationMethodOptions}
+              tooltip="Method used to allocate environmental impacts"
+              required
+            />
 
-              <Card className="p-6">
-                <FormSection 
-                  title="Impact Allocation" 
-                  tooltip="Configure how environmental impacts are allocated"
-                >
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormSelect
-                      name="allocation_method"
-                      label="Allocation Method"
-                      options={allocationMethodOptions}
-                      required
-                      tooltip="Method for allocating environmental impacts between products"
-                    />
-                    {watchAllocationMethod === 'hybrid' && (
-                      <>
-                        <FormNumberInput
-                          name="hybrid_weights.economic"
-                          label="Economic Weight"
-                          unit="ratio"
-                          min={0}
-                          max={1}
-                          step={0.01}
-                          required
-                          tooltip="Weight for economic allocation in hybrid method"
-                        />
-                        <FormNumberInput
-                          name="hybrid_weights.physical"
-                          label="Physical Weight"
-                          unit="ratio"
-                          min={0}
-                          max={1}
-                          step={0.01}
-                          required
-                          tooltip="Weight for physical allocation in hybrid method"
-                        />
-                      </>
-                    )}
-                  </div>
-                </FormSection>
-              </Card>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Object.keys(defaultAllocationValues.product_values).map((key) => (
+                <FormNumberInput
+                  key={key}
+                  name={`product_values.${key}`}
+                  label={`${key.replace('_', ' ').toUpperCase()} Value`}
+                  tooltip={`Economic value for ${key}`}
+                  required
+                />
+              ))}
             </div>
-          </form>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Object.keys(defaultAllocationValues.mass_flows).map((key) => (
+                <FormNumberInput
+                  key={key}
+                  name={`mass_flows.${key}`}
+                  label={`${key.replace('_', ' ').toUpperCase()} Mass Flow`}
+                  unit="kg"
+                  tooltip={`Mass flow for ${key}`}
+                  required
+                />
+              ))}
+            </div>
+
+            {allocationMethod === 'hybrid' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormNumberInput
+                  name="hybrid_weights.economic"
+                  label="Economic Weight"
+                  tooltip="Weight for economic allocation (0-1)"
+                  step={0.1}
+                  min={0}
+                  max={1}
+                  required
+                />
+                <FormNumberInput
+                  name="hybrid_weights.physical"
+                  label="Physical Weight"
+                  tooltip="Weight for physical allocation (0-1)"
+                  step={0.1}
+                  min={0}
+                  max={1}
+                  required
+                />
+              </div>
+            )}
+          </div>
+        </FormSection>
+
+        <div className="flex justify-end">
+          <Button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full md:w-auto"
+          >
+            {isLoading ? 'Processing...' : 'Analyze Environmental Impact'}
+          </Button>
         </div>
-      </FormProvider>
-    </TooltipProvider>
+
+        {Object.keys(form.formState.errors).length > 0 && (
+          <Alert variant="destructive">
+            Please correct the errors before submitting.
+          </Alert>
+        )}
+      </form>
+    </Form>
   );
 }
+
+export default EnvironmentalInputForm;

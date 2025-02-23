@@ -2,10 +2,10 @@
   "status": "success",
   "impact_results": {
     "total_impacts": {
-      "gwp": 598.5,
-      "hct": 2.935e-05,
+      "gwp": 595.8,
+      "hct": 2.53e-05,
       "frs": 313.75,
-      "water_consumption": 5825.0
+      "water_consumption": 6035.0
     },
     "process_contributions": {
       "gwp": {
@@ -15,7 +15,7 @@
           "process": "electricity"
         },
         "water": {
-          "value": 3.5,
+          "value": 0.8,
           "unit": "kg_CO2_eq/kg",
           "process": "water"
         },
@@ -32,7 +32,7 @@
           "process": "electricity"
         },
         "water_treatment": {
-          "value": 5.25e-06,
+          "value": 1.2e-06,
           "unit": "CTUh/kg",
           "process": "water_treatment"
         },
@@ -71,7 +71,7 @@
           "process": "cleaning"
         },
         "cooling": {
-          "value": 75.0,
+          "value": 285.0,
           "unit": "kg_water_per_kwh",
           "process": "cooling"
         }
@@ -80,39 +80,85 @@
     "metadata": {
       "total_mass": 1500.0,
       "energy_intensity": 0.6333333333333333,
-      "water_intensity": 2.3333333333333335,
+      "water_intensity": 0.5333333333333333,
       "thermal_ratio": 0.65
+    },
+    "rf_parameters": {
+      "temperature_outfeed": 84.4,
+      "temperature_electrode": 100.1,
+      "energy_consumption": 150.0,
+      "contribution_percentage": 15.789473684210526
+    },
+    "process_breakdown": {
+      "air_classifier_milling": 0.21,
+      "air_classification": 0.21,
+      "rf_treatment": 0.19,
+      "tempering": 0.144,
+      "hammer_milling": 0.13,
+      "dehulling": 0.16
     }
   },
   "allocation_results": {
     "allocation_factors": {
-      "starch": 0.05254716981132075,
-      "fiber": 0.038805031446540884,
-      "protein_isolate": 0.15864779874213836
+      "protein_concentrate": 0.15330188679245282,
+      "starch": 0.05424528301886791,
+      "fiber": 0.04245283018867925
     },
     "allocated_impacts": {
       "gwp": {
-        "protein_isolate": 379.80283018867925,
-        "starch": 125.79792452830188,
-        "fiber": 92.89924528301887
+        "protein_concentrate": 365.34905660377353,
+        "starch": 129.277358490566,
+        "fiber": 101.17358490566038
       },
       "hct": {
-        "protein_isolate": 1.8625251572327042e-05,
-        "starch": 6.1690377358490556e-06,
-        "fiber": 4.555710691823899e-06
+        "protein_concentrate": 1.5514150943396224e-05,
+        "starch": 5.489622641509433e-06,
+        "fiber": 4.296226415094339e-06
       },
       "frs": {
-        "protein_isolate": 199.10298742138363,
-        "starch": 65.94669811320755,
-        "fiber": 48.70031446540881
+        "protein_concentrate": 192.39386792452828,
+        "starch": 68.07783018867924,
+        "fiber": 53.278301886792455
       },
       "water_consumption": {
-        "protein_isolate": 3696.493710691824,
-        "starch": 1224.3490566037735,
-        "fiber": 904.1572327044025
+        "protein_concentrate": 3700.7075471698113,
+        "starch": 1309.4811320754716,
+        "fiber": 1024.8113207547171
       }
     },
-    "method_used": "hybrid"
+    "method_used": "economic"
   },
-  "suggested_allocation_method": "hybrid"
+  "suggested_allocation_method": "economic",
+  "rf_validation": {
+    "temperature": {
+      "outfeed": {
+        "value": 84.4,
+        "within_range": true,
+        "optimal": 84.4,
+        "tolerance": "\u00b15\u00b0C"
+      },
+      "electrode": {
+        "value": 100.1,
+        "within_range": true,
+        "optimal": 100.1,
+        "tolerance": "\u00b15\u00b0C"
+      }
+    },
+    "moisture": {
+      "initial": 0.136,
+      "final": 0.102,
+      "target": 0.125,
+      "reduction": 0.034000000000000016,
+      "within_range": true,
+      "optimal_reduction": 0.034,
+      "tolerance": "\u00b10.005"
+    },
+    "energy_efficiency": {
+      "value": 0.15789473684210525,
+      "within_range": false,
+      "optimal": 0.19,
+      "tolerance": "\u00b10.01"
+    },
+    "process_contribution": 0.19
+  }
 }

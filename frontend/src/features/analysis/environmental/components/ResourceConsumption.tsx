@@ -2,59 +2,74 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ConsumptionMetrics } from '@/types/environmental';
-import { Zap, Droplets, Snowflake } from 'lucide-react';
+import { ImpactResults } from '@/types/environmental';
+import { Zap, Droplets, Snowflake, Factory } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 
 interface ResourceConsumptionProps {
-  metrics: ConsumptionMetrics;
-  efficiency: number;
+  impactResults: ImpactResults;
 }
 
 export function ResourceConsumption({
-  metrics,
-  efficiency,
+  impactResults,
 }: ResourceConsumptionProps) {
+  const { process_contributions, metadata } = impactResults;
+
   const consumptionData = [
     {
       name: 'Electricity',
-      value: metrics.electricity,
-      unit: 'kWh',
+      value: process_contributions.gwp.electricity.value,
+      unit: process_contributions.gwp.electricity.unit,
       icon: <Zap className="h-4 w-4" />,
-      color: 'rgb(234 179 8)', // yellow-500
+      color: 'yellow',
       description: 'Total electricity consumption',
     },
     {
       name: 'Water',
-      value: metrics.water,
-      unit: 'm³',
+      value: process_contributions.water.tempering.value + process_contributions.water.cleaning.value,
+      unit: 'kg',
       icon: <Droplets className="h-4 w-4" />,
-      color: 'rgb(59 130 246)', // blue-500
+      color: 'blue',
       description: 'Total water consumption',
     },
     {
       name: 'Cooling',
-      value: metrics.cooling,
-      unit: 'kWh',
+      value: process_contributions.water.cooling.value,
+      unit: process_contributions.water.cooling.unit,
       icon: <Snowflake className="h-4 w-4" />,
-      color: 'rgb(99 102 241)', // indigo-500
-      description: 'Total cooling energy consumption',
+      color: 'indigo',
+      description: 'Cooling energy consumption',
     },
-  ].filter((item) => item.value !== null);
+    {
+      name: 'Thermal',
+      value: process_contributions.frs.thermal_treatment.value,
+      unit: process_contributions.frs.thermal_treatment.unit,
+      icon: <Factory className="h-4 w-4" />,
+      color: 'red',
+      description: 'Thermal energy consumption',
+    },
+  ];
+
+  const maxValue = Math.max(...consumptionData.map(d => d.value));
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Resource Consumption</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Energy Efficiency: {efficiency.toFixed(1)}%
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Energy Intensity: {metadata.energy_intensity.toFixed(2)} kWh/kg
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Water Intensity: {metadata.water_intensity.toFixed(2)} kg/kg
+          </p>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {consumptionData.map((item) => (
           <div key={item.name} className="space-y-2">
             <div className="flex items-center gap-2">
-              <div className={`rounded-full p-2 bg-${item.color.split(' ')[1]}/20`}>
+              <div className={`rounded-full p-2 bg-${item.color}-100 text-${item.color}-700`}>
                 {item.icon}
               </div>
               <div>
@@ -70,8 +85,8 @@ export function ResourceConsumption({
               </div>
             </div>
             <Progress
-              value={item.value / Math.max(...consumptionData.map(d => d.value || 0)) * 100}
-              className="h-2"
+              value={(item.value / maxValue) * 100}
+              className={`h-2 bg-${item.color}-100`}
             />
           </div>
         ))}

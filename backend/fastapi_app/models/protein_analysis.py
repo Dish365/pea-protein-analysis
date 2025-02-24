@@ -19,13 +19,26 @@ class ProteinRecoveryInput(BaseModel):
         ..., gt=0, le=100, description="Output protein content in %"
     )
     process_type: ProcessType = Field(..., description="Process type (baseline/rf/ir)")
+    moisture_compensation_factor: float = Field(0.05, ge=0, le=0.2)
+    initial_moisture: float = Field(13.6, ge=0, le=100)
+    final_moisture: float = Field(10.2, ge=0, le=100)
+
+
+class ProcessStep(BaseModel):
+    feed_composition: Union[Dict[str, float], str]
+    product_composition: Union[Dict[str, float], str]
+    mass_flow: Union[Dict[str, float], str]
+    processing_moisture: Optional[float] = Field(None, ge=0, le=100, description="Processing moisture content percentage")
 
 
 class SeparationEfficiencyInput(BaseModel):
     feed_composition: Dict[str, float]
     product_composition: Dict[str, float]
     mass_flow: Dict[str, float]
-    process_data: Optional[List[Dict]] = None
+    process_data: Optional[List[Dict[str, Union[Dict[str, float], str, float]]]] = Field(
+        None,
+        description="List of process steps with references or direct data, plus processing_moisture"
+    )
     target_purity: Optional[float] = None
 
     @field_validator("feed_composition")
@@ -33,6 +46,8 @@ class SeparationEfficiencyInput(BaseModel):
     def validate_feed_composition(cls, v: Dict[str, float]) -> Dict[str, float]:
         if not v:
             raise ValueError("Feed composition cannot be empty")
+        if "protein" not in v:
+            raise ValueError("Feed composition must include protein content")
         if not all(isinstance(val, (int, float)) and val >= 0 for val in v.values()):
             raise ValueError("All composition values must be non-negative numbers")
         if abs(sum(v.values()) - 100.0) > 0.1:
@@ -44,6 +59,8 @@ class SeparationEfficiencyInput(BaseModel):
     def validate_product_composition(cls, v: Dict[str, float]) -> Dict[str, float]:
         if not v:
             raise ValueError("Product composition cannot be empty")
+        if "protein" not in v:
+            raise ValueError("Product composition must include protein content")
         if not all(isinstance(val, (int, float)) and val >= 0 for val in v.values()):
             raise ValueError("All composition values must be non-negative numbers")
         if abs(sum(v.values()) - 100.0) > 0.1:
@@ -60,6 +77,31 @@ class SeparationEfficiencyInput(BaseModel):
             raise ValueError("All mass flow values must be positive numbers")
         if v["output"] > v["input"]:
             raise ValueError("Output mass cannot be greater than input mass")
+        return v
+
+    @field_validator("process_data")
+    @classmethod
+    def validate_process_data(cls, v: Optional[List[Dict]], values) -> Optional[List[Dict]]:
+        if v is None:
+            return v
+            
+        for step in v:
+            required_keys = {"feed_composition", "product_composition", "mass_flow"}
+            if not all(key in step for key in required_keys):
+                raise ValueError(f"Each process step must contain: {required_keys}")
+                
+            # Validate references and allow processing_moisture
+            for key in step:
+                if key in required_keys:
+                    value = step[key]
+                    if isinstance(value, str) and value not in values.data:
+                        raise ValueError(f"Invalid reference '{value}' in process data")
+                elif key == "processing_moisture":
+                    if not isinstance(step[key], (int, float)):
+                        raise ValueError("Processing moisture must be numeric")
+                else:
+                    raise ValueError(f"Unexpected field '{key}' in process data")
+        
         return v
 
 

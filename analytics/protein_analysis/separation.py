@@ -92,6 +92,7 @@ class SeparationEfficiencyAnalyzer:
         feed_composition: Dict[str, float],
         product_composition: Dict[str, float],
         mass_flow: Dict[str, float],
+        processing_moisture: float
     ) -> Dict[str, float]:
         """
         Calculate separation efficiency metrics for a single stage.
@@ -119,6 +120,7 @@ class SeparationEfficiencyAnalyzer:
             feed_composition: Dict with component percentages in feed
             product_composition: Dict with component percentages in product
             mass_flow: Dict with input and output mass flows
+            processing_moisture: Float representing processing moisture level
 
         Returns:
             Dict containing:
@@ -155,10 +157,15 @@ class SeparationEfficiencyAnalyzer:
         if feed_composition["protein"] <= 0:
             raise ValueError("Feed protein content must be greater than 0")
         
-        separation_efficiency = (
-            (output_flow * product_composition["protein"])
-            / (input_flow * feed_composition["protein"])
-        ) * 100
+        protein_ratio = product_composition["protein"] / feed_composition["protein"]
+        mass_ratio = output_flow / input_flow
+        base_efficiency = protein_ratio * mass_ratio * 100
+        
+        # Moisture impact adjustment
+        optimal_moisture = 12.5  # Ideal processing moisture level
+        moisture_factor = 1 - abs(processing_moisture - optimal_moisture)*0.02
+        
+        separation_efficiency = max(0, min(100, base_efficiency * moisture_factor))
 
         # Calculate component recoveries with zero handling
         component_recoveries = {}
@@ -181,7 +188,6 @@ class SeparationEfficiencyAnalyzer:
                     component_recoveries[component] = recovery
 
         # Calculate separation factor with zero handling
-        protein_ratio = product_composition["protein"] / feed_composition["protein"]
         non_protein_feed = 100 - feed_composition["protein"]
         non_protein_product = 100 - product_composition["protein"]
         
@@ -202,7 +208,7 @@ class SeparationEfficiencyAnalyzer:
         }
 
     def analyze_process_performance(
-        self, process_data: List[Dict], target_purity: Optional[float] = None
+        self, process_data: List[Dict], target_purity: Optional[float] = None, parent_data: Optional[Dict] = None
     ) -> Dict[str, float]:
         """
         Analyze overall process performance across multiple separation stages.
@@ -226,6 +232,7 @@ class SeparationEfficiencyAnalyzer:
         Args:
             process_data: List of dicts containing step-wise process data
             target_purity: Target protein purity percentage
+            parent_data: Optional parent data structure containing referenced compositions
 
         Returns:
             Dict containing:
@@ -242,15 +249,40 @@ class SeparationEfficiencyAnalyzer:
         step_efficiencies = []
 
         for step in process_data:
-            # Calculate step efficiency
-            step_results = self.calculate_efficiency(
-                step["feed"], step["product"], step["mass_flow"]
-            )
+            # Get the referenced compositions and mass flow
+            try:
+                feed_comp = step.get("feed_composition", {})
+                product_comp = step.get("product_composition", {})
+                mass_flow_data = step.get("mass_flow", {})
+                processing_moisture = step.get("processing_moisture", 0.0)
 
-            # Update cumulative metrics
-            cumulative_efficiency *= step_results["separation_efficiency"] / 100
-            cumulative_enrichment += step_results["protein_enrichment"]
-            step_efficiencies.append(step_results["separation_efficiency"])
+                # If these are references and we have parent data, get from parent
+                if isinstance(feed_comp, str) and parent_data:
+                    feed_comp = parent_data.get(feed_comp, {})
+                if isinstance(product_comp, str) and parent_data:
+                    product_comp = parent_data.get(product_comp, {})
+                if isinstance(mass_flow_data, str) and parent_data:
+                    mass_flow_data = parent_data.get(mass_flow_data, {})
+
+                # Validate required protein content
+                if "protein" not in feed_comp or "protein" not in product_comp:
+                    raise ValueError("Compositions must include protein content")
+
+                # Calculate step efficiency
+                step_results = self.calculate_efficiency(
+                    feed_comp,
+                    product_comp,
+                    mass_flow_data,
+                    processing_moisture
+                )
+
+                # Update cumulative metrics
+                cumulative_efficiency *= step_results["separation_efficiency"] / 100
+                cumulative_enrichment += step_results["protein_enrichment"]
+                step_efficiencies.append(step_results["separation_efficiency"])
+
+            except (KeyError, TypeError) as e:
+                raise ValueError(f"Invalid process data structure: {str(e)}")
 
         # Calculate average step efficiency
         n_steps = len(process_data)
@@ -266,7 +298,17 @@ class SeparationEfficiencyAnalyzer:
         if target_purity is not None:
             if target_purity <= 0:
                 raise ValueError("Target purity must be positive")
-            final_purity = process_data[-1]["product"]["protein"]
+            
+            # Get final protein content from last step
+            final_step = process_data[-1]
+            final_product = final_step.get("product_composition", {})
+            if isinstance(final_product, str) and parent_data:
+                final_product = parent_data.get(final_product, {})
+            
+            final_purity = final_product.get("protein", 0)
+            if final_purity <= 0:
+                raise ValueError("Invalid final protein content")
+                
             purity_achievement = (final_purity / target_purity) * 100
             results["purity_achievement"] = min(purity_achievement, 100.0)  # Cap at 100%
 
@@ -312,7 +354,7 @@ class SeparationEfficiencyAnalyzer:
         # First pass: collect enrichments and efficiencies
         for step in process_data:
             results = self.calculate_efficiency(
-                step["feed"], step["product"], step["mass_flow"]
+                step["feed_composition"], step["product_composition"], step["mass_flow"], step["processing_moisture"]
             )
             enrichment = results["protein_enrichment"]
             efficiency = results["separation_efficiency"]
@@ -326,7 +368,7 @@ class SeparationEfficiencyAnalyzer:
         # Second pass: calculate contributions and ratios
         for step in process_data:
             results = self.calculate_efficiency(
-                step["feed"], step["product"], step["mass_flow"]
+                step["feed_composition"], step["product_composition"], step["mass_flow"], step["processing_moisture"]
             )
 
             # Calculate enrichment contribution

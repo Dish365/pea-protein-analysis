@@ -230,11 +230,11 @@ class RustHandler:
         """
         try:
             # Validate inputs
-            if not particle_sizes or not weights:
+            if len(particle_sizes) == 0 or len(weights) == 0:
                 raise ValueError("Particle sizes and weights cannot be empty")
             if len(particle_sizes) != len(weights):
                 raise ValueError("Particle sizes and weights must have the same length")
-            if any(not isinstance(x, (int, float)) for x in particle_sizes + weights):
+            if any(not isinstance(x, (int, float)) for x in particle_sizes) or any(not isinstance(x, (int, float)) for x in weights):
                 raise ValueError("All values must be numeric")
             if any(x <= 0 for x in particle_sizes):
                 raise ValueError("Particle sizes must be positive")

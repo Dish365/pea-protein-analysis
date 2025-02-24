@@ -1,0 +1,50 @@
+{
+  "recovery_metrics": {
+    "recovery_rate": 30.708666666666666,
+    "protein_loss": 311.81100000000004,
+    "concentration_factor": 1.4022222222222223,
+    "process_efficiency": 43.060374814814814,
+    "yield_gap": 40.60670575805599,
+    "improvement_potential": 56.939625185185186
+  },
+  "separation_metrics": {
+    "separation_factor": 2.090033122553448,
+    "protein_enrichment": 18.1,
+    "separation_efficiency": 30.708666666666666,
+    "component_recoveries": {
+      "protein": 30.708666666666666,
+      "starch": 14.32885714285714,
+      "fiber": 14.6,
+      "others": 17.52
+    },
+    "cumulative_efficiency": 30.708666666666666,
+    "cumulative_enrichment": 18.1,
+    "average_step_efficiency": 30.708666666666666,
+    "purity_achievement": 100.0
+  },
+  "particle_metrics": {
+    "D10": 100.0,
+    "D50": 88.5142857142857,
+    "D90": 89.25,
+    "span": 100.0,
+    "mean": 10.952,
+    "std_dev": 5.794664442398715,
+    "cv": 52.909646113940056,
+    "specific_surface_area": 2775.5314570848586,
+    "total_surface_area": 4.823112528504871e-06,
+    "mean_surface_area": 4.823112528504871e-06,
+    "pre_treatment_moisture": 13.6,
+    "post_treatment_moisture": 10.2,
+    "processing_moisture": 10.2,
+    "current_moisture": 10.2,
+    "d10": 2.42,
+    "d50": 7.14,
+    "d90": 17.85,
+    "overall": 94.44107142857143
+  },
+  "process_performance": {
+    "cumulative_efficiency": 30.708666666666666,
+    "average_step_efficiency": 30.708666666666666,
+    "purity_achievement": 100.0
+  }
+}

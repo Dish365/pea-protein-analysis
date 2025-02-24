@@ -123,10 +123,17 @@ class ProteinRecoveryCalculator:
         # Calculate concentration factor
         concentration_factor = output_protein_content / self.initial_protein_content
 
+        # New moisture compensation factor
+        moisture_factor = 1 + (0.05 * (output_protein_content - self.initial_protein_content) / 100)
+        
+        # Adjusted recovery calculation
+        adjusted_recovery = min(recovery_rate * moisture_factor, 100)
+
         return {
-            "recovery_rate": recovery_rate,
+            "recovery_rate": adjusted_recovery,
             "protein_loss": protein_loss,
             "concentration_factor": concentration_factor,
+            "moisture_compensation_factor": moisture_factor,
         }
 
     def estimate_yield(

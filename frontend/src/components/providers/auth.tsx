@@ -1,7 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
-import { User } from "@/types/user";
+import { createContext, useContext } from "react";
 import { useAuth, UseAuth } from "@/hooks/useAuth";
 
 const AuthContext = createContext<UseAuth | null>(null);

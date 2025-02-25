@@ -1,6 +1,6 @@
 // Environment configuration
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";  // Empty string for relative URLs
-export const API_V1_URL = `/api/v1`;  // Direct path to API v1
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""; // Base URL without trailing slash
+export const API_V1_URL = `${BASE_URL}/api/v1`; // Complete path to API v1
 
 // API Configuration
 export const API_CONFIG = {
@@ -13,10 +13,10 @@ export const API_CONFIG = {
 // API Endpoints
 export const API_ENDPOINTS = {
   protein: {
-    completeAnalysis: `${API_V1_URL}/protein/protein-analysis/complete-analysis/`,
-    recovery: `${API_V1_URL}/protein/protein-analysis/recovery/`,
-    separation: `${API_V1_URL}/protein/protein-analysis/separation/`,
-    particleSize: `${API_V1_URL}/protein/protein-analysis/particle-size/`,
+    completeAnalysis: `${API_V1_URL}/protein/protein-analysis/complete-analysis`,
+    recovery: `${API_V1_URL}/protein/protein-analysis/recovery`,
+    separation: `${API_V1_URL}/protein/protein-analysis/separation`,
+    particleSize: `${API_V1_URL}/protein/protein-analysis/particle-size`,
   },
   economic: {
     analyze: `${API_V1_URL}/economic/profitability/analyze/comprehensive`,

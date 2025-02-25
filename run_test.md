@@ -6,6 +6,9 @@ sudo systemctl restart nginx
 
 pm2 status && sudo systemctl status nginx fastapi.service
 
+cat /etc/systemd/system/fastapi.service 
+cat /etc/nginx/sites-available/fastapi
+
 
 # Integration tests
 pytest tests/api/process_analysis/test_integration.py -v --log-cli-level=DEBUG

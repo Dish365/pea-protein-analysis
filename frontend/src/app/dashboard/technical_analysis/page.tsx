@@ -1,63 +1,118 @@
 "use client";
 
-import React from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Activity, Construction, ArrowRight } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import Link from 'next/link';
+import React, { useState } from 'react';
+import TechnicalInputForm from "@/components/forms/TechnicalInputForm";
+import { TechnicalAnalysisView } from "@/features/analysis/technical/components/TechnicalAnalysisView";
+import { TechnicalParameters, TechnicalResults } from "@/types/technical";
+import { API_CONFIG, API_ENDPOINTS } from "@/config/api";
+import { useToast } from "@/components/ui/use-toast";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function TechnicalAnalysisPage() {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
-      <div className="relative">
-        <div className="absolute inset-0 animate-spin-slow">
-          <Activity className="w-24 h-24 text-blue-500/20" />
-        </div>
-        <Construction className="w-24 h-24 text-blue-500 relative" />
-      </div>
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [results, setResults] = useState<TechnicalResults | undefined>();
+  const [error, setError] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState<string>("input");
+  const { toast } = useToast();
+
+  const handleAnalysis = async (parameters: TechnicalParameters) => {
+    setIsAnalyzing(true);
+    setError(undefined);
+    
+    try {
+      console.log('Sending analysis request with parameters:', parameters);
+
+      const response = await fetch(API_ENDPOINTS.protein.completeAnalysis, {
+        method: 'POST',
+        headers: API_CONFIG.headers,
+        body: JSON.stringify({
+          recovery_input: {
+            input_mass: parameters.input_mass,
+            output_mass: parameters.output_mass,
+            initial_protein_content: parameters.initial_protein_content,
+            output_protein_content: parameters.output_protein_content,
+            process_type: parameters.process_type,
+            moisture_compensation_factor: parameters.moisture_compensation_factor,
+            initial_moisture: parameters.initial_moisture,
+            final_moisture: parameters.final_moisture
+          },
+          separation_input: {
+            feed_composition: parameters.feed_composition,
+            product_composition: parameters.product_composition,
+            mass_flow: parameters.mass_flow,
+            process_data: [{
+              feed_composition: parameters.feed_composition,
+              product_composition: parameters.product_composition,
+              mass_flow: parameters.mass_flow,
+              processing_moisture: parameters.final_moisture
+            }],
+            target_purity: parameters.target_purity
+          },
+          particle_input: {
+            particle_sizes: parameters.particle_sizes,
+            weights: parameters.weights,
+            density: parameters.density,
+            target_ranges: parameters.target_ranges,
+            initial_moisture: parameters.initial_moisture,
+            final_moisture: parameters.final_moisture,
+            treatment_type: parameters.treatment_type
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Analysis failed:', errorData);
+        throw new Error(errorData.detail?.message || errorData.detail || 'Analysis failed');
+      }
+
+      const data = await response.json();
+      console.log('Analysis results:', data);
+      setResults(data);
+      setActiveTab("results");
       
-      <div className="space-y-2 max-w-[500px]">
-        <h2 className="text-2xl font-bold tracking-tight">
-          Technical Analysis Coming Soon
-        </h2>
-        <p className="text-muted-foreground">
-          We're working hard to bring you comprehensive technical analysis tools for process optimization, 
-          efficiency metrics, and performance indicators. Stay tuned for updates!
-        </p>
-      </div>
+      toast({
+        title: "Analysis Complete",
+        description: "Technical analysis results are ready for review.",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to perform analysis';
+      console.error('Analysis error:', err);
+      setError(message);
+      toast({
+        variant: "destructive",
+        title: "Analysis Failed",
+        description: message,
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
-      <div className="flex flex-col items-center gap-4 mt-4">
-        <div className="text-sm text-muted-foreground">
-          Expected features:
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm max-w-[600px]">
-          <Card className="bg-muted/50">
-            <CardContent className="p-4 flex items-start gap-3">
-              <Activity className="w-5 h-5 text-blue-500 mt-0.5" />
-              <div className="text-left">
-                <p className="font-medium">Process Efficiency Analysis</p>
-                <p className="text-muted-foreground">Detailed metrics and optimization recommendations</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-muted/50">
-            <CardContent className="p-4 flex items-start gap-3">
-              <Activity className="w-5 h-5 text-blue-500 mt-0.5" />
-              <div className="text-left">
-                <p className="font-medium">Performance Monitoring</p>
-                <p className="text-muted-foreground">Real-time tracking and analysis tools</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-2 mb-6">
+        <TabsTrigger value="input">Input Parameters</TabsTrigger>
+        <TabsTrigger value="results" disabled={!results}>Analysis Results</TabsTrigger>
+      </TabsList>
 
-      <Button asChild className="mt-8">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          Return to Dashboard
-          <ArrowRight className="w-4 h-4" />
-        </Link>
-      </Button>
-    </div>
+      <TabsContent value="input" className="space-y-6">
+        <Card className="p-6">
+          <TechnicalInputForm
+            onSubmit={handleAnalysis}
+            isSubmitting={isAnalyzing}
+          />
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="results" className="space-y-6">
+        <TechnicalAnalysisView
+          data={results}
+          isLoading={isAnalyzing}
+          error={error}
+        />
+      </TabsContent>
+    </Tabs>
   );
 }

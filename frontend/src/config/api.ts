@@ -12,6 +12,12 @@ export const API_CONFIG = {
 
 // API Endpoints
 export const API_ENDPOINTS = {
+  protein: {
+    completeAnalysis: `${API_V1_URL}/protein/protein-analysis/complete-analysis/`,
+    recovery: `${API_V1_URL}/protein/protein-analysis/recovery/`,
+    separation: `${API_V1_URL}/protein/protein-analysis/separation/`,
+    particleSize: `${API_V1_URL}/protein/protein-analysis/particle-size/`,
+  },
   economic: {
     analyze: `${API_V1_URL}/economic/profitability/analyze/comprehensive`,
   },

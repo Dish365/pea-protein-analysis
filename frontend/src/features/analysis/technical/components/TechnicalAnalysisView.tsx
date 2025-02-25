@@ -1,14 +1,16 @@
 "use client";
 
 import React from 'react';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, TrendingUp, Droplets, PieChart, BarChart3, Gauge, ArrowUpRight } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TechnicalResults } from '@/types/technical';
 import { EfficiencyMetrics } from './EfficiencyMetrics';
 import { ProteinRecoveryCard } from './ProteinRecoveryCard';
 import { ParticleSizeDisplay } from './ParticleSizeDisplay';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import { motion } from 'framer-motion';
 
 interface TechnicalAnalysisViewProps {
   data?: TechnicalResults;
@@ -24,30 +26,13 @@ export function TechnicalAnalysisView({
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="p-6">
-            <div className="flex items-center space-x-4">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[200px]" />
-                <Skeleton className="h-4 w-[150px]" />
-              </div>
-            </div>
-          </Card>
-          <Card className="p-6">
-            <div className="space-y-4">
-              <Skeleton className="h-4 w-[250px]" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[200px]" />
-                <Skeleton className="h-4 w-[180px]" />
-              </div>
-            </div>
-          </Card>
-        </div>
         <Card className="p-6">
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-[300px]" />
-            <div className="h-[200px] bg-muted rounded-md" />
+          <div className="flex items-center space-x-4">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-[200px]" />
+              <Skeleton className="h-4 w-[150px]" />
+            </div>
           </div>
         </Card>
       </div>
@@ -85,22 +70,18 @@ export function TechnicalAnalysisView({
   }
 
   const { 
-    protein_recovery: proteinRecovery, 
-    separation_efficiency: separationEfficiency, 
-    process_efficiency: processEfficiency, 
-    particle_size_distribution: particleSizeDistribution 
+    recovery_metrics,
+    separation_metrics,
+    particle_metrics,
+    process_performance
   } = data;
 
-  const hasValidData = proteinRecovery && 
-    typeof proteinRecovery.mass === 'number' &&
-    typeof proteinRecovery.content === 'number' &&
-    typeof proteinRecovery.yield === 'number' &&
-    typeof separationEfficiency === 'number' && 
-    typeof processEfficiency === 'number' && 
-    particleSizeDistribution &&
-    typeof particleSizeDistribution.d10 === 'number' &&
-    typeof particleSizeDistribution.d50 === 'number' &&
-    typeof particleSizeDistribution.d90 === 'number';
+  const hasValidData = recovery_metrics && 
+    separation_metrics && 
+    particle_metrics &&
+    typeof recovery_metrics.recovery_rate === 'number' &&
+    typeof separation_metrics.separation_efficiency === 'number' &&
+    typeof particle_metrics.d10 === 'number';
 
   if (!hasValidData) {
     return (
@@ -115,17 +96,110 @@ export function TechnicalAnalysisView({
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-8 max-w-7xl mx-auto px-4"
+    >
+      {/* Main Analysis Cards */}
       <div className="grid gap-6 md:grid-cols-2">
-        <ProteinRecoveryCard recovery={proteinRecovery} />
-        <EfficiencyMetrics
-          separationEfficiency={separationEfficiency}
-          processEfficiency={processEfficiency}
-          proteinYield={proteinRecovery.yield}
-        />
+        <motion.div
+          initial={{ y: 20 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <ProteinRecoveryCard recovery={recovery_metrics} />
+        </motion.div>
+
+        <motion.div
+          initial={{ y: 20 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <EfficiencyMetrics metrics={separation_metrics} />
+        </motion.div>
       </div>
-      <ParticleSizeDisplay distribution={particleSizeDistribution} />
-    </div>
+
+      {/* Process Performance Card */}
+      {process_performance && (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card className="border-none shadow-lg bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <Gauge className="h-5 w-5 text-green-500" />
+                <CardTitle>Overall Process Performance</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 sm:grid-cols-3">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-2"
+                >
+                  <p className="text-sm text-green-600 dark:text-green-300">Cumulative Efficiency</p>
+                  <p className="text-3xl font-bold text-green-900 dark:text-green-100">
+                    {process_performance.cumulative_efficiency.toFixed(1)}%
+                  </p>
+                  <Progress 
+                    value={process_performance.cumulative_efficiency} 
+                    className="h-2 bg-green-100 dark:bg-green-900"
+                    indicatorClassName="bg-gradient-to-r from-green-500 to-emerald-500" 
+                  />
+                </motion.div>
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                  className="space-y-2"
+                >
+                  <p className="text-sm text-green-600 dark:text-green-300">Average Step Efficiency</p>
+                  <p className="text-3xl font-bold text-green-900 dark:text-green-100">
+                    {process_performance.average_step_efficiency.toFixed(1)}%
+                  </p>
+                  <Progress 
+                    value={process_performance.average_step_efficiency} 
+                    className="h-2 bg-green-100 dark:bg-green-900"
+                    indicatorClassName="bg-gradient-to-r from-green-500 to-emerald-500" 
+                  />
+                </motion.div>
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  className="space-y-2"
+                >
+                  <p className="text-sm text-green-600 dark:text-green-300">Purity Achievement</p>
+                  <p className="text-3xl font-bold text-green-900 dark:text-green-100">
+                    {process_performance.purity_achievement.toFixed(1)}%
+                  </p>
+                  <Progress 
+                    value={process_performance.purity_achievement} 
+                    className="h-2 bg-green-100 dark:bg-green-900"
+                    indicatorClassName="bg-gradient-to-r from-green-500 to-emerald-500" 
+                  />
+                </motion.div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Particle Size Analysis */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <ParticleSizeDisplay metrics={particle_metrics} />
+      </motion.div>
+    </motion.div>
   );
 }
 

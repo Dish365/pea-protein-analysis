@@ -6,7 +6,9 @@ This module initializes and configures the FastAPI application with all its rout
 
 import logging
 import sys
+import os
 from typing import Dict, Any, Optional
+from pathlib import Path
 
 # Configure logging before any imports
 logging.basicConfig(
@@ -36,8 +38,10 @@ for name in [
 logger = logging.getLogger('backend.fastapi_app.main')
 
 # Now import the rest of the modules
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 
@@ -104,7 +108,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],  # In production, you should specify the exact origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -238,6 +242,29 @@ async def analyze_process(
 # Include all routers in the main app
 app.include_router(api_router)
 app.include_router(process_router)
+
+# Static file handling - for serving frontend files
+# Define the path to the frontend build directory (adjust as needed)
+frontend_dir = Path(__file__).resolve().parents[3] / "frontend" / ".next"
+
+# Serve frontend static files if the directory exists
+if frontend_dir.exists():
+    app.mount("/_next", StaticFiles(directory=str(frontend_dir / "static")), name="static")
+    
+    @app.get("/{path:path}", include_in_schema=False)
+    async def serve_frontend(request: Request, path: str):
+        # First, check if it's requesting an API endpoint
+        if path.startswith("api/"):
+            # Let the API routers handle it
+            return None
+            
+        # For everything else, return the default response
+        return {
+            "message": "Welcome to the Process Analysis API",
+            "version": "1.0.0",
+            "docs_url": "/docs",
+            "note": "Frontend server is not running. Please start the Next.js server or access the API directly."
+        }
 
 @app.get("/")
 async def root():

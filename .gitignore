@@ -141,3 +141,10 @@ tests/
 
 # infodocs
 info_docs/
+
+# Analysis Files
+technical_comprehensive.py
+technical_analysis_results.json
+economic_comprehensive.py
+environmental_analysis_results.json
+environmental_comprehensive.py

@@ -220,7 +220,13 @@ async def analyze_process(
             
         response_data = ProcessAnalysisResponse(
             status="success",
-            impact_results=detailed_results,
+            impact_results={
+                **detailed_results,
+                "metadata": {
+                    **detailed_results["metadata"],
+                    "mass_flows": analysis_request.mass_flows or {}
+                }
+            },
             allocation_results=allocation_results,
             suggested_allocation_method=suggested_method,
             rf_validation=rf_validation

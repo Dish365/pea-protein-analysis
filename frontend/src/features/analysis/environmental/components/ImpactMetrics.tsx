@@ -9,11 +9,14 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
   TooltipProps,
 } from 'recharts';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ImpactMetricsProps {
   impactResults: ImpactResults;
@@ -36,6 +39,9 @@ interface ChartEntry {
   };
 }
 
+// Replace the existing ImpactKey type with:
+type ImpactKey = 'gwp' | 'hct' | 'frs' | 'water_consumption';
+
 export function ImpactMetrics({
   impactResults,
   allocationResults,
@@ -46,153 +52,251 @@ export function ImpactMetrics({
   const totalImpactData = [
     {
       name: 'Global Warming',
-      value: total_impacts.gwp,
-      unit: 'kg CO₂e',
-      description: 'Global Warming Potential',
+      value: total_impacts.gwp / impactResults.metadata.total_mass,
+      unit: 'kg CO₂e/kg',
+      description: 'Global Warming Potential per kg product',
     },
     {
       name: 'Human Toxicity',
-      value: total_impacts.hct,
-      unit: 'CTUh',
-      description: 'Human Toxicity Potential',
+      value: total_impacts.hct / impactResults.metadata.total_mass,
+      unit: 'CTUh/kg',
+      description: 'Human Toxicity Potential per kg product',
     },
     {
       name: 'Resource Scarcity',
-      value: total_impacts.frs,
-      unit: 'kg oil eq',
-      description: 'Fossil Resource Scarcity',
+      value: total_impacts.frs / impactResults.metadata.total_mass,
+      unit: 'kg oil eq/kg',
+      description: 'Fossil Resource Scarcity per kg product',
     },
     {
       name: 'Water Consumption',
-      value: total_impacts.water_consumption,
-      unit: 'kg',
-      description: 'Total Water Consumption',
+      value: total_impacts.water_consumption / impactResults.metadata.total_mass,
+      unit: 'kg/kg',
+      description: 'Water Consumption per kg product',
     },
   ];
 
   // Format allocation data
-  const allocationData = Object.entries(allocationResults.allocated_impacts.gwp).map(([product, value]) => ({
-    product,
-    gwp: value,
-    hct: allocationResults.allocated_impacts.hct[product],
-    frs: allocationResults.allocated_impacts.frs[product],
-    water: allocationResults.allocated_impacts.water_consumption[product],
-  }));
+  const allocationData = [
+    {
+      name: 'Protein Concentrate',
+      gwp: allocationResults.allocated_impacts.gwp.protein_concentrate / impactResults.metadata.mass_flows.protein_concentrate,
+      hct: allocationResults.allocated_impacts.hct.protein_concentrate / impactResults.metadata.mass_flows.protein_concentrate,
+      frs: allocationResults.allocated_impacts.frs.protein_concentrate / impactResults.metadata.mass_flows.protein_concentrate,
+      water: allocationResults.allocated_impacts.water_consumption.protein_concentrate / impactResults.metadata.mass_flows.protein_concentrate,
+    },
+    {
+      name: 'Starch',
+      gwp: allocationResults.allocated_impacts.gwp.starch / impactResults.metadata.mass_flows.starch,
+      hct: allocationResults.allocated_impacts.hct.starch / impactResults.metadata.mass_flows.starch,
+      frs: allocationResults.allocated_impacts.frs.starch / impactResults.metadata.mass_flows.starch,
+      water: allocationResults.allocated_impacts.water_consumption.starch / impactResults.metadata.mass_flows.starch,
+    },
+    {
+      name: 'Fiber',
+      gwp: allocationResults.allocated_impacts.gwp.fiber / impactResults.metadata.mass_flows.fiber,
+      hct: allocationResults.allocated_impacts.hct.fiber / impactResults.metadata.mass_flows.fiber,
+      frs: allocationResults.allocated_impacts.frs.fiber / impactResults.metadata.mass_flows.fiber,
+      water: allocationResults.allocated_impacts.water_consumption.fiber / impactResults.metadata.mass_flows.fiber,
+    }
+  ];
+
+  // Update the impact benchmarks section
+  const impactBenchmarks = {
+    gwp: { 
+      key: 'gwp',
+      label: 'Global Warming',
+      value: 0.45, 
+      unit: 'kg CO₂e/kg',
+      description: 'Carbon dioxide equivalent emissions per kg product'
+    },
+    water_consumption: { 
+      key: 'water_consumption',
+      label: 'Water',
+      value: 4.5, 
+      unit: 'kg/kg',
+      description: 'Process water consumption per kg product'
+    },
+    frs: { 
+      key: 'frs',
+      label: 'Resource Scarcity',
+      value: 0.25, 
+      unit: 'kg oil eq/kg',
+      description: 'Fossil resource scarcity per kg product'
+    },
+    hct: { 
+      key: 'hct',
+      label: 'Human Toxicity',
+      value: 2.5e-5, 
+      unit: 'CTUh/kg',
+      description: 'Comparative toxic units for human health per kg product'
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Impact Assessment</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Allocation Method: {allocationResults.method_used}
-        </p>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {/* Total Impacts Chart */}
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={totalImpactData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload as ChartTooltipData;
-                      return (
-                        <div className="rounded-lg bg-white p-2 shadow-md border">
-                          <p className="font-medium">{data.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {data.description}
-                          </p>
-                          <p className="mt-1 font-medium">
-                            {data.value.toFixed(2)} {data.unit}
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar
-                  dataKey="value"
-                  fill="#10b981"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Allocated Impacts Chart */}
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={allocationData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="product" />
-                <YAxis />
-                <Tooltip
-                  content={({ active, payload, label }: TooltipProps<number, string>) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="rounded-lg bg-white p-2 shadow-md border">
-                          <p className="font-medium capitalize">{String(label).replace('_', ' ')}</p>
-                          {payload.map((entry) => {
-                            if (!entry.dataKey) return null;
-                            const value = entry.payload && typeof entry.payload === 'object' 
-                              ? (entry.payload as Record<string, number>)[entry.dataKey]
-                              : 0;
-                            return (
-                              <p key={entry.dataKey} className="text-sm">
-                                {String(entry.dataKey).toUpperCase()}: {value.toFixed(2)}
-                              </p>
-                            );
-                          })}
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="gwp" name="GWP" fill="#10b981" stackId="a" />
-                <Bar dataKey="hct" name="HCT" fill="#3b82f6" stackId="a" />
-                <Bar dataKey="frs" name="FRS" fill="#6366f1" stackId="a" />
-                <Bar dataKey="water" name="Water" fill="#0ea5e9" stackId="a" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Summary Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {totalImpactData.map((impact) => (
-              <div key={impact.name} className="text-center">
-                <p className="text-sm font-medium text-muted-foreground">{impact.name}</p>
-                <p className="text-lg font-semibold">
-                  {impact.value.toFixed(2)} {impact.unit}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Allocation Factors */}
-          <div className="mt-6">
-            <h3 className="font-medium mb-3">Allocation Factors</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {Object.entries(allocationResults.allocation_factors).map(([product, factor]) => (
-                <div key={product} className="text-center p-2 bg-muted rounded-lg">
-                  <p className="text-sm font-medium capitalize">
-                    {product.replace(/_/g, ' ')}
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CardTitle>Product Impact Allocation</CardTitle>
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">
+                    Environmental impacts allocated to each product stream using {allocationResults.method_used} allocation.
+                    All values are normalized per kg of product.
                   </p>
-                  <p className="text-lg font-semibold">
-                    {(factor * 100).toFixed(1)}%
-                  </p>
-                </div>
-              ))}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Method: {allocationResults.method_used}
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* GWP Chart */}
+            <div className="h-[300px]">
+              <h3 className="text-sm font-medium mb-2">Global Warming Potential</h3>
+              <ResponsiveContainer>
+                <BarChart data={allocationData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis label={{ value: 'kg CO₂e/kg product', angle: -90, position: 'insideLeft' }} />
+                  <RechartsTooltip />
+                  <Bar dataKey="gwp" fill="#10b981" name="GWP" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Water Consumption Chart */}
+            <div className="h-[300px]">
+              <h3 className="text-sm font-medium mb-2">Water Consumption</h3>
+              <ResponsiveContainer>
+                <BarChart data={allocationData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis label={{ value: 'kg water/kg product', angle: -90, position: 'insideLeft' }} />
+                  <RechartsTooltip />
+                  <Bar dataKey="water" fill="#0ea5e9" name="Water" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Resource Scarcity Chart */}
+            <div className="h-[300px]">
+              <h3 className="text-sm font-medium mb-2">Resource Scarcity</h3>
+              <ResponsiveContainer>
+                <BarChart data={allocationData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis label={{ value: 'kg oil eq/kg product', angle: -90, position: 'insideLeft' }} />
+                  <RechartsTooltip />
+                  <Bar dataKey="frs" fill="#6366f1" name="FRS" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Human Toxicity Chart */}
+            <div className="h-[300px]">
+              <h3 className="text-sm font-medium mb-2">Human Toxicity</h3>
+              <ResponsiveContainer>
+                <BarChart data={allocationData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis label={{ value: 'CTUh/kg product', angle: -90, position: 'insideLeft' }} />
+                  <RechartsTooltip />
+                  <Bar dataKey="hct" fill="#3b82f6" name="HCT" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Add Allocation Factors Table */}
+          <div className="mt-6">
+            <h3 className="text-sm font-medium mb-2">Allocation Factors</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Mass Flow (kg)</TableHead>
+                  <TableHead>Allocation Factor</TableHead>
+                  <TableHead>Impact Share</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(allocationResults.allocation_factors).map(([product, factor]) => (
+                  <TableRow key={product}>
+                    <TableCell className="font-medium capitalize">
+                      {product.replace(/_/g, ' ')}
+                    </TableCell>
+                    <TableCell>
+                      {impactResults.metadata.mass_flows[product]}
+                    </TableCell>
+                    <TableCell>
+                      {(factor * 100).toFixed(1)}%
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-2 rounded-full bg-gray-200">
+                          <div 
+                            className="h-full rounded-full bg-primary"
+                            style={{ width: `${factor * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {(factor * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Add Impact Benchmarks */}
+          <div className="mt-6">
+            <h3 className="text-sm font-medium mb-2">Impact Benchmarks</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.values(impactBenchmarks).map((benchmark) => {
+                const currentValue = total_impacts[benchmark.key as ImpactKey] / impactResults.metadata.total_mass;
+                const isWithinBenchmark = currentValue <= benchmark.value;
+                const formattedValue = benchmark.key === 'hct' 
+                  ? currentValue.toExponential(2) 
+                  : currentValue.toFixed(2);
+                
+                return (
+                  <div key={benchmark.key} className="p-4 bg-muted rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{benchmark.label}</span>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">{benchmark.description}</p>
+                          <p className="text-sm mt-1">Benchmark: {benchmark.value} {benchmark.unit}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <p className="text-2xl font-semibold mt-2">
+                      {formattedValue} {benchmark.unit}
+                    </p>
+                    <p className={`text-sm mt-1 ${isWithinBenchmark ? 'text-green-600' : 'text-amber-600'}`}>
+                      {isWithinBenchmark ? 'Within Benchmark' : 'Above Benchmark'}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 } 

@@ -86,9 +86,9 @@ class DetailedImpactResults(TypedDict):
     """Detailed impact results including process contributions"""
     total_impacts: ImpactResults
     process_contributions: Dict[str, Dict[str, ProcessContribution]]
-    metadata: Dict[str, float]
-    rf_parameters: Dict[str, float]  # RF-specific parameters
-    process_breakdown: Dict[str, float]  # Process step contributions
+    metadata: Dict[str, Union[float, Dict[str, float]]]
+    rf_parameters: Dict[str, float]
+    process_breakdown: Dict[str, float]
 
 class AllocationWeights(BaseModel):
     """Weights for hybrid allocation."""
@@ -137,11 +137,20 @@ class ProcessAnalysisResponse(BaseModel):
     impact_results: DetailedImpactResults
     allocation_results: Optional[AllocationResults] = None
     suggested_allocation_method: Optional[AllocationMethod] = None
-    rf_validation: Dict[str, Any] = Field(
-        default_factory=lambda: {
-            "moisture_reduction": 0.0,
-            "energy_efficiency": 0.0,
-            "process_contribution": 0.0
-        },
-        description="RF process validation metrics"
-    ) 
+    rf_validation: Dict[str, Any]
+
+    @model_validator(mode='after')
+    def validate_impact_results(self) -> 'ProcessAnalysisResponse':
+        if not isinstance(self.impact_results, dict):
+            raise ValueError("impact_results must be a dictionary")
+        if "total_impacts" not in self.impact_results:
+            raise ValueError("impact_results must contain total_impacts")
+        if "process_contributions" not in self.impact_results:
+            raise ValueError("impact_results must contain process_contributions")
+        if "metadata" not in self.impact_results:
+            raise ValueError("impact_results must contain metadata")
+        if "rf_parameters" not in self.impact_results:
+            raise ValueError("impact_results must contain rf_parameters")
+        if "process_breakdown" not in self.impact_results:
+            raise ValueError("impact_results must contain process_breakdown")
+        return self 

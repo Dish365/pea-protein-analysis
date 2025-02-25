@@ -41,7 +41,40 @@ class SeparationEfficiencyAnalyzer:
        ηₒᵥ = η₁ * η₂ * ... * ηₙ
        where:
        - ηᵢ = Efficiency of stage i
+
+    Moisture Content Parameters:
+    -------------------------
+    - Optimal processing moisture: 12.5%
+    - Moisture impact factor: 0.02 per percentage point deviation
     """
+    
+    # Class-level constants for moisture parameters
+    OPTIMAL_PROCESSING_MOISTURE = 12.5  # Optimal moisture content for processing
+    MOISTURE_IMPACT_FACTOR = 0.02      # Impact on efficiency per percentage point deviation
+    
+    def __init__(self, optimal_moisture: float = OPTIMAL_PROCESSING_MOISTURE, 
+                 moisture_impact: float = MOISTURE_IMPACT_FACTOR):
+        """
+        Initialize the analyzer with configurable moisture parameters.
+        
+        Args:
+            optimal_moisture: Optimal moisture content percentage (default: 12.5%)
+            moisture_impact: Impact factor per percentage point deviation (default: 0.02)
+        """
+        self.optimal_moisture = optimal_moisture
+        self.moisture_impact = moisture_impact
+        
+    def calculate_moisture_factor(self, processing_moisture: float) -> float:
+        """
+        Calculate the moisture impact factor.
+        
+        Args:
+            processing_moisture: Current processing moisture content
+            
+        Returns:
+            float: Moisture adjustment factor (0-1)
+        """
+        return 1 - abs(processing_moisture - self.optimal_moisture) * self.moisture_impact
 
     def _validate_composition(self, composition: Dict[str, float]) -> None:
         """
@@ -162,8 +195,7 @@ class SeparationEfficiencyAnalyzer:
         base_efficiency = protein_ratio * mass_ratio * 100
         
         # Moisture impact adjustment
-        optimal_moisture = 12.5  # Ideal processing moisture level
-        moisture_factor = 1 - abs(processing_moisture - optimal_moisture)*0.02
+        moisture_factor = self.calculate_moisture_factor(processing_moisture)
         
         separation_efficiency = max(0, min(100, base_efficiency * moisture_factor))
 

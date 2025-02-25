@@ -1,4 +1,4 @@
-from typing import Dict, TypedDict, List, Optional
+from typing import Dict, TypedDict, List, Optional, Union
 from dataclasses import dataclass
 from ..impact.gwp import GWPCalculator
 from ..impact.hct import HCTCalculator
@@ -43,8 +43,8 @@ class DetailedImpactResults(TypedDict):
     """Type definition for detailed impact results including process contributions"""
     total_impacts: ImpactResults
     process_contributions: Dict[str, Dict[str, ProcessContribution]]
-    metadata: Dict[str, float]
-    rf_parameters: Dict[str, float]  # Added RF-specific parameters
+    metadata: Dict[str, Union[float, Dict[str, float]]]
+    rf_parameters: Dict[str, float]
 
 class ImpactCalculator:
     """Environmental Impact Calculator Service"""

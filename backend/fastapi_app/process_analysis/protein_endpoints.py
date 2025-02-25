@@ -122,36 +122,83 @@ async def analyze_separation_efficiency(
     background_tasks: BackgroundTasks
 ):
     """Analyze separation efficiency"""
-    logger.info("Processing separation efficiency analysis")
-    logger.debug(f"Separation input data: {input_data.dict()}")
+    request_id = f"req_{hash(str(input_data))}"[-8:]  # Generate request ID for tracing
+    logger.info(f"[{request_id}] Starting separation efficiency analysis")
+    logger.debug(f"[{request_id}] Input data validation starting")
     
     try:
+        # Validate input ranges
+        for component, value in input_data.feed_composition.items():
+            logger.debug(f"[{request_id}] Validating feed component {component}: {value}%")
+            if not 0 <= value <= 100:
+                raise ValueError(f"Feed component {component} value {value}% outside valid range (0-100%)")
+                
+        for component, value in input_data.product_composition.items():
+            logger.debug(f"[{request_id}] Validating product component {component}: {value}%")
+            if not 0 <= value <= 100:
+                raise ValueError(f"Product component {component} value {value}% outside valid range (0-100%)")
+        
+        logger.debug(f"[{request_id}] Validating mass flows - input: {input_data.mass_flow['input']}, output: {input_data.mass_flow['output']}")
+        if input_data.mass_flow['output'] > input_data.mass_flow['input']:
+            raise ValueError("Output mass cannot exceed input mass")
+            
         analyzer = SeparationEfficiencyAnalyzer()
-        logger.debug("SeparationEfficiencyAnalyzer initialized")
+        logger.debug(f"[{request_id}] SeparationEfficiencyAnalyzer initialized")
+
+        # Get and validate processing moisture
+        if not input_data.process_data or not input_data.process_data[0].get("processing_moisture"):
+            logger.error(f"[{request_id}] Missing processing moisture in process data")
+            raise ValueError("Processing moisture is required in the first process step")
+            
+        processing_moisture = input_data.process_data[0]["processing_moisture"]
+        logger.debug(f"[{request_id}] Processing moisture: {processing_moisture}%")
+        if not 0 <= processing_moisture <= 100:
+            raise ValueError(f"Processing moisture {processing_moisture}% outside valid range (0-100%)")
 
         # Calculate basic efficiency
-        logger.debug("Calculating basic efficiency metrics...")
+        logger.debug(f"[{request_id}] Calculating basic efficiency metrics...")
         efficiency_results = analyzer.calculate_efficiency(
             feed_composition=input_data.feed_composition,
             product_composition=input_data.product_composition,
             mass_flow=input_data.mass_flow,
+            processing_moisture=processing_moisture
         )
-        logger.debug(f"Basic efficiency results: {efficiency_results}")
+        logger.debug(f"[{request_id}] Basic efficiency results: {json.dumps(efficiency_results, indent=2)}")
+
+        # Convert numpy types to Python types and ensure all metrics are properly typed as floats
+        for key in ['separation_factor', 'protein_enrichment', 'separation_efficiency']:
+            if key in efficiency_results:
+                value = efficiency_results[key]
+                if hasattr(value, 'item'):  # Check if numpy type
+                    value = value.item()
+                efficiency_results[key] = float(value)
+                logger.debug(f"[{request_id}] Converted {key}: {efficiency_results[key]}")
 
         # Process component recoveries
         if "component_recoveries" in efficiency_results:
             component_order = list(input_data.feed_composition.keys())
-            logger.debug(f"Processing component recoveries with order: {component_order}")
+            logger.debug(f"[{request_id}] Processing component recoveries with order: {component_order}")
             efficiency_results["component_recoveries"] = {
                 k: float(efficiency_results["component_recoveries"][k])
                 for k in component_order
                 if k in efficiency_results["component_recoveries"]
             }
-            logger.debug(f"Processed component recoveries: {efficiency_results['component_recoveries']}")
+            logger.debug(f"[{request_id}] Processed component recoveries: {json.dumps(efficiency_results['component_recoveries'], indent=2)}")
+
+        # Add moisture-related metrics
+        efficiency_results["processing_moisture"] = float(processing_moisture)
+        moisture_impact = analyzer.calculate_moisture_factor(processing_moisture)
+        efficiency_results["moisture_impact"] = float(moisture_impact)
+        efficiency_results["optimal_moisture"] = float(analyzer.OPTIMAL_PROCESSING_MOISTURE)
+        efficiency_results["moisture_impact_factor"] = float(analyzer.MOISTURE_IMPACT_FACTOR)
+        
+        logger.debug(f"[{request_id}] Moisture metrics - Impact: {moisture_impact:.3f}, Optimal: {analyzer.OPTIMAL_PROCESSING_MOISTURE}%")
+        if moisture_impact < 0.95:
+            logger.warning(f"[{request_id}] Low moisture impact factor: {moisture_impact:.3f} - Process efficiency may be compromised")
 
         # Analyze process performance if data provided
         if input_data.process_data and input_data.target_purity:
-            logger.debug("Analyzing process performance with additional data...")
+            logger.debug(f"[{request_id}] Analyzing process performance with target purity: {input_data.target_purity}%")
             try:
                 # Create parent data dictionary for references
                 parent_data = {
@@ -165,33 +212,48 @@ async def analyze_separation_efficiency(
                     target_purity=input_data.target_purity,
                     parent_data=parent_data
                 )
+                
+                # Convert numpy types and ensure all performance metrics are properly typed as floats
+                for key in ['cumulative_efficiency', 'cumulative_enrichment', 'average_step_efficiency', 'purity_achievement']:
+                    if key in performance_results:
+                        value = performance_results[key]
+                        if hasattr(value, 'item'):
+                            value = value.item()
+                        performance_results[key] = float(value)
+                        logger.debug(f"[{request_id}] Performance metric {key}: {performance_results[key]}")
+                
                 efficiency_results.update(performance_results)
-                logger.debug(f"Performance analysis results: {performance_results}")
 
                 # Calculate stage contributions if multiple stages
                 if len(input_data.process_data) > 1:
-                    logger.debug("Calculating multi-stage contributions...")
+                    logger.debug(f"[{request_id}] Calculating multi-stage contributions for {len(input_data.process_data)} stages")
                     stage_results = analyzer.calculate_stage_contributions(
                         process_data=input_data.process_data
                     )
+                    
+                    # Convert numpy types and ensure all stage analysis values are floats
+                    for key, values in stage_results.items():
+                        stage_results[key] = [float(v.item() if hasattr(v, 'item') else v) for v in values]
+                        logger.debug(f"[{request_id}] Stage analysis {key}: {stage_results[key]}")
+                    
                     efficiency_results["stage_analysis"] = stage_results
-                    logger.debug(f"Stage analysis results: {stage_results}")
+
             except Exception as e:
-                logger.error(f"Error in process performance analysis: {str(e)}", exc_info=True)
+                logger.error(f"[{request_id}] Error in process performance analysis: {str(e)}", exc_info=True)
                 raise
 
         # Add cleanup task
-        background_tasks.add_task(logger.info, f"Completed separation analysis")
+        background_tasks.add_task(logger.info, f"[{request_id}] Completed separation analysis")
         
-        logger.info("Successfully completed separation efficiency analysis")
-        logger.debug(f"Final separation results: {efficiency_results}")
+        logger.info(f"[{request_id}] Successfully completed separation efficiency analysis")
+        logger.debug(f"[{request_id}] Final results: {json.dumps(efficiency_results, indent=2, default=str)}")
         return efficiency_results
 
     except ValueError as ve:
-        logger.error(f"Validation error in separation efficiency analysis: {str(ve)}", exc_info=True)
+        logger.error(f"[{request_id}] Validation error: {str(ve)}", exc_info=True)
         raise HTTPException(status_code=422, detail=str(ve))
     except Exception as e:
-        logger.error(f"Unexpected error in separation efficiency analysis: {str(e)}", exc_info=True)
+        logger.error(f"[{request_id}] Unexpected error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/particle-size/", response_model=Dict[str, Union[float, Dict]])

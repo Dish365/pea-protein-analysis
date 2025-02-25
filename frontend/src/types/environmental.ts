@@ -110,6 +110,10 @@ export interface ProcessMetadata {
   energy_intensity: number;
   water_intensity: number;
   thermal_ratio: number;
+  mass_flows: Record<string, number>;
+  initial_moisture: number;
+  final_moisture: number;
+  target_moisture: number;
 }
 
 export interface RFParameters {
@@ -117,6 +121,8 @@ export interface RFParameters {
   temperature_electrode: number;
   energy_consumption: number;
   contribution_percentage: number;
+  anode_current: number;
+  grid_current: number;
 }
 
 export interface ProcessBreakdown {
@@ -161,6 +167,18 @@ export interface ImpactResults {
   metadata: ProcessMetadata;
   rf_parameters: RFParameters;
   process_breakdown: ProcessBreakdown;
+  rf_validation: {
+    energy_efficiency: {
+      within_range: boolean;
+      optimal: number;
+      tolerance: string;
+    };
+    temperature: {
+      outfeed: RFValidationMetric;
+      electrode: RFValidationMetric;
+    };
+    moisture: MoistureValidation;
+  };
 }
 
 export interface AllocationResults {

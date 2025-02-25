@@ -148,3 +148,7 @@ technical_analysis_results.json
 economic_comprehensive.py
 environmental_analysis_results.json
 environmental_comprehensive.py
+
+# AWS
+nrc_project_key.pem
+*.pem

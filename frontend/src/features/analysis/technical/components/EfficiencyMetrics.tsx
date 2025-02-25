@@ -6,6 +6,12 @@ import { Progress } from "@/components/ui/progress";
 import { SeparationMetrics } from '@/types/technical';
 import { motion } from 'framer-motion';
 import { Activity, Droplets, PieChart, Gauge, TrendingUp, ArrowUpRight, Layers } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface EfficiencyMetricsProps {
   metrics: SeparationMetrics;
@@ -17,6 +23,7 @@ export function EfficiencyMetrics({ metrics }: EfficiencyMetricsProps) {
       label: "Separation Efficiency",
       value: metrics.separation_efficiency,
       description: "Overall separation process efficiency",
+      tooltip: "Measure of how effectively the process separates protein from other components",
       unit: "%",
       icon: <Activity className="h-5 w-5" />,
       color: metrics.separation_efficiency > 50 ? "text-emerald-500" : "text-amber-500"
@@ -25,6 +32,7 @@ export function EfficiencyMetrics({ metrics }: EfficiencyMetricsProps) {
       label: "Protein Enrichment",
       value: metrics.protein_enrichment,
       description: "Protein concentration improvement",
+      tooltip: "Percentage increase in protein concentration from input to output",
       unit: "%",
       icon: <TrendingUp className="h-5 w-5" />,
       color: "text-blue-500"
@@ -33,6 +41,7 @@ export function EfficiencyMetrics({ metrics }: EfficiencyMetricsProps) {
       label: "Separation Factor",
       value: metrics.separation_factor,
       description: "Effectiveness of separation process",
+      tooltip: "Ratio indicating how well the process separates protein from non-protein components",
       unit: "×",
       icon: <Layers className="h-5 w-5" />,
       color: "text-indigo-500"
@@ -44,6 +53,7 @@ export function EfficiencyMetrics({ metrics }: EfficiencyMetricsProps) {
       label: "Protein Recovery",
       value: metrics.component_recoveries.protein,
       description: "Protein fraction recovery",
+      tooltip: "Percentage of initial protein successfully recovered in the final product",
       unit: "%",
       color: "text-amber-500"
     },
@@ -51,6 +61,7 @@ export function EfficiencyMetrics({ metrics }: EfficiencyMetricsProps) {
       label: "Starch Recovery",
       value: metrics.component_recoveries.starch,
       description: "Starch fraction recovery",
+      tooltip: "Percentage of initial starch content retained in the final product",
       unit: "%",
       color: "text-blue-500"
     },
@@ -58,6 +69,7 @@ export function EfficiencyMetrics({ metrics }: EfficiencyMetricsProps) {
       label: "Fiber Recovery",
       value: metrics.component_recoveries.fiber,
       description: "Fiber fraction recovery",
+      tooltip: "Percentage of initial fiber content present in the final product",
       unit: "%",
       color: "text-green-500"
     },
@@ -65,6 +77,7 @@ export function EfficiencyMetrics({ metrics }: EfficiencyMetricsProps) {
       label: "Others Recovery",
       value: metrics.component_recoveries.others,
       description: "Other components recovery",
+      tooltip: "Percentage of other initial components retained in the final product",
       unit: "%",
       color: "text-purple-500"
     }
@@ -93,7 +106,16 @@ export function EfficiencyMetrics({ metrics }: EfficiencyMetricsProps) {
                 <div className="flex items-center space-x-2">
                   <span className={metric.color}>{metric.icon}</span>
                   <div>
-                    <p className="font-medium">{metric.label}</p>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="font-medium cursor-help">{metric.label}</p>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[250px]">
+                          <p>{metric.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <p className="text-sm text-muted-foreground">
                       {metric.description}
                     </p>
@@ -122,7 +144,16 @@ export function EfficiencyMetrics({ metrics }: EfficiencyMetricsProps) {
         <div className="space-y-4">
           <div className="flex items-center space-x-2">
             <PieChart className="h-5 w-5 text-emerald-500" />
-            <h3 className="font-semibold">Component Recovery Distribution</h3>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <h3 className="font-semibold cursor-help">Component Recovery Distribution</h3>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[250px]">
+                  <p>Distribution of recovery rates for different components in the final product</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <div className="space-y-3">
             {componentRecoveries.map((metric, index) => (
@@ -134,7 +165,16 @@ export function EfficiencyMetrics({ metrics }: EfficiencyMetricsProps) {
                 className="space-y-2"
               >
                 <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium">{metric.label}</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-sm font-medium cursor-help">{metric.label}</p>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[250px]">
+                        <p>{metric.tooltip}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <span className={`text-sm font-semibold ${metric.color}`}>
                     {metric.value.toFixed(2)}%
                   </span>

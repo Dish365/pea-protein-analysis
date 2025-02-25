@@ -19,7 +19,8 @@ import {
   Target,
   Package,
   Zap,
-  LucideIcon
+  LucideIcon,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
@@ -29,6 +30,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MotionDiv } from "@/components/motion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AnalysisFeature {
   icon: LucideIcon;
@@ -93,26 +96,48 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="flex flex-col gap-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground">
+        <MotionDiv
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+            <p className="text-muted-foreground max-w-[500px]">
               Overview of your process analysis activities
             </p>
           </div>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Analysis
-              </Button>
-            </DropdownMenuTrigger>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="gap-2 relative overflow-hidden group">
+                      <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-200" />
+                      New Analysis
+                      <MotionDiv
+                        className="absolute inset-0 bg-primary/10"
+                        initial={{ scale: 0, opacity: 0 }}
+                        whileHover={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                      />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Start a new analysis</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <DropdownMenuContent align="end" className="w-48">
               {analysisTypes.map((type) => {
                 const Icon = type.features[0].icon;
                 return (
                   <DropdownMenuItem key={type.title} asChild>
-                    <Link href={type.href} className="flex items-center gap-2">
+                    <Link href={type.href} className="flex items-center gap-2 cursor-pointer">
                       <Icon className={`h-4 w-4 ${type.accentColor}`} />
                       <span>{type.title}</span>
                     </Link>
@@ -121,56 +146,74 @@ export default function DashboardPage() {
               })}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
+        </MotionDiv>
 
         {/* Analysis Types Grid */}
         <div className="grid gap-6 md:grid-cols-3">
-          {analysisTypes.map((analysis) => {
+          {analysisTypes.map((analysis, index) => {
             const MainIcon = analysis.features[0].icon;
             return (
-              <Link 
-                key={analysis.title} 
-                href={analysis.href}
-                className="group"
+              <MotionDiv
+                key={analysis.title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <Card className={`
-                  h-full transition-all duration-300 
-                  hover:shadow-lg hover:scale-[1.02]
-                  bg-gradient-to-br ${analysis.bgGradient}
-                  border ${analysis.borderColor}
-                `}>
-                  <CardContent className="p-6 space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <MainIcon className={`h-6 w-6 ${analysis.accentColor}`} />
-                        <h3 className="text-xl font-semibold">{analysis.title}</h3>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {analysis.description}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2 pt-2">
-                      {analysis.features.map((feature, index) => {
-                        const FeatureIcon = feature.icon;
-                        return (
-                          <div 
-                            key={feature.label}
-                            className={`
-                              flex items-center gap-2 text-sm
-                              animate-in fade-in slide-in-from-bottom-2
-                            `}
-                            style={{ animationDelay: `${index * 150}ms` }}
+                <Link 
+                  href={analysis.href}
+                  className="group block"
+                >
+                  <Card className={`
+                    relative h-full transition-all duration-300 
+                    hover:shadow-lg hover:-translate-y-1
+                    bg-gradient-to-br ${analysis.bgGradient}
+                    border ${analysis.borderColor}
+                    overflow-hidden
+                  `}>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <MotionDiv
+                            whileHover={{ rotate: 5, scale: 1.1 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                            className={`p-2 rounded-lg bg-gradient-to-br from-${analysis.accentColor}/20 to-${analysis.accentColor}/10`}
                           >
-                            <FeatureIcon className={`h-4 w-4 ${feature.color}`} />
-                            <span>{feature.label}</span>
+                            <MainIcon className={`h-6 w-6 ${analysis.accentColor}`} />
+                          </MotionDiv>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xl font-semibold">{analysis.title}</h3>
+                            <ArrowRight className={`h-4 w-4 opacity-0 -translate-x-2 transition-all duration-200 ${analysis.accentColor} group-hover:opacity-100 group-hover:translate-x-0`} />
                           </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {analysis.description}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2 pt-2">
+                        {analysis.features.map((feature, featureIndex) => {
+                          const FeatureIcon = feature.icon;
+                          return (
+                            <MotionDiv 
+                              key={feature.label}
+                              className={`
+                                flex items-center gap-2 text-sm
+                                animate-in fade-in slide-in-from-bottom-2
+                              `}
+                              style={{ animationDelay: `${featureIndex * 150}ms` }}
+                              whileHover={{ x: 4 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <FeatureIcon className={`h-4 w-4 ${feature.color}`} />
+                              <span>{feature.label}</span>
+                            </MotionDiv>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </MotionDiv>
             );
           })}
         </div>

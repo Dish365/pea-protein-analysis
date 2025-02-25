@@ -11,6 +11,12 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TechnicalAnalysisViewProps {
   data?: TechnicalResults;
@@ -143,7 +149,18 @@ export function TechnicalAnalysisView({
                   transition={{ duration: 0.3 }}
                   className="space-y-2"
                 >
-                  <p className="text-sm text-green-600 dark:text-green-300">Cumulative Efficiency</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-sm text-green-600 dark:text-green-300 cursor-help">
+                          Cumulative Efficiency
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[250px]">
+                        <p>Overall efficiency of the entire process, considering all steps and their combined impact on protein extraction.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <p className="text-3xl font-bold text-green-900 dark:text-green-100">
                     {process_performance.cumulative_efficiency.toFixed(1)}%
                   </p>
@@ -159,7 +176,18 @@ export function TechnicalAnalysisView({
                   transition={{ duration: 0.3, delay: 0.1 }}
                   className="space-y-2"
                 >
-                  <p className="text-sm text-green-600 dark:text-green-300">Average Step Efficiency</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-sm text-green-600 dark:text-green-300 cursor-help">
+                          Average Step Efficiency
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[250px]">
+                        <p>Mean efficiency across individual process steps, indicating the typical performance level of each separation stage.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <p className="text-3xl font-bold text-green-900 dark:text-green-100">
                     {process_performance.average_step_efficiency.toFixed(1)}%
                   </p>
@@ -175,7 +203,18 @@ export function TechnicalAnalysisView({
                   transition={{ duration: 0.3, delay: 0.2 }}
                   className="space-y-2"
                 >
-                  <p className="text-sm text-green-600 dark:text-green-300">Purity Achievement</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-sm text-green-600 dark:text-green-300 cursor-help">
+                          Purity Achievement
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[250px]">
+                        <p>Percentage of target purity achieved in the final product. 100% means the exact target protein concentration was reached.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <p className="text-3xl font-bold text-green-900 dark:text-green-100">
                     {process_performance.purity_achievement.toFixed(1)}%
                   </p>

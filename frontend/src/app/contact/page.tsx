@@ -37,17 +37,17 @@ const supportInfo = [
     icon: Mail,
     title: "Email Support",
     description: "Get help via email within 24 hours",
-    detail: "support@pea-analysis.com"
+    detail: "contact@proteinanalysis.io"
   },
   {
     icon: Phone,
     title: "Phone Support",
     description: "Available during business hours",
-    detail: "+1 (555) 123-4567"
+    detail: "+1 (xxx) xxx-xxxx"
   },
   {
     icon: Clock,
-    title: "Business Hours",
+    title: "Available Hours",
     description: "When we're available",
     detail: "Mon-Fri: 9AM-6PM EST"
   },
@@ -55,7 +55,7 @@ const supportInfo = [
     icon: Globe,
     title: "Global Support",
     description: "Support in multiple languages",
-    detail: "English, Spanish, French"
+    detail: "English, French"
   }
 ] as const;
 

@@ -32,6 +32,7 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media
+backend/django_app/
 
 # FastAPI
 .env
@@ -129,3 +130,14 @@ ENV/
 .venv
 pip-log.txt
 pip-delete-this-directory.txt
+
+# PowerShell Scripts
+*.ps1
+
+# Test Files
+run_tests.py
+run_test.md
+tests/
+
+# infodocs
+info_docs/

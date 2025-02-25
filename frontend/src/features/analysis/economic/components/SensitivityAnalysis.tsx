@@ -139,50 +139,57 @@ export const SensitivityAnalysis: React.FC<SensitivityAnalysisProps> = ({ data }
             }));
             
             return (
-              <div key={variable} className="bg-card rounded-lg p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-semibold flex items-center gap-2">
+              <div 
+                key={variable} 
+                className="bg-card rounded-lg p-6 shadow-lg border border-border/50 hover:shadow-xl transition-shadow duration-200"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-semibold flex items-center gap-3">
                       {variable.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                      {getImpactIcon(maxImpact, variable)}
+                      <div className="p-1.5 rounded-full bg-muted">
+                        {getImpactIcon(maxImpact, variable)}
+                      </div>
                     </h3>
-                    <div className="flex flex-wrap gap-3 items-center">
+                    <div className="flex flex-wrap gap-4 items-center">
                       <Badge 
                         variant={
                           (variable === 'discount_rate' || variable === 'operating_costs')
                             ? (maxImpact > 0 ? "success" : maxImpact < -30 ? "destructive" : "warning")
                             : (maxImpact > 30 ? "success" : maxImpact < 0 ? "destructive" : "warning")
                         }
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm"
                       >
-                        <Info className="w-3 h-3" />
+                        <Info className="w-4 h-4" />
                         Max Impact: {maxImpact.toFixed(1)}%
                       </Badge>
-                      <span className="text-sm text-muted-foreground flex items-center gap-1">
-                        <LineChartIcon className="w-4 h-4" />
-                        Base NPV: {formatCurrency(data.values[baseIndex])}
-                      </span>
+                      <div className="px-3 py-1.5 bg-muted/30 rounded-full flex items-center gap-2">
+                        <LineChartIcon className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium">
+                          Base NPV: {formatCurrency(data.values[baseIndex])}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Legend */}
-                <div className="flex flex-wrap gap-4 text-sm mb-6 bg-muted/30 p-3 rounded-lg">
+                <div className="flex flex-wrap gap-4 text-sm mb-6 bg-muted/30 p-4 rounded-lg backdrop-blur-sm">
                   {(variable === 'discount_rate' || variable === 'operating_costs') ? (
                     <>
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 px-3 py-1.5 bg-background/50 rounded-full">
                         <ArrowDownRight className="w-4 h-4 text-green-600" />
                         <span className="text-muted-foreground">
                           Decrease: NPV Increases
                         </span>
                       </span>
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 px-3 py-1.5 bg-background/50 rounded-full">
                         <ArrowRight className="w-4 h-4 text-yellow-600" />
                         <span className="text-muted-foreground">
                           Small Increase: NPV Slightly Decreases
                         </span>
                       </span>
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 px-3 py-1.5 bg-background/50 rounded-full">
                         <ArrowUpRight className="w-4 h-4 text-red-600" />
                         <span className="text-muted-foreground">
                           Large Increase: NPV Significantly Decreases
@@ -191,19 +198,19 @@ export const SensitivityAnalysis: React.FC<SensitivityAnalysisProps> = ({ data }
                     </>
                   ) : (
                     <>
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 px-3 py-1.5 bg-background/50 rounded-full">
                         <ArrowUpRight className="w-4 h-4 text-green-600" />
                         <span className="text-muted-foreground">
                           Large Increase: NPV Significantly Increases
                         </span>
                       </span>
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 px-3 py-1.5 bg-background/50 rounded-full">
                         <ArrowRight className="w-4 h-4 text-yellow-600" />
                         <span className="text-muted-foreground">
                           Small Increase: NPV Slightly Increases
                         </span>
                       </span>
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 px-3 py-1.5 bg-background/50 rounded-full">
                         <ArrowDownRight className="w-4 h-4 text-red-600" />
                         <span className="text-muted-foreground">
                           Decrease: NPV Decreases
@@ -214,7 +221,7 @@ export const SensitivityAnalysis: React.FC<SensitivityAnalysisProps> = ({ data }
                 </div>
 
                 {/* Chart */}
-                <div className="bg-card rounded-lg p-4 shadow-sm mb-4">
+                <div className="bg-card rounded-lg p-6 shadow-sm mb-6 border border-border/50">
                   <ResponsiveContainer width="100%" height={400}>
                     <LineChart data={chartData} margin={{ top: 20, right: 50, left: 80, bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -262,15 +269,15 @@ export const SensitivityAnalysis: React.FC<SensitivityAnalysisProps> = ({ data }
                   <CollapsibleTrigger asChild>
                     <Button 
                       variant="outline" 
-                      className="w-full flex items-center justify-center gap-2 hover:bg-muted/50"
+                      className="w-full flex items-center justify-center gap-2 hover:bg-muted/50 transition-colors"
                     >
                       <Table className="h-4 w-4" />
                       {openTables[variable] ? 'Hide' : 'Show'} Detailed Data
                       {openTables[variable] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-4">
-                    <div className="overflow-x-auto rounded-lg border bg-card">
+                  <CollapsibleContent>
+                    <div className="mt-4 overflow-x-auto rounded-lg border bg-card">
                       <table className="w-full">
                         <thead>
                           <tr className="bg-muted/50 border-b">

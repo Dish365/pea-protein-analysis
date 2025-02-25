@@ -1,6 +1,6 @@
 // Environment configuration
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";  // Use relative URLs in production
-export const API_V1_URL = `${API_BASE_URL}/api/v1`;
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api";  // Ensure we always have /api prefix
+export const API_V1_URL = `${API_BASE_URL}/v1`;
 
 // API Configuration
 export const API_CONFIG = {

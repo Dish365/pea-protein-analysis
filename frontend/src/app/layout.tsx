@@ -3,7 +3,7 @@
 import "@/app/globals.css"
 import { Inter as FontSans } from "next/font/google"
 import { cn } from "@/lib/utils"
-import { Providers } from "@/components/providers/index"
+import { QueryProvider } from "@/components/providers/query"
 import { MotionDiv } from "@/components/motion"
 
 const fontSans = FontSans({
@@ -27,7 +27,7 @@ export default function RootLayout({
           fontSans.variable
         )}
       >
-        <Providers>
+        <QueryProvider>
           {/* Background Effects */}
           <div className="fixed inset-0 bg-grid-black/[0.02] -z-10" />
           <div className="fixed inset-0 bg-gradient-to-br from-blue-50/50 via-background to-emerald-50/50 dark:from-blue-950/20 dark:via-background dark:to-emerald-950/20 -z-10" />
@@ -81,7 +81,7 @@ export default function RootLayout({
           <main className="relative flex min-h-screen flex-col">
             {children}
           </main>
-        </Providers>
+        </QueryProvider>
       </body>
     </html>
   )
